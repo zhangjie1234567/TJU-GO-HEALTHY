@@ -1,0 +1,84 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarHidden": true
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/school/school",
+      "style": {
+        "navigationBarTitleText": "学校"
+      }
+    },
+    {
+      "path": "pages/schedule/schedule",
+      "style": {
+        "navigationBarTitleText": "计划"
+      }
+    },
+    {
+      "path": "pages/communication/communication",
+      "style": {
+        "navigationBarTitleText": "社区"
+      }
+    },
+    {
+      "path": "pages/my/my",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#212121",
+    "selectedColor": "#53B1EF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tab/home-black.png",
+        "selectedIconPath": "static/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/school/school",
+        "text": "学校",
+        "iconPath": "static/tab/school-black.png",
+        "selectedIconPath": "static/tab/school-active.png"
+      },
+      {
+        "pagePath": "pages/schedule/schedule",
+        "text": "计划",
+        "iconPath": "static/tab/schedule-black.png",
+        "selectedIconPath": "static/tab/schedule-active.png"
+      },
+      {
+        "pagePath": "pages/communication/communication",
+        "text": "社区",
+        "iconPath": "static/tab/community-black.png",
+        "selectedIconPath": "static/tab/community-active.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "static/tab/my-black.png",
+        "selectedIconPath": "static/tab/my-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8",
+    "darkmode": false
+  }
+}

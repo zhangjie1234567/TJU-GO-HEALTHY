@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>学生认证</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Source Han Sans CN", sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 16px;
+      gap: 24px;
+    }
+    .screenshot-wrap {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      max-width: 1200px;
+    }
+    .phone-frame {
+      width: 375px;
+      height: 812px;
+      background: #1a1a1a;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 0 0 2px #333;
+      flex-shrink: 0;
+      transform: scale(0.72);
+      transform-origin: top center;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 28px;
+      overflow: hidden;
+      position: relative;
+      background: linear-gradient(165deg, #4FA1F2 0%, #80D0FF 100%);
+    }
+    .proto {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 25px;
+    }
+    .card-wrap {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 0;
+    }
+    .card {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(10px);
+    }
+    .flow-title {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .flow-title h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2C3E50;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .flow-title .subtitle {
+      font-size: 14px;
+      color: #666;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-title {
+      font-size: 16px;
+      color: #4A5568;
+      margin-bottom: 8px;
+      padding-left: 5px;
+    }
+    .form-input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid #e0e0e0;
+      border-radius: 24px;
+      padding: 0 20px;
+      font-size: 16px;
+      color: #333;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input::placeholder {
+      color: #999;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #4FA1F2;
+      box-shadow: 0 0 0 3px rgba(79, 161, 242, 0.2);
+    }
+    .form-error {
+      font-size: 12px;
+      color: #e74c3c;
+      margin-top: 6px;
+      padding-left: 5px;
+    }
+    .remember-row {
+      margin-bottom: 20px;
+    }
+    .remember-label {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 14px;
+      color: #666;
+    }
+    .remember-label input {
+      margin-right: 8px;
+      width: 18px;
+      height: 18px;
+      accent-color: #4FA1F2;
+      cursor: pointer;
+    }
+    .next-btn {
+      width: 100%;
+      height: 50px;
+      border: none;
+      border-radius: 25px;
+      background: linear-gradient(90deg, #4FA1F2 0%, #80D0FF 100%);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 161, 242, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .next-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 161, 242, 0.45);
+    }
+    .next-btn:active {
+      transform: translateY(0);
+    }
+    .spec-panel {
+      width: 360px;
+      max-width: 100%;
+      max-height: calc(812px * 0.72);
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      flex-shrink: 0;
+    }
+    .spec-panel h3 {
+      font-size: 18px;
+      color: #2C3E50;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #4FA1F2;
+    }
+    .spec-section {
+      margin-bottom: 18px;
+    }
+    .spec-section h4 {
+      font-size: 14px;
+      color: #4A5568;
+      margin-bottom: 6px;
+    }
+    .spec-section p, .spec-section ul {
+      font-size: 13px;
+      color: #5a6578;
+      line-height: 1.6;
+    }
+    .spec-section ul {
+      padding-left: 18px;
+    }
+    .spec-section li {
+      margin-bottom: 4px;
+    }
+    .color-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .interaction-note {
+      background: #f0f7ff;
+      border-left: 3px solid #4FA1F2;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #4A5568;
+      border-radius: 0 8px 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="screenshot-wrap">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="proto">
+          <div class="card-wrap">
+            <div class="card">
+              <div class="flow-title">
+                <h2>学生认证</h2>
+                <div class="subtitle">请登录您的账号</div>
+              </div>
+              <form class="proto-form" id="authForm" onsubmit="return handleSubmit(event)">
+                <div class="form-group">
+                  <div class="form-title">姓名</div>
+                  <input type="text" class="form-input" name="name" placeholder="请输入真实姓名" maxlength="20" />
+                </div>
+                <div class="form-group">
+                  <div class="form-title">学号</div>
+                  <input type="text" class="form-input" name="studentId" id="studentIdInput" placeholder="请输入10位学号" maxlength="10" inputmode="numeric" />
+                  <div id="studentIdError" class="form-error" style="display:none">学号格式不正确</div>
+                </div>
+                <div class="remember-row">
+                  <label class="remember-label">
+                    <input type="checkbox" name="remember" id="rememberMe" />
+                    <span>记住我</span>
+                  </label>
+                </div>
+                <button type="submit" class="next-btn">认证</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec-panel">
+      <h3>设计说明（登录页）</h3>
+      <div class="spec-section">
+        <h4>页面与布局</h4>
+        <p>学生认证登录页。背景为蓝色渐变（#4FA1F2 → #80D0FF）；中间为白色圆角卡片，内含标题、表单、记住我、认证按钮。</p>
+      </div>
+      <div class="spec-section">
+        <h4>色彩规范</h4>
+        <ul>
+          <li><span class="color-dot" style="background:#4FA1F2"></span> 背景渐变起点：#4FA1F2</li>
+          <li><span class="color-dot" style="background:#80D0FF"></span> 背景渐变终点：#80D0FF</li>
+          <li><span class="color-dot" style="background:#2C3E50"></span> 主标题：#2C3E50</li>
+          <li><span class="color-dot" style="background:#4A5568"></span> 表单标签：#4A5568</li>
+          <li><span class="color-dot" style="background:#4FA1F2"></span> 按钮/勾选主色：#4FA1F2</li>
+          <li>卡片：半透明白 + 毛玻璃效果</li>
+        </ul>
+      </div>
+      <div class="spec-section">
+        <h4>学号与记住我</h4>
+        <ul>
+          <li>学号仅允许 10 位数字，否则提示「学号格式不正确」</li>
+          <li>「记住我」勾选后，下次可回填学号/姓名（实际项目用本地存储）</li>
+        </ul>
+      </div>
+      <div class="spec-section">
+        <h4>交互说明</h4>
+        <div class="interaction-note">
+          <strong>可操作：</strong>姓名、学号输入；学号输入时实时校验位数；勾选「记住我」；点击「认证」提交，校验通过后弹窗提示。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var form = document.getElementById('authForm');
+      var studentIdInput = document.getElementById('studentIdInput');
+      var studentIdError = document.getElementById('studentIdError');
+
+      function onlyDigits(val) {
+        return (val || '').replace(/\D/g, '').slice(0, 10);
+      }
+
+      studentIdInput.addEventListener('input', function() {
+        this.value = onlyDigits(this.value);
+        var len = this.value.length;
+        studentIdError.style.display = (len > 0 && len !== 10) ? 'block' : 'none';
+      });
+
+      function validateStudentId(id) {
+        return /^\d{10}$/.test((id || '').trim());
+      }
+
+      function handleSubmit(e) {
+        e.preventDefault();
+        var name = (form.name && form.name.value) ? form.name.value.trim() : '';
+        var studentId = (form.studentId && form.studentId.value) ? form.studentId.value.trim() : '';
+        studentIdError.style.display = 'none';
+
+        if (!name) {
+          alert('请输入真实姓名');
+          if (form.name) form.name.focus();
+          return false;
+        }
+        if (!studentId) {
+          alert('请输入学号');
+          if (form.studentId) form.studentId.focus();
+          return false;
+        }
+        if (!validateStudentId(studentId)) {
+          studentIdError.style.display = 'block';
+          alert('学号格式不正确，请输入10位数字');
+          if (studentIdInput) studentIdInput.focus();
+          return false;
+        }
+        alert('认证提交成功！\n姓名：' + name + '\n学号：' + studentId);
+        return false;
+      }
+
+      form.onsubmit = handleSubmit;
+    })();
+  </script>
+</body>
+</html>
