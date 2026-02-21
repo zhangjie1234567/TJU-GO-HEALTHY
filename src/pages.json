@@ -25,6 +25,36 @@
       }
     },
     {
+      "path": "pages/school/facilities/facilities",
+      "style": {
+        "navigationBarTitleText": "校内设施"
+      }
+    },
+    {
+      "path": "pages/school/canteen/canteen",
+      "style": {
+        "navigationBarTitleText": "食堂"
+      }
+    },
+    {
+      "path": "pages/school/others/others",
+      "style": {
+        "navigationBarTitleText": "其他服务"
+      }
+    },
+    {
+      "path": "pages/school/fitness/fitness",
+      "style": {
+        "navigationBarTitleText": "体测"
+      }
+    },
+    {
+      "path": "pages/school/schedule/schedule",
+      "style": {
+        "navigationBarTitleText": "课表"
+      }
+    },
+    {
       "path": "pages/schedule/schedule",
       "style": {
         "navigationBarTitleText": "计划"

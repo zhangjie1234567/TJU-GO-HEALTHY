@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <image class="bg" src="/static/首页人物图.png" mode="aspectFill" />
+    <image class="bg" src="/static/school/main/background.png" mode="aspectFill" />
     <!-- http://localhost:5173/#/pages/school/school -->
     <view class="container">
       <view class="search">
@@ -49,6 +49,82 @@ const onItemClick = (item) => {
     // 浏览器环境 fallback
     const href = '/#/pages/school/map/map'
     window.location.href = href
+    return
+  }
+
+  if (item.name === 'timetable') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 跳转到 school 下的 schedule 页面
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/schedule/schedule' })
+        return
+      }
+    } catch (e) {}
+    const href = '/#/pages/school/schedule/schedule'
+    window.location.href = href
+    return
+  }
+
+  if (item.name === 'fitness') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 跳转到 school 下的 fitness 页面
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/fitness/fitness' })
+        return
+      }
+    } catch (e) {}
+    const href = '/#/pages/school/fitness/fitness'
+    window.location.href = href
+    return
+  }
+
+  if (item.name === 'facilities') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 跳转到 school 下的 facilities 页面
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/facilities/facilities' })
+        return
+      }
+    } catch (e) {}
+    const href = '/#/pages/school/facilities/facilities'
+    window.location.href = href
+    return
+  }
+
+  if (item.name === 'canteen') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 跳转到 school 下的 canteen 页面
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/canteen/canteen' })
+        return
+      }
+    } catch (e) {}
+    const href = '/#/pages/school/canteen/canteen'
+    window.location.href = href
+    return
+  }
+
+  if (item.name === 'others') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 跳转到 school 下的 others 页面
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/others/others' })
+        return
+      }
+    } catch (e) {}
+    const href = '/#/pages/school/others/others'
+    window.location.href = href
+    return
   }
 }
 </script>
@@ -57,9 +133,9 @@ const onItemClick = (item) => {
 .page {
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh; /* 固定窗口高度，禁止页面高度随内容增长 */
   background: #fff;
-  overflow: hidden;
+  overflow: hidden; /* 禁止滚动 */
   font-family: "PingFang SC", "Helvetica Neue", "Microsoft Yahei", Arial, sans-serif;
 }
 
@@ -67,18 +143,21 @@ const onItemClick = (item) => {
   position: absolute;
   left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw; /* 使背景占满视口宽度 */
+  height: 100vh; /* 使背景占满视口高度 */
   z-index: 1;
-  opacity: 0.92;
-  transform: scale(1.03);
+  opacity: 0.95;
+  object-fit: cover; /* 保持覆盖且居中裁切 */
+  transform: none; /* 取消缩放避免超出 */
 }
 
 .container {
   position: relative;
   z-index: 2;
+  height: 100vh; /* 与页面同高，内容超出将被裁切 */
   padding: 40rpx 30rpx 120rpx;
   box-sizing: border-box;
+  overflow: hidden; /* 防止容器内部产生滚动 */
 }
 
 .search {
