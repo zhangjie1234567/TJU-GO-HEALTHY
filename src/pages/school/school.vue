@@ -23,13 +23,14 @@
 <script setup>
 import { reactive } from 'vue'
 
+// 保持搜索框不变；项目内已有图标请根据实际素材替换路径
 const items = reactive([
-  { name: 'map', label: '地图', img: '/static/首页功能图标/首页AI对话模块主图.png' },
-  { name: 'timetable', label: '课表与食堂', img: '/static/首页功能图标/首页AI对话模块主图.png' },
+  { name: 'map', label: '地图', img: '/static/首页功能图标/AI对话小圆圈.png' },
+  { name: 'timetable', label: '课表', img: '/static/首页功能图标/喝水图.png' },
   { name: 'fitness', label: '体测', img: '/static/首页功能图标/运动图.png' },
-  { name: 'service', label: '服务', img: '/static/首页功能图标/首页人物图.png' },
-  { name: 'water', label: '饮水机记录', img: '/static/首页功能图标/喝水图标.png' },
-  { name: 'school', label: '学校', img: '/static/school_logo.png' }
+  { name: 'facilities', label: '校内设施', img: '/static/school_logo.png' },
+  { name: 'canteen', label: '食堂', img: '/static/首页功能图标/喝水图标.png' },
+  { name: 'others', label: '其他服务', img: '/static/首页功能图标/首页人物图.png' }
 ])
 </script>
 
@@ -40,6 +41,7 @@ const items = reactive([
   min-height: 100vh;
   background: #fff;
   overflow: hidden;
+  font-family: "PingFang SC", "Helvetica Neue", "Microsoft Yahei", Arial, sans-serif;
 }
 
 .bg {
@@ -49,13 +51,14 @@ const items = reactive([
   width: 100%;
   height: 100%;
   z-index: 1;
-  opacity: 0.95;
+  opacity: 0.92;
+  transform: scale(1.03);
 }
 
 .container {
   position: relative;
   z-index: 2;
-  padding: 40rpx 30rpx 100rpx;
+  padding: 40rpx 30rpx 120rpx;
   box-sizing: border-box;
 }
 
@@ -63,10 +66,10 @@ const items = reactive([
   display: flex;
   align-items: center;
   gap: 20rpx;
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.95);
   border-radius: 60rpx;
-  padding: 20rpx 24rpx;
-  margin: 24rpx 0 40rpx 0;
+  padding: 18rpx 22rpx;
+  margin: 20rpx 0 36rpx 0;
   box-shadow: 0 6rpx 18rpx rgba(0,0,0,0.08);
 }
 
@@ -77,6 +80,7 @@ const items = reactive([
   border: none;
   background: transparent;
   outline: none;
+  color: #333;
 }
 
 .search-icon {
@@ -87,7 +91,8 @@ const items = reactive([
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 36rpx 34rpx;
+  gap: 34rpx 34rpx;
+  justify-items: center;
 }
 
 .grid-item {
@@ -95,37 +100,43 @@ const items = reactive([
   flex-direction: column;
   align-items: center;
   text-align: center;
+  width: 100%;
 }
 
 .icon-wrap {
-  width: 320rpx;
-  height: 320rpx;
-  border-radius: 48rpx;
-  background: rgba(255,255,255,0.95);
+  width: 300rpx;
+  height: 300rpx;
+  border-radius: 36rpx;
+  background: rgba(255,255,255,0.98);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.12);
-  border: 1rpx solid rgba(0,0,0,0.05);
+  box-shadow: 0 12rpx 30rpx rgba(0,0,0,0.12);
+  border: 1rpx solid rgba(0,0,0,0.04);
   overflow: hidden;
 }
 
 .icon {
-  width: 70%;
-  height: 70%;
+  width: 68%;
+  height: 68%;
   object-fit: contain;
 }
 
 .label {
-  margin-top: 18rpx;
-  font-size: 28rpx;
-  color: #ffffff;
-  text-shadow: 0 2rpx 6rpx rgba(0,0,0,0.45);
-  font-weight: 600;
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  color: #111;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
-/* Responsive adjustments for smaller screens */
+/* Smaller screens adjustments */
 @media (max-width: 360px) {
-  .icon-wrap { width: 300rpx; height: 300rpx; }
+  .icon-wrap { width: 260rpx; height: 260rpx; }
+  .label { font-size: 28rpx; }
+  .container { padding-bottom: 80rpx; }
 }
+
+/* If you prefer white labels over dark ones (like mock), uncomment below */
+/* .label { color: #fff; text-shadow: 0 2rpx 6rpx rgba(0,0,0,0.45); } */
 </style>
