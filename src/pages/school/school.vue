@@ -1,7 +1,7 @@
 <template>
   <view class="page">
     <image class="bg" src="/static/首页人物图.png" mode="aspectFill" />
-
+    <!-- http://localhost:5173/#/pages/school/school -->
     <view class="container">
       <view class="search">
         <input class="search-input" placeholder="搜索" />
