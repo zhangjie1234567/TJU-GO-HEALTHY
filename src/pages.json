@@ -19,6 +19,12 @@
       }
     },
     {
+      "path": "pages/school/map/map",
+      "style": {
+        "navigationBarTitleText": "地图"
+      }
+    },
+    {
       "path": "pages/schedule/schedule",
       "style": {
         "navigationBarTitleText": "计划"

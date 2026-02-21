@@ -9,11 +9,11 @@
       </view>
 
       <view class="grid">
-        <view class="grid-item" v-for="item in items" :key="item.name">
-          <view class="icon-wrap">
-            <image :src="item.img" class="icon" mode="aspectFit" />
+        <view class="grid-item" v-for="item in items" :key="item.name" @click="onItemClick(item)">
+          <view class="icon-wrap" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">
+            <image :src="item.img" class="icon" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)"></image>
           </view>
-          <text class="label">{{ item.label }}</text>
+          <text class="label" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">{{ item.label }}</text>
         </view>
       </view>
     </view>
@@ -25,13 +25,32 @@ import { reactive } from 'vue'
 
 // 保持搜索框不变；项目内已有图标请根据实际素材替换路径
 const items = reactive([
-  { name: 'map', label: '地图', img: '/static/首页功能图标/AI对话小圆圈.png' },
-  { name: 'timetable', label: '课表', img: '/static/首页功能图标/喝水图.png' },
-  { name: 'fitness', label: '体测', img: '/static/首页功能图标/运动图.png' },
-  { name: 'facilities', label: '校内设施', img: '/static/school_logo.png' },
-  { name: 'canteen', label: '食堂', img: '/static/首页功能图标/喝水图标.png' },
-  { name: 'others', label: '其他服务', img: '/static/首页功能图标/首页人物图.png' }
+  { name: 'map', label: '地图', img: '/static/school/main/map.png' },
+  { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png' },
+  { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png' },
+  { name: 'facilities', label: '校内设施', img: '/static/school/main/facilities.png' },
+  { name: 'canteen', label: '食堂', img: '/static/school/main/canteen.png' },
+  { name: 'others', label: '其他服务', img: '/static/school/main/others.png' }
 ])
+
+const onItemClick = (item) => {
+  if (item.name === 'map') {
+    try {
+      // @ts-ignore
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        // 使用 uni.navigateTo 跳转到 map 页面（school/map）
+        // @ts-ignore
+        uni.navigateTo({ url: '/pages/school/map/map' })
+        return
+      }
+    } catch (e) {
+      // ignore
+    }
+    // 浏览器环境 fallback
+    const href = '/#/pages/school/map/map'
+    window.location.href = href
+  }
+}
 </script>
 
 <style lang="scss" scoped>
