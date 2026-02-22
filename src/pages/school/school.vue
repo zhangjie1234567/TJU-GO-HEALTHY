@@ -4,16 +4,15 @@
     <!-- http://localhost:5173/#/pages/school/school -->
     <view class="container">
       <view class="search">
-        <input class="search-input" placeholder="搜索" />
-        <image class="search-icon" src="/static/logo.png" mode="aspectFit" />
+        <image class="search-img" src="/static/school/main/search.png" mode="aspectFill" />
       </view>
 
       <view class="grid">
         <view class="grid-item" v-for="item in items" :key="item.name" @click="onItemClick(item)">
           <view class="icon-wrap" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">
-            <image :src="item.img" class="icon" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)"></image>
+            <image :src="item.img" class="icon" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
           </view>
-          <text class="label" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">{{ item.label }}</text>
+          <image :src="item.wordImg" class="label-img" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
         </view>
       </view>
     </view>
@@ -25,12 +24,12 @@ import { reactive } from 'vue'
 
 // 保持搜索框不变；项目内已有图标请根据实际素材替换路径
 const items = reactive([
-  { name: 'map', label: '地图', img: '/static/school/main/map.png' },
-  { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png' },
-  { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png' },
-  { name: 'facilities', label: '校内设施', img: '/static/school/main/facilities.png' },
-  { name: 'canteen', label: '食堂', img: '/static/school/main/canteen.png' },
-  { name: 'others', label: '其他服务', img: '/static/school/main/others.png' }
+  { name: 'map', label: '地图', img: '/static/school/main/map.png', wordImg: '/static/school/main/map_word.png' },
+  { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png', wordImg: '/static/school/main/timetable_word.png' },
+  { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png', wordImg: '/static/school/main/fitness_word.png' },
+  { name: 'facilities', label: '校内设施', img: '/static/school/main/facilities.png', wordImg: '/static/school/main/facilities_word.png' },
+  { name: 'canteen', label: '食堂', img: '/static/school/main/canteen.png', wordImg: '/static/school/main/canteen_word.png' },
+  { name: 'others', label: '其他服务', img: '/static/school/main/others.png', wordImg: '/static/school/main/others_word.png' }
 ])
 
 const onItemClick = (item) => {
@@ -162,28 +161,15 @@ const onItemClick = (item) => {
 
 .search {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 20rpx;
-  background: rgba(255,255,255,0.95);
+  margin: 10rpx 0 28rpx 0;
+}
+
+.search-img {
+  width: 92%;
+  height: 88rpx;
   border-radius: 60rpx;
-  padding: 18rpx 22rpx;
-  margin: 20rpx 0 36rpx 0;
-  box-shadow: 0 6rpx 18rpx rgba(0,0,0,0.08);
-}
-
-.search-input {
-  flex: 1;
-  height: 56rpx;
-  font-size: 28rpx;
-  border: none;
-  background: transparent;
-  outline: none;
-  color: #333;
-}
-
-.search-icon {
-  width: 48rpx;
-  height: 48rpx;
 }
 
 .grid {
@@ -220,21 +206,16 @@ const onItemClick = (item) => {
   object-fit: contain;
 }
 
-.label {
-  margin-top: 16rpx;
-  font-size: 30rpx;
-  color: #111;
-  font-weight: 700;
-  letter-spacing: 1rpx;
+.label-img {
+  width: 160rpx;
+  height: 48rpx;
+  margin-top: 14rpx;
 }
 
 /* Smaller screens adjustments */
 @media (max-width: 360px) {
   .icon-wrap { width: 260rpx; height: 260rpx; }
-  .label { font-size: 28rpx; }
+  .label-img { width: 140rpx; height: 44rpx }
   .container { padding-bottom: 80rpx; }
 }
-
-/* If you prefer white labels over dark ones (like mock), uncomment below */
-/* .label { color: #fff; text-shadow: 0 2rpx 6rpx rgba(0,0,0,0.45); } */
 </style>
