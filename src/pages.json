@@ -49,6 +49,18 @@
       }
     },
     {
+      "path": "pages/school/fitness/fitness_detail",
+      "style": {
+        "navigationBarTitleText": "体测详情"
+      }
+    },
+    {
+      "path": "pages/school/fitness/exercise_detail",
+      "style": {
+        "navigationBarTitleText": "锻炼详情"
+      }
+    },
+    {
       "path": "pages/school/schedule/schedule",
       "style": {
         "navigationBarTitleText": "课表"
