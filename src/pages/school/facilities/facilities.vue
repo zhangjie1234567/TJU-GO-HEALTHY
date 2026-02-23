@@ -1,10 +1,5 @@
 <template>
   <view class="page">
-    <view class="header">
-      <view class="back" @click="goBack">‹</view>
-      <text class="title">校内设施</text>
-    </view>
-
     <view class="content">
       <view class="card water-card">
         <text class="card-title">我的水卡</text>
@@ -42,29 +37,12 @@ const locations = reactive([
   { title: '校内超市' }
 ])
 
-const goBack = () => {
-  try {
-    // @ts-ignore
-    if (typeof uni !== 'undefined' && uni.navigateBack) {
-      uni.navigateBack({ delta: 1 })
-      setTimeout(() => {
-        // @ts-ignore
-        if (typeof uni !== 'undefined' && uni.switchTab) {
-          uni.switchTab({ url: '/pages/school/school' })
-        }
-      }, 300)
-      return
-    }
-  } catch (e) {}
-  if (window && window.history) window.history.back()
-}
+
 </script>
 
 <style lang="scss" scoped>
 .page { min-height: 100vh; background: #fff; padding-top: 24rpx; font-family: "PingFang SC", "Microsoft Yahei", Arial, sans-serif }
-.header { display:flex; align-items:center; height:88rpx; padding:0 24rpx }
-.back { font-size:48rpx; line-height:88rpx; width:88rpx; color:#111 }
-.title { font-size:36rpx; font-weight:700; margin-left:8rpx }
+
 .content { padding:24rpx }
 .card { background:#BEEAFB; border-radius:30rpx; padding:20rpx; margin-bottom:20rpx }
 .water-row { display:flex; justify-content:space-between; margin-top:12rpx; font-weight:700 }

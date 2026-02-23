@@ -4,7 +4,10 @@
     <!-- http://localhost:5173/#/pages/school/school -->
     <view class="container">
       <view class="search">
-        <image class="search-img" src="/static/school/main/search.png" mode="aspectFill" />
+        <view class="search-box">
+          <input class="search-input" placeholder="搜索" placeholder-style="color: #999" />
+          <image class="search-icon" src="/static/school/main/search_icon.png" mode="aspectFit" />
+        </view>
       </view>
 
       <view class="grid">
@@ -166,10 +169,33 @@ const onItemClick = (item) => {
   margin: 10rpx 0 28rpx 0;
 }
 
-.search-img {
+.search-box {
+  display: flex;
+  align-items: center;
   width: 92%;
   height: 88rpx;
+  background: rgba(255,255,255,0.98);
   border-radius: 60rpx;
+  padding: 0 30rpx;
+  box-sizing: border-box;
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  font-size: 32rpx;
+  color: #333;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.search-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-left: 20rpx;
+  object-fit: contain;
+  display: block;
 }
 
 .grid {
@@ -185,31 +211,33 @@ const onItemClick = (item) => {
   align-items: center;
   text-align: center;
   width: 100%;
+  justify-content: center;
 }
 
 .icon-wrap {
   width: 300rpx;
   height: 300rpx;
   border-radius: 36rpx;
-  background: rgba(255,255,255,0.98);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12rpx 30rpx rgba(0,0,0,0.12);
-  border: 1rpx solid rgba(0,0,0,0.04);
   overflow: hidden;
 }
 
 .icon {
-  width: 68%;
-  height: 68%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .label-img {
   width: 160rpx;
   height: 48rpx;
   margin-top: 14rpx;
+  object-fit: contain;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Smaller screens adjustments */
