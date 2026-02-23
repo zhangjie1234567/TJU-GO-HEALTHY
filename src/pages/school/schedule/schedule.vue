@@ -60,10 +60,16 @@ const week = reactive([
 
 /* 确保没有额外的间距或内容 */
 .week-card { background:#BEEAFB; border-radius:30rpx; padding: 24rpx; margin-bottom: 28rpx }
-.day-title { font-weight:800; font-size:30rpx; margin-bottom: 12rpx }
+.day-title { 
+  display: block;        /* 关键点1：改为块级元素，使 margin 生效 */
+  font-weight: 800; 
+  font-size: 32rpx; 
+  margin-bottom: 20rpx;  /* 关键点2：统一间距 */
+  color: #000;
+}
 .lessons { }
-.lesson { display:flex; justify-content:space-between; margin-bottom:10rpx }
-.lesson-name { font-size:26rpx; font-weight:700 }
-.lesson-time { font-size:24rpx; color:#222 }
-.lesson-room { font-size:24rpx; color:#222 }
+.lesson { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20rpx; margin-bottom: 16rpx; align-items: center }
+.lesson-name { font-size:26rpx; font-weight:700; text-align: left }
+.lesson-time { font-size:24rpx; color:#222; text-align: center }
+.lesson-room { font-size:24rpx; color:#222; text-align: right }
 </style>
