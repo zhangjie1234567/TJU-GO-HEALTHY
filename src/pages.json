@@ -31,6 +31,36 @@
       }
     },
     {
+      "path": "pages/school/facilities/water",
+      "style": {
+        "navigationBarTitleText": "校内饮水机"
+      }
+    },
+    {
+      "path": "pages/school/facilities/printer",
+      "style": {
+        "navigationBarTitleText": "校内打印机"
+      }
+    },
+    {
+      "path": "pages/school/facilities/print_shop",
+      "style": {
+        "navigationBarTitleText": "校内打印店"
+      }
+    },
+    {
+      "path": "pages/school/facilities/shop",
+      "style": {
+        "navigationBarTitleText": "校内超市"
+      }
+    },
+    {
+      "path": "pages/school/facilities/records",
+      "style": {
+        "navigationBarTitleText": "消费记录"
+      }
+    },
+    {
       "path": "pages/school/canteen/canteen",
       "style": {
         "navigationBarTitleText": "食堂"
