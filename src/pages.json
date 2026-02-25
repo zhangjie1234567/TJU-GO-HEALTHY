@@ -67,6 +67,54 @@
       }
     },
     {
+      "path": "pages/school/canteen/choice",
+      "style": {
+        "navigationBarTitleText": "今天吃什么"
+      }
+    },
+    {
+      "path": "pages/school/canteen/diary",
+      "style": {
+        "navigationBarTitleText": "干饭日记"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/liu",
+      "style": {
+        "navigationBarTitleText": "留园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/mei",
+      "style": {
+        "navigationBarTitleText": "梅园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/zhu",
+      "style": {
+        "navigationBarTitleText": "竹园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/lan",
+      "style": {
+        "navigationBarTitleText": "兰园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/ju",
+      "style": {
+        "navigationBarTitleText": "菊园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/tao",
+      "style": {
+        "navigationBarTitleText": "桃园菜单"
+      }
+    },
+    {
       "path": "pages/school/others/others",
       "style": {
         "navigationBarTitleText": "其他服务"
