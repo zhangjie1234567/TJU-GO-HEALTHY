@@ -219,8 +219,8 @@ const reset = () => {
 
 .turntable-container { 
   position: relative; 
-  width: 320rpx; 
-  height: 320rpx; 
+  width: 400rpx; 
+  height: 400rpx; 
 }
 
 .turntable { 

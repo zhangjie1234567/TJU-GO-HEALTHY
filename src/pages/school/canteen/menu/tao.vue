@@ -1,32 +1,24 @@
 <template>
   <view class="page">
-    <view class="container">
-      <text class="title">桃园菜单</text>
+    <view class="content">
+      <text class="page-title">今日菜单 - 桃园</text>
       
-      <!-- 自选菜 -->
-      <view class="section">
-        <text class="section-title">自选菜</text>
+      <view class="category-section">
+        <text class="category-title">自选菜</text>
         <view class="food-list">
-          <view class="food-item" v-for="(food, index) in selfService" :key="index">
+          <view class="food-item" v-for="(food, index) in foods" :key="index">
             <text class="food-name">{{ food.name }}</text>
-            <view class="food-info">
-              <text class="food-price">{{ food.price }}</text>
-              <text class="food-score">{{ food.score }}</text>
-            </view>
+            <text class="food-price">{{ food.price }}元</text>
           </view>
         </view>
       </view>
       
-      <!-- 特色菜 -->
-      <view class="section">
-        <text class="section-title">特色菜</text>
+      <view class="category-section">
+        <text class="category-title">特色菜</text>
         <view class="food-list">
-          <view class="food-item" v-for="(food, index) in specialties" :key="index">
+          <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
             <text class="food-name">{{ food.name }}</text>
-            <view class="food-info">
-              <text class="food-price">{{ food.price }}</text>
-              <text class="food-score">{{ food.score }}</text>
-            </view>
+            <text class="food-price">{{ food.price }}元</text>
           </view>
         </view>
       </view>
@@ -35,44 +27,83 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 
-const selfService = reactive([
-  { name: '桃园菜品1', price: '12元', score: '4.5' },
-  { name: '桃园菜品2', price: '15元', score: '4.2' },
-  { name: '桃园菜品3', price: '10元', score: '4.0' },
-  { name: '桃园菜品4', price: '13元', score: '4.3' },
-  { name: '桃园菜品5', price: '11元', score: '4.1' },
-  { name: '桃园菜品6', price: '14元', score: '4.4' }
+const foods = reactive([
+  { name: '桃园菜品1', price: 12, score: 4.5 },
+  { name: '桃园菜品2', price: 15, score: 4.2 },
+  { name: '桃园菜品3', price: 10, score: 4.0 },
+  { name: '桃园菜品4', price: 13, score: 4.3 },
+  { name: '桃园菜品5', price: 11, score: 4.1 }
 ])
 
-const specialties = reactive([
-  { name: '桃园特色菜1', price: '20元', score: '4.8' },
-  { name: '桃园特色菜2', price: '25元', score: '4.7' },
-  { name: '桃园特色菜3', price: '18元', score: '4.6' }
+const specialFoods = reactive([
+  { name: '桃园特色菜1', price: 20, score: 4.8 },
+  { name: '桃园特色菜2', price: 25, score: 4.7 },
+  { name: '桃园特色菜3', price: 18, score: 4.6 }
 ])
 </script>
 
 <style lang="scss" scoped>
-.page { min-height:100vh; background:#fff; padding-top:24rpx; font-family: "PingFang SC", "Microsoft Yahei", Arial, sans-serif }
+.page {
+  min-height: 100vh;
+  background: #fff;
+  padding-top: 24rpx;
+  font-family: "PingFang SC", "Helvetica Neue", "Microsoft Yahei", Arial, sans-serif;
+}
 
-.container { padding:24rpx }
+.content {
+  padding: 24rpx;
+}
 
-.title { display: block; font-size:36rpx; font-weight:700; text-align:center; margin-bottom:30rpx }
+.page-title {
+  display: block; 
+  font-size:36rpx; 
+  font-weight:700; 
+  margin-bottom: 20rpx; 
+  margin-left: 10rpx;
+}
 
-.section { margin-bottom:40rpx }
+.category-section {
+  margin-bottom: 40rpx;
+}
 
-.section-title { display: block; font-size:28rpx; font-weight:600; margin-bottom:20rpx; padding-left:10rpx; border-left:6rpx solid #4ecdc4 }
+.category-title {
+  display: block; 
+  font-size:30rpx; 
+  font-weight:700; 
+  margin-bottom: 20rpx; 
+  margin-left: 10rpx;
+}
 
-.food-list { background:#f8f9fa; border-radius:20rpx; padding:20rpx }
+.food-list {
+  background: #BEEAFB;
+  border-radius: 24rpx;
+  padding: 20rpx;
+}
 
-.food-item { display:flex; justify-content:space-between; align-items:center; padding:15rpx; background:#fff; border-radius:15rpx; margin-bottom:15rpx }
+.food-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(255,255,255,0.6);
+  &:last-child {
+    border-bottom: none;
+  }
+}
 
-.food-name { font-size:24rpx; font-weight:500 }
+.food-name {
+  font-size: 26rpx;
+  font-weight: 700;
+  flex: 1;
+}
 
-.food-info { display:flex; align-items:center; gap:20rpx }
+.food-price {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: 600;
+}
 
-.food-price { font-size:22rpx; color:#ff6b6b; font-weight:600 }
 
-.food-score { font-size:22rpx; color:#4ecdc4; font-weight:600 }
 </style>

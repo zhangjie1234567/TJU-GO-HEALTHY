@@ -9,7 +9,6 @@
           <view class="food-item" v-for="(food, index) in foods" :key="index">
             <text class="food-name">{{ food.name }}</text>
             <text class="food-price">{{ food.price }}元</text>
-            <text class="food-score">{{ food.score }}分</text>
           </view>
         </view>
       </view>
@@ -20,7 +19,6 @@
           <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
             <text class="food-name">{{ food.name }}</text>
             <text class="food-price">{{ food.price }}元</text>
-            <text class="food-score">{{ food.score }}分</text>
           </view>
         </view>
       </view>
@@ -59,10 +57,11 @@ const specialFoods = reactive([
 }
 
 .page-title {
-  font-size: 36rpx;
-  font-weight: 800;
-  margin-bottom: 32rpx;
-  text-align: center;
+  display: block; 
+  font-size:36rpx; 
+  font-weight:700; 
+  margin-bottom: 20rpx; 
+  margin-left: 10rpx;
 }
 
 .category-section {
@@ -70,9 +69,11 @@ const specialFoods = reactive([
 }
 
 .category-title {
-  font-size: 30rpx;
-  font-weight: 700;
-  margin-bottom: 16rpx;
+  display: block; 
+  font-size:30rpx; 
+  font-weight:700; 
+  margin-bottom: 20rpx; 
+  margin-left: 10rpx;
 }
 
 .food-list {
@@ -101,12 +102,6 @@ const specialFoods = reactive([
 .food-price {
   font-size: 24rpx;
   color: #333;
-  margin: 0 20rpx;
-}
-
-.food-score {
-  font-size: 24rpx;
-  color: #FF9800;
-  font-weight: 700;
+  font-weight: 600;
 }
 </style>

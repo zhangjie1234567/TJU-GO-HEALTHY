@@ -54,12 +54,12 @@ const goToDiary = () => {
   try {
     // @ts-ignore
     if (typeof uni !== 'undefined' && uni.navigateTo) {
-      uni.navigateTo({ url: '/pages/school/canteen/diary' })
+      uni.navigateTo({ url: '/pages/school/canteen/demo' })
       return
     }
   } catch (e) {}
   // 浏览器环境 fallback
-  const href = '/#/pages/school/canteen/diary'
+  const href = '/#/pages/school/canteen/demo'
   window.location.href = href
 }
 

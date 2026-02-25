@@ -2,7 +2,7 @@
   <view class="page">
     <image class="bg" src="/static/school/main/background.png" mode="aspectFill" />
     <!-- http://localhost:5173/#/pages/school/school -->
-     <!-- display: block; font-size:34rpx; font-weight:700; margin-bottom: 20rpx; margin-left: 10rpx; -->
+    <!-- display: block; font-size:34rpx; font-weight:700; margin-bottom: 20rpx; margin-left: 10rpx; -->
     <view class="container">
       <view class="search">
         <view class="search-box">

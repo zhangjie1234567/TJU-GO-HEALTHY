@@ -73,7 +73,7 @@
       }
     },
     {
-      "path": "pages/school/canteen/diary",
+      "path": "pages/school/canteen/demo",
       "style": {
         "navigationBarTitleText": "干饭日记"
       }
