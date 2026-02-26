@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "运行社区页面预览",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "运行H5预览",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev:h5"
+			],
+			"isBackground": true
+		}
+	]
+}

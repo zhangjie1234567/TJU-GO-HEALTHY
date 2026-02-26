@@ -1,17 +1,12 @@
 <template>
   <view class="container">
-    <!-- 顶部导航 -->
-    <view class="nav-header">
-      <text class="back-btn" @click="goBack">← 返回</text>
-      <text class="page-title">📚 课程推荐</text>
-      <view style="width: 60rpx;"></view>
-    </view>
-
     <!-- 搜索框 -->
     <view class="search-box">
-      <text class="search-icon">🔍</text>
-      <input v-model="searchText" type="text" class="search-input" placeholder="搜索课程..."/>
-      <text v-if="searchText" class="clear-icon" @click="searchText = ''">✕</text>
+      <view class="search-bar">
+        <text class="search-icon">🔍</text>
+        <input v-model="searchText" type="text" class="search-input" placeholder="搜索课程..."/>
+        <text v-if="searchText" class="menu-icon" @click="searchText = ''">✕</text>
+      </view>
     </view>
 
     <!-- 筛选标签 -->
@@ -30,7 +25,7 @@
 
     <!-- 课程列表 -->
     <view v-else class="courses-grid">
-      <view v-for="(item, index) in filteredCourses" :key="index" class="course-card">
+      <view v-for="(item, index) in filteredCourses" :key="index" class="course-card" @click="goToDetail(item)">
         <view class="card-image-wrapper">
           <image class="card-image" :src="item.image" mode="aspectFill"></image>
           <view class="card-badge" v-if="item.badge">{{ item.badge }}</view>
@@ -70,8 +65,9 @@
 
           <view class="card-footer">
             <text class="price" :class="{ free: item.price === '免费' }">{{ item.price }}</text>
-            <text class="fav-icon" @click.stop="toggleFavorite(item.id)" 
-                  :class="{ collected: isFavorited(item.id) }">{{ isFavorited(item.id) ? '★' : '☆' }}</text>
+            <view class="fav-icon-wrapper" @click="toggleFavorite(item.id)">
+              <text class="fav-icon" :class="{ collected: isFavorited(item.id) }">{{ isFavorited(item.id) ? '★' : '☆' }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -99,16 +95,79 @@ const courses = ref([])
 const loadCourses = async () => {
   loading.value = true
   try {
-    const response = await uni.request({
-      url: 'http://127.0.0.1:3000/api/courses',
-      method: 'GET'
-    })
-
-    if (response[1]?.data?.code === 0) {
-      courses.value = response[1].data.data || []
-    } else {
-      console.error('课程加载失败:', response[1]?.data)
-    }
+    // 使用本地mock数据（不需要后端）
+    const mockData = [
+      {
+        id: 1,
+        title: '7天瑜伽入门',
+        name: '7天瑜伽入门',
+        platform: '瑜伽平台',
+        instructor: '瑜伽教练',
+        category: '瑜伽',
+        duration: '7天',
+        difficulty: '简单',
+        level: 'beginner',
+        badge: '热门',
+        price: '199元',
+        rating: '4.8',
+        students: '2.3万',
+        desc: '零基础瑜伽课程，适合初学者',
+        image: 'https://via.placeholder.com/200x150/9370DB/FFFFFF?text=瑜伽'
+      },
+      {
+        id: 2,
+        title: '30分钟HIIT训练',
+        name: '30分钟HIIT训练',
+        platform: '健身平台',
+        instructor: '健身教练',
+        category: '有氧',
+        duration: '30分钟',
+        difficulty: '中等',
+        level: 'advanced',
+        badge: '高效',
+        price: '99元',
+        rating: '4.9',
+        students: '5.2万',
+        desc: '高效燃脂训练计划',
+        image: 'https://via.placeholder.com/200x150/FF4500/FFFFFF?text=HIIT'
+      },
+      {
+        id: 3,
+        title: '居家腹肌养成',
+        name: '居家腹肌养成',
+        platform: '健身平台',
+        instructor: '力量教练',
+        category: '力量',
+        duration: '15天',
+        difficulty: '简单',
+        level: 'beginner',
+        badge: '新课',
+        price: '免费',
+        rating: '4.7',
+        students: '3.1万',
+        desc: '在家也能练腹肌',
+        image: 'https://via.placeholder.com/200x150/20B2AA/FFFFFF?text=腹肌'
+      },
+      {
+        id: 4,
+        title: '瘦腿5分钟破圈',
+        name: '瘦腿5分钟破圈',
+        platform: '塑形平台',
+        instructor: '塑形师',
+        category: '塑形',
+        duration: '5分钟',
+        difficulty: '简单',
+        level: 'beginner',
+        badge: '推荐',
+        price: '59元',
+        rating: '4.6',
+        students: '4.8万',
+        desc: '快速瘦腿方法',
+        image: 'https://via.placeholder.com/200x150/FF69B4/FFFFFF?text=瘦腿'
+      }
+    ]
+    
+    courses.value = mockData
   } catch (error) {
     console.error('课程加载异常:', error)
   } finally {
@@ -122,17 +181,17 @@ const filteredCourses = computed(() => {
   // 搜索过滤
   if (searchText.value) {
     result = result.filter(item =>
-      item.title.toLowerCase().includes(searchText.value.toLowerCase()) ||
-      item.platform.toLowerCase().includes(searchText.value.toLowerCase()) ||
-      item.instructor.toLowerCase().includes(searchText.value.toLowerCase())
+      item.title.includes(searchText.value) ||
+      item.platform.includes(searchText.value) ||
+      item.instructor.includes(searchText.value)
     )
   }
   
   // 难度过滤
   if (filterType.value === 'beginner') {
-    result = result.filter(item => item.level === '入门级')
+    result = result.filter(item => item.level === 'beginner')
   } else if (filterType.value === 'advanced') {
-    result = result.filter(item => item.level === '进阶级')
+    result = result.filter(item => item.level === 'advanced')
   } else if (filterType.value === 'free') {
     result = result.filter(item => item.price === '免费')
   }
@@ -177,6 +236,23 @@ const isFavorited = (id) => {
   return favorites.value.includes(id)
 }
 
+const goToDetail = (item) => {
+  uni.navigateTo({
+    url: `/pages/schedule/courses_detail?id=${item.id}&title=${item.title}`,
+    success: () => {
+      uni.$emit('course-data', item)
+    },
+    fail: (err) => {
+      console.error('跳转详情页失败:', err)
+      uni.showToast({
+        title: '页面跳转失败',
+        icon: 'none',
+        duration: 2000
+      })
+    }
+  })
+}
+
 const goBack = () => uni.navigateBack()
 </script>
 
@@ -213,32 +289,35 @@ $bg-blue: #E3F2FD;
 }
 
 .search-box {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 24rpx;
-  margin: 16rpx 24rpx;
-  background: white;
-  border-radius: 20rpx;
-  border: 2rpx solid rgba(79, 161, 242, 0.2);
+  margin-bottom: 30rpx;
 
-  .search-icon {
-    font-size: 28rpx;
-    flex-shrink: 0;
-  }
+  .search-bar {
+    background: white;
+    border-radius: 50rpx;
+    height: 80rpx;
+    display: flex;
+    align-items: center;
+    padding: 0 24rpx;
+    gap: 12rpx;
+    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.15);
 
-  .search-input {
-    flex: 1;
-    font-size: 28rpx;
-    outline: none;
-    border: none;
-    background: transparent;
-  }
+    .search-icon {
+      font-size: 32rpx;
+    }
 
-  .clear-icon {
-    font-size: 24rpx;
-    color: #999;
-    flex-shrink: 0;
+    .search-input {
+      flex: 1;
+      font-size: 28rpx;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    .menu-icon {
+      font-size: 28rpx;
+      color: $main-blue;
+      cursor: pointer;
+    }
   }
 }
 
@@ -322,11 +401,11 @@ $bg-blue: #E3F2FD;
         font-weight: 600;
         color: white;
 
-        &.level-入门级 {
+        &.level-beginner {
           background: rgba(76, 203, 119, 0.9);
         }
 
-        &.level-进阶级 {
+        &.level-advanced {
           background: rgba(255, 195, 0, 0.9);
         }
       }
@@ -426,6 +505,11 @@ $bg-blue: #E3F2FD;
             color: #4ECDC4;
             font-weight: 700;
           }
+        }
+
+        .fav-icon-wrapper {
+          padding: 8rpx;
+          cursor: pointer;
         }
 
         .fav-icon {

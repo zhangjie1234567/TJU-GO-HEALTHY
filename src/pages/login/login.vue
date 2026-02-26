@@ -114,6 +114,14 @@ function onSubmit() {
     } catch (e) {}
   }
 
+  try {
+    uni.setStorageSync('current_user_profile', {
+      name,
+      studentId,
+      avatar: name ? name.slice(0, 1) : '我'
+    })
+  } catch (e) {}
+
   uni.showToast({ title: '认证成功', icon: 'success' })
   setTimeout(() => {
     uni.navigateTo({ url: '/pages/schedule/schedule' })
@@ -197,17 +205,23 @@ onMounted(() => {
 .form-input {
   width: 100%;
   height: 96rpx;
-  border: 2rpx solid #e0e0e0;
+  border: 2rpx solid #E0E6F2;
   border-radius: 48rpx;
   padding: 0 40rpx;
   font-size: 32rpx;
   color: #333;
   background: #fff;
   box-sizing: border-box;
+  font-family: inherit;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-input:focus {
   border-color: #4FA1F2;
+  box-shadow: 0 0 0 2rpx rgba(79, 161, 242, 0.1);
 }
 
 .input-placeholder {

@@ -1,12 +1,5 @@
 <template>
   <view class="container">
-    <!-- 顶部导航 -->
-    <view class="nav-header">
-      <text class="back-btn" @click="goBack">← 返回</text>
-      <text class="page-title">⏰ 断食计划</text>
-      <view style="width: 60rpx;"></view>
-    </view>
-
     <!-- 介绍卡片 -->
     <view class="intro-card">
       <text class="intro-title">什么是间歇性断食？</text>

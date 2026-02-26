@@ -1,21 +1,18 @@
 <template>
   <view class="container">
-    <!-- 顶部导航 -->
-    <view class="nav-bar">
-      <text class="back-btn" @click="goBack">← 返回</text>
-      <text class="nav-title">饮品详情</text>
-      <text class="fav-btn" @click="toggleFavorite(drink.id)" 
-            :class="{ collected: isFavorited(drink.id) }">{{ isFavorited(drink.id) ? '★' : '☆' }}</text>
+    <!-- 加载中 -->
+    <view v-if="loading" class="loading-container">
+      <text class="loading-text">加载饮品详情中...</text>
     </view>
 
     <!-- 饮品图片 -->
-    <view class="image-section">
+    <view v-else class="image-section">
       <image class="drink-image" :src="drink.image" mode="aspectFill"></image>
       <view class="badge" v-if="drink.badge">{{ drink.badge }}</view>
     </view>
 
     <!-- 基本信息 -->
-    <view class="info-section">
+    <view v-if="!loading" class="info-section">
       <view class="title-row">
         <text class="drink-title">{{ drink.name }}</text>
         <text class="category-tag">{{ drink.category }}</text>
@@ -46,7 +43,7 @@
     </view>
 
     <!-- 详细信息 -->
-    <view class="detail-sections">
+    <view v-if="!loading" class="detail-sections">
       <!-- 简介 -->
       <view class="section">
         <text class="section-title">📖 简介</text>
@@ -106,7 +103,7 @@
     </view>
 
     <!-- 底部操作 -->
-    <view class="action-bar">
+    <view v-if="!loading" class="action-bar">
       <view class="action-btn favorite-btn" @click="toggleFavorite(drink.id)">
         {{ isFavorited(drink.id) ? '已收藏' : '+ 收藏' }}
       </view>
@@ -119,55 +116,132 @@
 import { ref, onMounted } from 'vue'
 
 const favorites = ref([])
+const loading = ref(false)
+let drinkId = null
 
-const drink = ref({
-  id: 1,
-  name: '经典绿茶',
-  category: '茶类',
-  cal: '0-2 千卡',
-  caffeine: '25-35mg',
-  badge: '推荐',
-  image: 'https://via.placeholder.com/600x300/4FA1F2/FFFFFF?text=绿茶'
-})
-
+const drink = ref({})
 const drinkDetails = ref({
-  intro: '绿茶是一种经过最少加工的茶叶，保留了茶叶原始的绿色和众多活性成分。作为世界上消费最多的茶类之一，绿茶因其清爽的口感和强大的抗氧化特性而广受欢迎。',
-  nutrition: [
-    { label: '卡路里', value: '0-2 kcal' },
-    { label: '蛋白质', value: '0.2g' },
-    { label: '碳水化合物', value: '0g' },
-    { label: '儿茶素 (EGCG)', value: '25-50mg' },
-    { label: '咖啡因', value: '25-35mg' },
-    { label: '多酚', value: '50-100mg' }
-  ],
-  benefits: [
-    '强大的抗氧化作用 - 儿茶素（EGCG）是最有效的天然抗氧化剂之一',
-    '加强新陈代谢 - 绿茶提取物能增加脂肪氧化和热量消耗',
-    '改善心血管健康 - 定期饮用可降低胆固醇和血压',
-    '保护脑认知 - L-茶氨酸与咖啡因协同作用，提高注意力和放松',
-    '促进体重管理 - 低卡且能增加脂肪燃烧',
-    '强化骨密度 - 长期饮用与骨质密度改善相关'
-  ],
-  frequency: '每天1-3杯',
-  bestTime: '上午9-11点或下午3-5点（避免睡前）',
-  amount: '约3-5克茶叶配250ml温水，冲泡3-5分钟',
-  special: '孕妇应限制摄入；胃敏感人群建议饭后饮用；服用某些药物的请咨询医生',
-  recipes: [
-    '蜂蜜绿茶：冲泡后加入1茶匙蜂蜜，增加甜度和润肺效果',
-    '绿茶+柠檬：补充维生素C，增强吸收效率',
-    '绿茶+薄荷：清凉舒爽，帮助消化',
-    '冷泡绿茶：前一晚用冷水浸泡，低温冲泡更能保留营养'
-  ],
-  cautions: [
-    '不建议空腹饮用，可能引起胃部不适',
-    '睡前4小时避免饮用，可能影响睡眠质量',
-    '过量饮用可能导致咖啡因过敏（如心悸、头晕）',
-    '冲泡水温：65-75℃为最佳，过热会破坏有效成分',
-    '存储：避免阳光直射和高温，置于阴凉干燥处'
-  ]
+  nutrition: [],
+  benefits: [],
+  recipes: [],
+  cautions: []
 })
 
-// 加载收藏
+// 从后端获取饮品详情
+const loadDrinkDetail = async () => {
+  if (!drinkId) return
+  
+  loading.value = true
+  try {
+    // 使用本地mock数据（不需要后端）
+    const mockDrinks = {
+      1: {
+        drink: {
+          id: 1,
+          name: '经典绿茶',
+          category: '茶类',
+          cal: '0-2 千卡',
+          caffeine: '25-35mg',
+          badge: '推荐',
+          image: 'https://via.placeholder.com/300x250/4FA1F2/FFFFFF?text=绿茶'
+        },
+        details: {
+          intro: '经典的绿茶，清香爽口，富含抗氧化物。适合日常饮用，能增强新陈代谢，是健康生活的好选择。',
+          nutrition: [
+            { label: '热量', value: '0-2 千卡' },
+            { label: '蛋白质', value: '0g' },
+            { label: '脂肪', value: '0g' },
+            { label: '碳水化合物', value: '0.5g' }
+          ],
+          benefits: [
+            '含有丰富的抗氧化物质（茶多酚），延缓衰老',
+            '能促进新陈代谢，帮助燃脂',
+            '清热解毒，适合春夏季节饮用',
+            '含有咖啡因，有助于提神醒脑'
+          ],
+          frequency: '每天1-2杯',
+          bestTime: '早上或下午3-5点',
+          amount: '每次3-5克茶叶，冲泡200ml水',
+          special: '孕妇、儿童应适量饮用；失眠人群建议下午4点后不饮用',
+          recipes: [
+            '蜂蜜绿茶：冲泡后加入1茶匙蜂蜜，增加甜度和润肺效果',
+            '绿茶+柠檬：补充维生素C，增强吸收效率',
+            '绿茶+薄荷：清凉舒爽，帮助消化',
+            '冷泡绿茶：前一晚用冷水浸泡，低温冲泡更能保留营养'
+          ],
+          cautions: [
+            '不建议空腹饮用，可能引起胃部不适',
+            '睡前4小时避免饮用，可能影响睡眠质量',
+            '过量饮用可能导致咖啡因过敏（如心悸、头晕）',
+            '冲泡水温：65-75℃为最佳，过热会破坏有效成分',
+            '存储：避免阳光直射和高温，置于阴凉干燥处'
+          ]
+        }
+      }
+    }
+    
+    const data = mockDrinks[drinkId] || mockDrinks[1]
+    drink.value = data.drink || {}
+    drinkDetails.value = data.details || {}
+  } catch (error) {
+    console.error('饮品加载异常:', error)
+    // 使用默认数据避免白屏
+    initDefaultData()
+  } finally {
+    loading.value = false
+  }
+}
+
+// 初始化默认数据（后端未就绪时使用）
+const initDefaultData = () => {
+  drink.value = {
+    id: 1,
+    name: '经典绿茶',
+    category: '茶类',
+    cal: '0-2 千卡',
+    caffeine: '25-35mg',
+    badge: '推荐',
+    image: 'https://via.placeholder.com/600x300/4FA1F2/FFFFFF?text=绿茶'
+  }
+  drinkDetails.value = {
+    intro: '绿茶是一种经过最少加工的茶叶，保留了茶叶原始的绿色和众多活性成分。作为世界上消费最多的茶类之一，绿茶因其清爽的口感和强大的抗氧化特性而广受欢迎。',
+    nutrition: [
+      { label: '卡路里', value: '0-2 kcal' },
+      { label: '蛋白质', value: '0.2g' },
+      { label: '碳水化合物', value: '0g' },
+      { label: '儿茶素 (EGCG)', value: '25-50mg' },
+      { label: '咖啡因', value: '25-35mg' },
+      { label: '多酚', value: '50-100mg' }
+    ],
+    benefits: [
+      '强大的抗氧化作用 - 儿茶素（EGCG）是最有效的天然抗氧化剂之一',
+      '加强新陈代谢 - 绿茶提取物能增加脂肪氧化和热量消耗',
+      '改善心血管健康 - 定期饮用可降低胆固醇和血压',
+      '保护脑认知 - L-茶氨酸与咖啡因协同作用，提高注意力和放松',
+      '促进体重管理 - 低卡且能增加脂肪燃烧',
+      '强化骨密度 - 长期饮用与骨质密度改善相关'
+    ],
+    frequency: '每天1-3杯',
+    bestTime: '上午9-11点或下午3-5点（避免睡前）',
+    amount: '约3-5克茶叶配250ml温水，冲泡3-5分钟',
+    special: '孕妇应限制摄入；胃敏感人群建议饭后饮用；服用某些药物的请咨询医生',
+    recipes: [
+      '蜂蜜绿茶：冲泡后加入1茶匙蜂蜜，增加甜度和润肺效果',
+      '绿茶+柠檬：补充维生素C，增强吸收效率',
+      '绿茶+薄荷：清凉舒爽，帮助消化',
+      '冷泡绿茶：前一晚用冷水浸泡，低温冲泡更能保留营养'
+    ],
+    cautions: [
+      '不建议空腹饮用，可能引起胃部不适',
+      '睡前4小时避免饮用，可能影响睡眠质量',
+      '过量饮用可能导致咖啡因过敏（如心悸、头晕）',
+      '冲泡水温：65-75℃为最佳，过热会破坏有效成分',
+      '存储：避免阳光直射和高温，置于阴凉干燥处'
+    ]
+  }
+}
+
+// 加载收藏和饮品详情
 onMounted(() => {
   try {
     const saved = uni.getStorageSync('drink_favorites')
@@ -176,6 +250,21 @@ onMounted(() => {
     }
   } catch (e) {
     console.error('加载收藏失败', e)
+  }
+  
+  // 从URL参数获取ID（如果有）
+  const pages = getCurrentPages()
+  if (pages.length > 0) {
+    const currentPage = pages[pages.length - 1]
+    drinkId = currentPage.options?.id
+    if (drinkId) {
+      loadDrinkDetail()
+    } else {
+      // 没有ID时加载默认数据
+      initDefaultData()
+    }
+  } else {
+    initDefaultData()
   }
 })
 
@@ -219,31 +308,6 @@ $bg-blue: #E3F2FD;
   background: linear-gradient(135deg, $bg-blue 0%, #F0F9FF 100%);
   min-height: 100vh;
   padding-bottom: 120rpx;
-}
-
-.nav-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 24rpx;
-  background: white;
-  box-shadow: 0 2rpx 8rpx rgba(79, 161, 242, 0.1);
-
-  .back-btn, .fav-btn {
-    font-size: 28rpx;
-    color: $main-blue;
-    font-weight: 600;
-  }
-
-  .nav-title {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: #333;
-  }
-
-  .fav-btn.collected {
-    color: #FFB347;
-  }
 }
 
 .image-section {
@@ -450,6 +514,15 @@ $bg-blue: #E3F2FD;
       line-height: 2;
     }
   }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400rpx;
+  font-size: 28rpx;
+  color: #999;
 }
 
 .action-bar {

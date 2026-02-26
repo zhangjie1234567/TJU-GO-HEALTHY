@@ -1,17 +1,12 @@
 <template>
   <view class="container">
-    <!-- 顶部导航 -->
-    <view class="nav-header">
-      <text class="back-btn" @click="goBack">← 返回</text>
-      <text class="page-title">💧 热门饮品</text>
-      <view style="width: 60rpx;"></view>
-    </view>
-
     <!-- 搜索框 -->
     <view class="search-box">
-      <text class="search-icon">🔍</text>
-      <input v-model="searchText" type="text" class="search-input" placeholder="搜索饮品..."/>
-      <text v-if="searchText" class="clear-icon" @click="searchText = ''">✕</text>
+      <view class="search-bar">
+        <text class="search-icon">🔍</text>
+        <input v-model="searchText" type="text" class="search-input" placeholder="搜索饮品..."/>
+        <text v-if="searchText" class="menu-icon" @click="searchText = ''">✕</text>
+      </view>
     </view>
 
     <!-- 筛选标签 -->
@@ -82,16 +77,47 @@ const drinks = ref([])
 const loadDrinks = async () => {
   loading.value = true
   try {
-    const response = await uni.request({
-      url: 'http://127.0.0.1:3000/api/drinks',
-      method: 'GET'
-    })
-
-    if (response[1]?.data?.code === 0) {
-      drinks.value = response[1].data.data || []
-    } else {
-      console.error('饮品加载失败:', response[1]?.data)
-    }
+    // 使用本地mock数据（不需要后端）
+    const mockData = [
+      {
+        id: 1,
+        name: '经典绿茶',
+        category: '茶类',
+        cal: '0-2 千卡',
+        caffeine: '25',
+        badge: '推荐',
+        image: 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=绿茶'
+      },
+      {
+        id: 2,
+        name: '咖啡拿铁',
+        category: '咖啡',
+        cal: '100-150 千卡',
+        caffeine: '75',
+        badge: '热饮',
+        image: 'https://via.placeholder.com/200x150/8B4513/FFFFFF?text=咖啡'
+      },
+      {
+        id: 3,
+        name: '新鲜果汁',
+        category: '果汁',
+        cal: '80-120 千卡',
+        caffeine: '0',
+        badge: '',
+        image: 'https://via.placeholder.com/200x150/FF6347/FFFFFF?text=果汁'
+      },
+      {
+        id: 4,
+        name: '冰淇淋奶茶',
+        category: '奶茶',
+        cal: '150-200 千卡',
+        caffeine: '35',
+        badge: '冷饮',
+        image: 'https://via.placeholder.com/200x150/FFB6C1/FFFFFF?text=奶茶'
+      }
+    ]
+    
+    drinks.value = mockData
   } catch (error) {
     console.error('饮品加载异常:', error)
   } finally {
@@ -207,32 +233,35 @@ $bg-blue: #E3F2FD;
 }
 
 .search-box {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 24rpx;
-  margin: 16rpx 24rpx;
-  background: white;
-  border-radius: 20rpx;
-  border: 2rpx solid rgba(79, 161, 242, 0.2);
+  margin-bottom: 30rpx;
 
-  .search-icon {
-    font-size: 28rpx;
-    flex-shrink: 0;
-  }
+  .search-bar {
+    background: white;
+    border-radius: 50rpx;
+    height: 80rpx;
+    display: flex;
+    align-items: center;
+    padding: 0 24rpx;
+    gap: 12rpx;
+    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.15);
 
-  .search-input {
-    flex: 1;
-    font-size: 28rpx;
-    outline: none;
-    border: none;
-    background: transparent;
-  }
+    .search-icon {
+      font-size: 32rpx;
+    }
 
-  .clear-icon {
-    font-size: 24rpx;
-    color: #999;
-    flex-shrink: 0;
+    .search-input {
+      flex: 1;
+      font-size: 28rpx;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    .menu-icon {
+      font-size: 28rpx;
+      color: $main-blue;
+      cursor: pointer;
+    }
   }
 }
 

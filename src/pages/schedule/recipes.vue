@@ -1,17 +1,13 @@
 <template>
   <view class="container">
-    <!-- 标题栏 -->
-    <view class="header">
-      <text class="back-icon" @click="goBack">← 返回</text>
-      <text class="page-title">🍽️ 热门食谱</text>
-      <view style="width: 60rpx;"></view>
-    </view>
 
     <!-- 搜索框 -->
     <view class="search-box">
-      <text class="search-icon">🔍</text>
-      <input v-model="searchText" type="text" class="search-input" placeholder="搜索食材或菜名..."/>
-      <text v-if="searchText" class="clear-icon" @click="searchText = ''">✕</text>
+      <view class="search-bar">
+        <text class="search-icon">🔍</text>
+        <input v-model="searchText" type="text" class="search-input" placeholder="搜索食材或菜名..."/>
+        <text v-if="searchText" class="menu-icon" @click="searchText = ''">✕</text>
+      </view>
     </view>
 
     <!-- 筛选标签 -->
@@ -34,7 +30,7 @@
         <view class="card-image-wrapper">
           <image class="card-image" :src="item.image" mode="aspectFill"></image>
           <view class="card-badge" v-if="item.badge">{{ item.badge }}</view>
-          <view class="difficulty" :class="'diff-' + item.difficulty">{{ item.difficulty }}</view>
+          <view class="difficulty" :class="'diff-' + getDifficultyKey(item.difficulty)">{{ item.difficulty }}</view>
         </view>
         
         <view class="card-content">
@@ -53,8 +49,9 @@
           </view>
 
           <view class="card-footer">
-            <text class="fav-icon" @click.stop="toggleFavorite(item.id)" 
-                  :class="{ collected: isFavorited(item.id) }">{{ isFavorited(item.id) ? '★' : '☆' }}</text>
+            <view class="fav-icon-wrapper" @click="toggleFavorite(item.id)">
+              <text class="fav-icon" :class="{ collected: isFavorited(item.id) }">{{ isFavorited(item.id) ? '★' : '☆' }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -82,16 +79,47 @@ const recipes = ref([])
 const loadRecipes = async () => {
   loading.value = true
   try {
-    const response = await uni.request({
-      url: 'http://127.0.0.1:3000/api/recipes',
-      method: 'GET'
-    })
-
-    if (response[1]?.data?.code === 0) {
-      recipes.value = response[1].data.data || []
-    } else {
-      console.error('食谱加载失败:', response[1]?.data)
-    }
+    // 使用本地mock数据（不需要后端）
+    const mockData = [
+      {
+        id: 1,
+        name: '三文鱼沙拉',
+        category: '鱼类',
+        cal: '280 千卡',
+        protein: '25g',
+        badge: '推荐',
+        image: 'https://via.placeholder.com/200x150/FF6B6B/FFFFFF?text=三文鱼'
+      },
+      {
+        id: 2,
+        name: '番茄鸡蛋面',
+        category: '面食',
+        cal: '350 千卡',
+        protein: '12g',
+        badge: '快手面',
+        image: 'https://via.placeholder.com/200x150/FFA500/FFFFFF?text=汤面'
+      },
+      {
+        id: 3,
+        name: '健身鸡胸肉',
+        category: '禽肉',
+        cal: '165 千卡',
+        protein: '31g',
+        badge: '低脂',
+        image: 'https://via.placeholder.com/200x150/DAA520/FFFFFF?text=鸡肉'
+      },
+      {
+        id: 4,
+        name: '花椰菜炒饭',
+        category: '米饭',
+        cal: '250 千卡',
+        protein: '8g',
+        badge: '清淡',
+        image: 'https://via.placeholder.com/200x150/90EE90/FFFFFF?text=炒饭'
+      }
+    ]
+    
+    recipes.value = mockData
   } catch (error) {
     console.error('食谱加载异常:', error)
   } finally {
@@ -104,8 +132,8 @@ const filteredRecipes = computed(() => {
   
   if (searchText.value) {
     result = result.filter(item =>
-      item.name.toLowerCase().includes(searchText.value.toLowerCase()) ||
-      item.desc.toLowerCase().includes(searchText.value.toLowerCase())
+      item.name.includes(searchText.value) ||
+      item.desc.includes(searchText.value)
     )
   }
   
@@ -148,6 +176,15 @@ const toggleFavorite = (id) => {
   } catch (e) {
     console.error('保存收藏失败', e)
   }
+}
+
+const getDifficultyKey = (difficulty) => {
+  const map = {
+    '简单': 'easy',
+    '中等': 'medium',
+    '困难': 'hard'
+  }
+  return map[difficulty] || 'easy'
 }
 
 const isFavorited = (id) => {
@@ -201,32 +238,35 @@ $bg-blue: #E3F2FD;
 }
 
 .search-box {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 24rpx;
-  margin: 16rpx 24rpx;
-  background: white;
-  border-radius: 20rpx;
-  border: 2rpx solid rgba(79, 161, 242, 0.2);
+  margin-bottom: 30rpx;
 
-  .search-icon {
-    font-size: 28rpx;
-    flex-shrink: 0;
-  }
+  .search-bar {
+    background: white;
+    border-radius: 50rpx;
+    height: 80rpx;
+    display: flex;
+    align-items: center;
+    padding: 0 24rpx;
+    gap: 12rpx;
+    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.15);
 
-  .search-input {
-    flex: 1;
-    font-size: 28rpx;
-    outline: none;
-    border: none;
-    background: transparent;
-  }
+    .search-icon {
+      font-size: 32rpx;
+    }
 
-  .clear-icon {
-    font-size: 24rpx;
-    color: #999;
-    flex-shrink: 0;
+    .search-input {
+      flex: 1;
+      font-size: 28rpx;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    .menu-icon {
+      font-size: 28rpx;
+      color: $main-blue;
+      cursor: pointer;
+    }
   }
 }
 
@@ -310,15 +350,15 @@ $bg-blue: #E3F2FD;
         font-weight: 600;
         color: white;
 
-        &.diff-简单 {
+        &.diff-easy {
           background: rgba(76, 203, 119, 0.9);
         }
 
-        &.diff-中等 {
+        &.diff-medium {
           background: rgba(255, 195, 0, 0.9);
         }
 
-        &.diff-困难 {
+        &.diff-hard {
           background: rgba(244, 67, 54, 0.9);
         }
       }
@@ -368,6 +408,11 @@ $bg-blue: #E3F2FD;
       .card-footer {
         display: flex;
         justify-content: flex-end;
+
+        .fav-icon-wrapper {
+          padding: 8rpx;
+          cursor: pointer;
+        }
 
         .fav-icon {
           font-size: 24rpx;

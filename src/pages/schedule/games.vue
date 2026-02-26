@@ -1,13 +1,6 @@
 <template>
   <view class="games-container">
     <view class="games-list">
-      <!-- 返回导航栏 -->
-      <view class="nav-header">
-        <text class="back-btn" @click="goBack">← 返回</text>
-        <text class="page-title">💪 体感运动挑战</text>
-        <view style="width: 60rpx;"></view>
-      </view>
-
       <!-- 游戏头部 -->
       <view class="games-header">
         <text class="games-title">3大高端体感游戏等你挑战！</text>

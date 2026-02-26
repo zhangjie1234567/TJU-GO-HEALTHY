@@ -109,11 +109,11 @@
         <view class="angle-display">
           <view class="angle-item">
             <text class="angle-label">Roll</text>
-            <text class="angle-value">{{ Math.round(rollAngle) }}°</text>
+            <text class="angle-value">{{ rollAngleRounded }}°</text>
           </view>
           <view class="angle-item">
             <text class="angle-label">Pitch</text>
-            <text class="angle-value">{{ Math.round(pitchAngle) }}°</text>
+            <text class="angle-value">{{ pitchAngleRounded }}°</text>
           </view>
         </view>
       </view>
@@ -276,6 +276,10 @@ const ratingText = computed(() => {
   return '新手入门'
 })
 
+const rollAngleRounded = computed(() => Math.round(rollAngle.value))
+
+const pitchAngleRounded = computed(() => Math.round(pitchAngle.value))
+
 const prepareHint = computed(() => {
   const hints = [
     '深呼吸，放松身体...',
@@ -328,8 +332,8 @@ const startGyroSensor = () => {
     if (gameState.value !== 'playing') return
 
     // 计算倾斜角度（这里简化处理，实际需要陀螺仪积分）
-    rollAngle.value = res.x || 0
-    pitchAngle.value = res.y || 0
+    rollAngle.value = (res?.x) || 0
+    pitchAngle.value = (res?.y) || 0
 
     const tiltMagnitude = Math.sqrt(
       Math.pow(rollAngle.value, 2) + Math.pow(pitchAngle.value, 2)
@@ -356,14 +360,18 @@ const startGyroSensor = () => {
       }
 
       isBalanced.value = false
-      uni.vibrateShort()
+      try {
+        uni.vibrateShort()
+      } catch (e) {
+        console.log('振动不支持或未授权')
+      }
     } else {
       if (unbalancedStartTime) {
         unbalancedStartTime = null
       }
       isBalanced.value = true
     }
-  }, { frequency: 'game' })
+  }, { frequency: 'ui' })
 }
 
 const startTimer = () => {
@@ -391,8 +399,13 @@ const finishGame = () => {
 const stopGame = () => {
   if (timerInterval) {
     clearInterval(timerInterval)
+    timerInterval = null
   }
-  uni.offGyroscopeChange()
+  try {
+    uni.offGyroscopeChange()
+  } catch (e) {
+    console.log('关闭陀螺仪异常')
+  }
 }
 
 const formatTime = (seconds) => {
@@ -628,7 +641,7 @@ $text-light: #E0F7FF;
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(var(--ripple-scale, 1) * 1.5);
+    transform: translate(-50%, -50%) scale(calc(var(--ripple-scale, 1) * 1.5));
   }
 }
 

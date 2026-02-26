@@ -1,13 +1,5 @@
 <template>
   <view class="container">
-    <!-- 顶部导航 -->
-    <view class="nav-bar">
-      <text class="back-btn" @click="goBack">← 返回</text>
-      <view style="flex: 1;"></view>
-      <text class="fav-btn" @click="toggleFavorite(recipe.id)" 
-            :class="{ collected: isFavorited(recipe.id) }">{{ isFavorited(recipe.id) ? '★' : '☆' }}</text>
-    </view>
-
     <!-- 食谱图片 -->
     <view class="image-section">
       <image class="recipe-image" :src="recipe.image" mode="aspectFill"></image>
@@ -18,7 +10,7 @@
     <view class="info-card">
       <view class="info-header">
         <text class="recipe-title">{{ recipe.name }}</text>
-        <text class="difficulty-tag" :class="'diff-' + recipe.difficulty">{{ recipe.difficulty }}</text>
+        <text class="difficulty-tag" :class="'diff-' + recipe.difficulty">{{ getDifficultyLabel(recipe.difficulty) }}</text>
       </view>
 
       <view class="stats-row">
@@ -125,7 +117,7 @@ const recipe = ref({
   id: 1,
   name: '西葫芦炒牛肉',
   desc: '这是一道低脂高蛋白的经典菜肴，食材简单，烹饪快速，营养丰富。西葫芦低卡且富含纤维，牛肉提供优质蛋白质，是健身和减脂人士的理想选择。',
-  difficulty: '简单',
+  difficulty: 'easy',
   time: 15,
   cal: 180,
   badge: '推荐',
@@ -198,6 +190,16 @@ const toggleFavorite = (id) => {
   }
 }
 
+// 难度标签映射
+const getDifficultyLabel = (difficulty) => {
+  const map = {
+    'easy': '简单',
+    'medium': '中等',
+    'hard': '困难'
+  }
+  return map[difficulty] || difficulty
+}
+
 // 检查是否收藏
 const isFavorited = (id) => {
   return favorites.value.includes(id)
@@ -215,33 +217,6 @@ $bg-blue: #E3F2FD;
   background: linear-gradient(135deg, $bg-blue 0%, #F0F9FF 100%);
   min-height: 100vh;
   padding-bottom: 120rpx;
-}
-
-.nav-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 24rpx;
-  background: white;
-  box-shadow: 0 2rpx 8rpx rgba(79, 161, 242, 0.1);
-
-  .back-btn {
-    font-size: 32rpx;
-    color: $main-blue;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-
-  .fav-btn {
-    font-size: 28rpx;
-    color: $main-blue;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .fav-btn.collected {
-    color: #FFB347;
-  }
 }
 
 .image-section {
@@ -296,15 +271,15 @@ $bg-blue: #E3F2FD;
       font-weight: 600;
       color: white;
 
-      &.diff-简单 {
+      &.diff-easy {
         background: rgba(76, 203, 119, 0.9);
       }
 
-      &.diff-中等 {
+      &.diff-medium {
         background: rgba(255, 195, 0, 0.9);
       }
 
-      &.diff-困难 {
+      &.diff-hard {
         background: rgba(244, 67, 54, 0.9);
       }
     }

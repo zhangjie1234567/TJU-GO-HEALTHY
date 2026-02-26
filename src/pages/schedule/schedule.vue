@@ -173,22 +173,29 @@ const performSearch = async () => {
 
   isSearching.value = true
   try {
-    const response = await uni.request({
-      url: 'http://127.0.0.1:3000/api/search',
-      method: 'GET',
-      data: { q: searchQuery.value },
-      timeout: 5000
-    })
-
-    if (response.statusCode === 200 && response.data.code === 0) {
-      searchResults.value = (response.data.data || []).slice(0, 8)
-    } else {
-      searchResults.value = []
-      uni.showToast({ title: '搜索失败，请重试', icon: 'none' })
-    }
+    // 使用本地mock数据（不需要后端）
+    const mockSearchResults = [
+      { id: 1, name: '经典绿茶', type: 'drink', category: '茶类', emoji: '🍵' },
+      { id: 2, name: '咖啡拿铁', type: 'drink', category: '咖啡', emoji: '☕' },
+      { id: 3, name: '三文鱼沙拉', type: 'recipe', category: '鱼类', emoji: '🥗' },
+      { id: 4, name: '番茄鸡蛋面', type: 'recipe', category: '面食', emoji: '🍜' },
+      { id: 5, name: '健身鸡胸肉', type: 'recipe', category: '禽肉', emoji: '🍗' },
+      { id: 6, name: '7天瑜伽入门', type: 'course', category: '瑜伽', emoji: '🧘' },
+      { id: 7, name: '30分钟HIIT训练', type: 'course', category: '有氧', emoji: '💪' },
+      { id: 8, name: '新鲜果汁', type: 'drink', category: '果汁', emoji: '🧃' }
+    ]
+    
+    // 搜索过滤
+    const filtered = mockSearchResults.filter(item => 
+      item.name.includes(searchQuery.value) || 
+      item.category.includes(searchQuery.value) ||
+      item.type.includes(searchQuery.value)
+    )
+    
+    searchResults.value = filtered.slice(0, 8)
   } catch (error) {
     console.error('搜索请求失败:', error)
-    uni.showToast({ title: '网络错误', icon: 'none' })
+    uni.showToast({ title: '搜索出错', icon: 'none' })
     searchResults.value = []
   } finally {
     isSearching.value = false

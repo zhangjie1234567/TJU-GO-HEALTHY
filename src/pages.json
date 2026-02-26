@@ -7,6 +7,114 @@
       }
     },
     {
+      "path": "pages/home/home",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/school/school",
+      "style": {
+        "navigationBarTitleText": "学校"
+      }
+    },
+    {
+      "path": "pages/communication/communication",
+      "style": {
+        "navigationBarTitleText": "社区"
+      }
+    },
+    {
+      "path": "pages/communication/method_rank",
+      "style": {
+        "navigationBarTitleText": "减重方法评分榜"
+      }
+    },
+    {
+      "path": "pages/communication/user_rank",
+      "style": {
+        "navigationBarTitleText": "用户排行榜"
+      }
+    },
+    {
+      "path": "pages/communication/messages",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/communication/recruit",
+      "style": {
+        "navigationBarTitleText": "健康搭子招募"
+      }
+    },
+    {
+      "path": "pages/communication/publish",
+      "style": {
+        "navigationBarTitleText": "发布动态"
+      }
+    },
+    {
+      "path": "pages/communication/post_detail",
+      "style": {
+        "navigationBarTitleText": "动态详情"
+      }
+    },
+    {
+      "path": "pages/communication/chat_detail",
+      "style": {
+        "navigationBarTitleText": "私聊"
+      }
+    },
+    {
+      "path": "pages/my/my",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/my/account",
+      "style": {
+        "navigationBarTitleText": "账号与安全"
+      }
+    },
+    {
+      "path": "pages/my/my_plan",
+      "style": {
+        "navigationBarTitleText": "我的方案"
+      }
+    },
+    {
+      "path": "pages/my/my_collection",
+      "style": {
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/my/data_summary",
+      "style": {
+        "navigationBarTitleText": "数据小结"
+      }
+    },
+    {
+      "path": "pages/my/yearly_summary",
+      "style": {
+        "navigationBarTitleText": "使用小结"
+      }
+    },
+    {
+      "path": "pages/my/help_feedback",
+      "style": {
+        "navigationBarTitleText": "帮助与反馈"
+      }
+    },
+    {
+      "path": "pages/my/my_assessment",
+      "style": {
+        "navigationBarTitleText": "我的测评"
+      }
+    },
+    {
       "path": "pages/schedule/drinks",
       "style": {
         "navigationBarTitleText": "热门饮品"
@@ -49,27 +157,27 @@
       }
     },
     {
-      "path": "pages/login/login",
+      "path": "pages/schedule/game_squat",
       "style": {
-        "navigationBarHidden": true
+        "navigationBarTitleText": "深蹲挑战"
       }
     },
     {
-      "path": "pages/school/school",
+      "path": "pages/schedule/game_balance",
       "style": {
-        "navigationBarTitleText": "学校"
+        "navigationBarTitleText": "平衡保持"
       }
     },
     {
-      "path": "pages/communication/communication",
+      "path": "pages/schedule/game_boxing",
       "style": {
-        "navigationBarTitleText": "社区"
+        "navigationBarTitleText": "拳击训练"
       }
     },
     {
-      "path": "pages/my/my",
+      "path": "pages/schedule/courses_detail",
       "style": {
-        "navigationBarTitleText": "我的"
+        "navigationBarTitleText": "课程详情"
       }
     }
   ],
@@ -100,8 +208,8 @@
       {
         "pagePath": "pages/communication/communication",
         "text": "社区",
-        "iconPath": "static/tab/community-black.png",
-        "selectedIconPath": "static/tab/community-active.png"
+        "iconPath": "static/tab/communication-black.png",
+        "selectedIconPath": "static/tab/communication-active.png"
       },
       {
         "pagePath": "pages/my/my",
@@ -114,7 +222,7 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#F8F8F8",
-    "backgroundColor": "#F8F8F8",
-    "darkmode": false
-  }
+    "backgroundColor": "#F8F8F8"
+  },
+  "uniIdRouter": {}
 }
