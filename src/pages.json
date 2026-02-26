@@ -27,6 +27,132 @@
       }
     },
     {
+      "path": "pages/school/map/map",
+      "style": {
+        "navigationBarTitleText": "地图"
+      }
+    },
+    {
+      "path": "pages/school/facilities/facilities",
+      "style": {
+        "navigationBarTitleText": "校内设施"
+      }
+    },
+    {
+      "path": "pages/school/facilities/water",
+      "style": {
+        "navigationBarTitleText": "校内饮水机"
+      }
+    },
+    {
+      "path": "pages/school/facilities/printer",
+      "style": {
+        "navigationBarTitleText": "校内打印机"
+      }
+    },
+    {
+      "path": "pages/school/facilities/print_shop",
+      "style": {
+        "navigationBarTitleText": "校内打印店"
+      }
+    },
+    {
+      "path": "pages/school/facilities/shop",
+      "style": {
+        "navigationBarTitleText": "校内超市"
+      }
+    },
+    {
+      "path": "pages/school/facilities/records",
+      "style": {
+        "navigationBarTitleText": "消费记录"
+      }
+    },
+    {
+      "path": "pages/school/canteen/canteen",
+      "style": {
+        "navigationBarTitleText": "食堂"
+      }
+    },
+    {
+      "path": "pages/school/canteen/choice",
+      "style": {
+        "navigationBarTitleText": "今天吃什么"
+      }
+    },
+    {
+      "path": "pages/school/canteen/demo",
+      "style": {
+        "navigationBarTitleText": "干饭日记"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/liu",
+      "style": {
+        "navigationBarTitleText": "留园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/mei",
+      "style": {
+        "navigationBarTitleText": "梅园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/zhu",
+      "style": {
+        "navigationBarTitleText": "竹园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/lan",
+      "style": {
+        "navigationBarTitleText": "兰园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/ju",
+      "style": {
+        "navigationBarTitleText": "菊园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/tao",
+      "style": {
+        "navigationBarTitleText": "桃园菜单"
+      }
+    },
+    {
+      "path": "pages/school/others/others",
+      "style": {
+        "navigationBarTitleText": "其他服务"
+      }
+    },
+    {
+      "path": "pages/school/fitness/fitness",
+      "style": {
+        "navigationBarTitleText": "体测"
+      }
+    },
+    {
+      "path": "pages/school/fitness/fitness_detail",
+      "style": {
+        "navigationBarTitleText": "体测详情"
+      }
+    },
+    {
+      "path": "pages/school/fitness/exercise_detail",
+      "style": {
+        "navigationBarTitleText": "锻炼详情"
+      }
+    },
+    {
+      "path": "pages/school/schedule/schedule",
+      "style": {
+        "navigationBarTitleText": "课表"
+      }
+    },
+    {
       "path": "pages/schedule/schedule",
       "style": {
         "navigationBarTitleText": "计划"
