@@ -1,33 +1,36 @@
 <template>
   <view class="home-bg">
-    <!-- 食物搜索栏 - 增加点击反馈、优化语义 -->
-    <view class="food-search-bar" @click="goToHomeSearchBar" hover-class="search-bar-hover">
-      <text class="food-search-placeholder">请输入你想了解的食物并点击查看详情</text>
-      <image class="food-search-icon" src="/static/搜索图标.png" mode="aspectFit" lazy-load />
+    <!-- 食物搜索栏 - 样式对齐 schedule -->
+    <view class="search-box">
+      <view class="food-search-bar" @click="goToHomeSearchBar" hover-class="search-bar-hover">
+        <text class="search-icon">🔍</text>
+        <text class="food-search-placeholder">请输入你想了解的食物并点击查看详情</text>
+        <text class="menu-icon">✕</text>
+      </view>
     </view>
     <!-- 人物形象和AI对话横向排列 - 修复响应式、增加点击反馈 -->
     <view class="home-top-row">
       <!-- 人物形象卡片 - 增加点击反馈 -->
       <view class="card-row-item" @click="goToPlanProgress" hover-class="card-hover">
-        <image class="avatar-img" src="/static/首页人物图.png" mode="aspectFill" lazy-load />
+        <image class="avatar-img" :src="assetHomeAvatar" mode="aspectFit" lazy-load />
       </view>
       <!-- AI对话卡片 - 补全点击事件、增加点击反馈、优化布局 -->
       <view class="card-row-item" @click="goToAIChat" hover-class="card-hover">
         <!-- 左下：两个圆圈横排 -->
         <view class="ai-circle-group ai-circle-group-l">
-          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
-          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" :src="assetAiCircle" lazy-load />
+          <image class="ai-circle" :src="assetAiCircle" lazy-load />
         </view>
         <!-- 右上：两个圆圈横排 -->
         <view class="ai-circle-group ai-circle-group-r">
-          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
-          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" :src="assetAiCircle" lazy-load />
+          <image class="ai-circle" :src="assetAiCircle" lazy-load />
         </view>
 
         <view class="ai-dialog-main">
           <!-- 蓝色圆角框定位在主图正中间 -->
           <view class="ai-dialog-main-bg"></view>
-          <image class="ai-dialog-main-img" src="/static/首页AI对话模块主图.png" mode="aspectFit" lazy-load />
+          <image class="ai-dialog-main-img" :src="assetAiMain" mode="aspectFit" lazy-load />
         </view>
         <view class="ai-dialog-desc">
           拍照识别卡路里<br />语音分析情绪<br />定制食谱
@@ -41,11 +44,11 @@
         <view class="plan-header-card" @click="goToMyPlan" hover-class="card-hover">
           <view class="plan-header-content">
             <view class="plan-icon-bg">
-              <image class="plan-icon-img" src="/static/我的方案图标.png" mode="aspectFit" lazy-load />
+              <image class="plan-icon-img" :src="assetPlanIcon" mode="aspectFit" lazy-load />
             </view>
             <text class="plan-title">我的方案</text>
             <view class="plan-icon-bg">
-              <image class="plan-icon-img" src="/static/我的方案图标.png" mode="aspectFit" lazy-load />
+              <image class="plan-icon-img" :src="assetPlanIcon" mode="aspectFit" lazy-load />
             </view>
           </view>
         </view>
@@ -138,6 +141,22 @@
     onLoad
   } from '@dcloudio/uni-app';
 
+  const assetSearchIcon = new URL('../../static/搜索图标.png', import.meta.url).href;
+  const assetHomeAvatar = new URL('../../static/首页人物图.png', import.meta.url).href;
+  const assetAiCircle = new URL('../../static/AI对话小圆圈.png', import.meta.url).href;
+  const assetAiMain = new URL('../../static/首页AI对话模块主图.png', import.meta.url).href;
+  const assetPlanIcon = new URL('../../static/我的方案图标.png', import.meta.url).href;
+  const assetWeightIcon = new URL('../../static/首页功能图标/记录体重图标.png', import.meta.url).href;
+  const assetWeightImage = new URL('../../static/首页功能图标/记录体重图.png', import.meta.url).href;
+  const assetDrinkIcon = new URL('../../static/首页功能图标/喝水图标.png', import.meta.url).href;
+  const assetDrinkImage = new URL('../../static/首页功能图标/喝水图.png', import.meta.url).href;
+  const assetExerciseIcon = new URL('../../static/首页功能图标/运动图标.png', import.meta.url).href;
+  const assetExerciseImage = new URL('../../static/首页功能图标/运动图.png', import.meta.url).href;
+  const assetFastingIcon = new URL('../../static/首页功能图标/断食图标.png', import.meta.url).href;
+  const assetFastingImage = new URL('../../static/首页功能图标/断食图.png', import.meta.url).href;
+  const assetDiaryIcon = new URL('../../static/首页功能图标/日记图标.png', import.meta.url).href;
+  const assetDiaryImage = new URL('../../static/首页功能图标/日记图.png', import.meta.url).href;
+
   // 统一路由跳转封装 - 增加异常处理和日志
   function navigateToPage(url) {
     try {
@@ -164,21 +183,15 @@
 
   //跳转到首页搜索栏页面
   function goToHomeSearchBar() {
-    uni.navigateTo({
-      url: '/pages/home/home_search_bar/home_search_bar?from=home'
-    });
+    navigateToPage('/pages/home/home_search_bar?from=home');
   }
   // 跳转到计划进度页面
   function goToPlanProgress() {
-    uni.navigateTo({
-      url: '/pages/home/plan_progress/plan_progress?from=home'
-    });
+    navigateToPage('/pages/home/plan_progress?from=home');
   }
   // 跳转到AI对话页面
   function goToAIChat() {
-    uni.navigateTo({
-      url: '/pages/home/ai_chat/ai_chat?from=home'
-    });
+    navigateToPage('/pages/home/ai_chat?from=home');
   }
   // 健康提醒弹窗相关
   import {
@@ -262,47 +275,43 @@
   }
   // 跳转到我的方案页面
   function goToMyPlan() {
-    uni.navigateTo({
-      url: '/pages/home/my_plan/my_plan?from=home'
-    });
+    navigateToPage('/pages/home/my_plan?from=home');
   }
   // 快捷功能区数据
   const quickActions = [{
       name: '体重',
-      icon: '/static/首页功能图标/记录体重图标.png',
-      img: '/static/首页功能图标/记录体重图.png',
-      route: '/pages/home/record_weight/record_weight',
+      icon: assetWeightIcon,
+      img: assetWeightImage,
+      route: '/pages/home/record_weight',
     },
     {
       name: '喝水',
-      icon: '/static/首页功能图标/喝水图标.png',
-      img: '/static/首页功能图标/喝水图.png',
-      route: '/pages/home/drink_water/drink_water',
+      icon: assetDrinkIcon,
+      img: assetDrinkImage,
+      route: '/pages/home/drink_water',
     },
     {
       name: '运动',
-      icon: '/static/首页功能图标/运动图标.png',
-      img: '/static/首页功能图标/运动图.png',
-      route: '/pages/home/exercise/exercise',
+      icon: assetExerciseIcon,
+      img: assetExerciseImage,
+      route: '/pages/home/exercise',
     },
     {
       name: '断食',
-      icon: '/static/首页功能图标/断食图标.png',
-      img: '/static/首页功能图标/断食图.png',
+      icon: assetFastingIcon,
+      img: assetFastingImage,
       route: '/pages/schedule/fasting',
     },
     {
       name: '日记',
-      icon: '/static/首页功能图标/日记图标.png',
-      img: '/static/首页功能图标/日记图.png',
-      route: '/pages/home/diary/diary',
+      icon: assetDiaryIcon,
+      img: assetDiaryImage,
+      route: '/pages/home/diary',
     },
   ];
   // 跳转到对应功能页面
   function goToAction(route) {
-    uni.navigateTo({
-      url: route + '?from=home'
-    });
+    navigateToPage(route + '?from=home');
   }
   // 卡路里数据
   const calories = ref({
@@ -314,14 +323,12 @@
   // 跳转到选择页面
   function goToSelect(type) {
     let map = {
-      breakfast: '/pages/home/select_breakfast/select_breakfast',
-      lunch: '/pages/home/select_lunch/select_lunch',
-      dinner: '/pages/home/select_dinner/select_dinner',
-      other: '/pages/home/select_otherfood/select_otherfood',
+      breakfast: '/pages/home/select_breakfast',
+      lunch: '/pages/home/select_lunch',
+      dinner: '/pages/home/select_dinner',
+      other: '/pages/home/select_otherfood',
     };
-    uni.navigateTo({
-      url: map[type] + '?from=home'
-    });
+    navigateToPage(map[type] + '?from=home');
   }
   // 加载卡路里数据
   function loadCalories() {
@@ -434,21 +441,23 @@
 
   /* 顶部人物形象和AI对话横向排列 */
   .home-top-row {
-    width: 340px;
+    width: calc(100vw - 24px);
+    max-width: 460px;
     display: flex;
     flex-direction: row;
-    gap: 4px;
-    margin: 16px auto 0 auto;
+    gap: 10px;
+    margin: 14px auto 0 auto;
     justify-content: space-between;
+    box-sizing: border-box;
   }
 
   .card-row-item {
     width: 48%;
     height: 280px;
     /*之前是180*/
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(79, 161, 242, 0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(79, 161, 242, 0.14);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -468,45 +477,58 @@
   .avatar-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #E3F2FD;
     border-radius: 10px;
   }
 
   /* 食物搜索栏 */
+  .search-box {
+    width: calc(100vw - 24px);
+    max-width: 460px;
+    margin-top: 18px;
+    margin-bottom: 4px;
+  }
+
   .food-search-bar {
-    width: 366px;
-    height: 44px;
+    width: calc(100vw - 24px);
+    max-width: 460px;
+    height: 40px;
     background: #fff;
-    border-radius: 22px;
-    border: 1.5px solid #D9D9D9;
+    border-radius: 25px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 18px;
-    margin: 18px auto 0 auto;
+    gap: 6px;
+    padding: 0 12px;
+    margin: 0 auto;
     box-sizing: border-box;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.04);
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.16);
+  }
+
+  .search-icon {
+    font-size: 16px;
+    line-height: 1;
   }
 
   .food-search-placeholder {
-    color: #D9D9D9;
-    font-size: 15px;
+    color: #b5bcc6;
+    font-size: 14px;
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .food-search-icon {
-    width: 22px;
-    height: 22px;
-    margin-left: 12px;
+  .menu-icon {
+    font-size: 16px;
+    color: #4FA1F2;
+    line-height: 1;
   }
 
   body,
   .home-bg {
-    background: #E3F2FD;
+    background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
     min-height: 100vh;
     width: 100vw;
   }
@@ -544,20 +566,19 @@
   }
 
   .home-siqu-container {
-    width: 366px;
-    background: #f7fbff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(79, 161, 242, 0.08);
+    width: calc(100vw - 24px);
+    max-width: 460px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 16px;
+    box-shadow: 0 6px 16px rgba(79, 161, 242, 0.12);
     padding: 18px 16px 16px 16px;
-    margin: 0 20px 8px 20px;
+    margin: 0 0 8px 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
     box-sizing: border-box;
     overflow-x: hidden !important;
     /* 强制禁止子容器横向溢出 */
-    max-width: 90%;
-    /* 新增：适配不同屏幕宽度，避免超出视口 */
   }
 
   /* AI对话卡片 */
@@ -622,7 +643,7 @@
 
   /* 背景层样式调整 */
   .ai-dialog-main-bg {
-    background: #53B1EF;
+    background: linear-gradient(135deg, #4FA1F2 0%, #80D0FF 100%);
     border-radius: 20px;
     /* 尺寸为图片的1/3：130px / 3 ≈ 43.3px */
     width: 90px;
@@ -647,9 +668,9 @@
   /* 我的方案卡片区 */
   .plan-header-card {
     width: 100%;
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(79, 161, 242, 0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.12);
     padding: 12px 0;
     margin-bottom: 8px;
     cursor: pointer;
@@ -683,7 +704,7 @@
   .plan-icon-bg {
     width: 38px;
     height: 36px;
-    background: #4D96FF;
+    background: linear-gradient(135deg, #4FA1F2 0%, #80D0FF 100%);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -717,9 +738,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #FDD3D0;
+    background: linear-gradient(135deg, rgba(79, 161, 242, 0.18), rgba(128, 208, 255, 0.18));
     border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(79, 161, 242, 0.08);
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.12);
     padding: 18px 0;
     cursor: pointer;
     margin-bottom: 0;
@@ -747,7 +768,8 @@
 
   .tag {
     font-size: 13px;
-    color: #000000;
+    color: #2b5f91;
+    background: rgba(79, 161, 242, 0.1);
     border-radius: 6px;
     padding: 2px 10px;
     min-width: 48px;
@@ -762,7 +784,7 @@
 
   .health-link {
     text-align: center;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   .link-text {
@@ -776,7 +798,7 @@
   .quick-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px 16px;
+    gap: 12px 12px;
     margin-top: 8px;
     justify-content: space-between;
     width: 100%;
@@ -789,9 +811,9 @@
 
   .action-item {
     width: calc(50% - 8px);
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(79, 161, 242, 0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.12);
     padding: 12px 12px 0 12px;
     margin-bottom: 0;
     cursor: pointer;
@@ -816,7 +838,7 @@
 
   .action-title {
     font-size: 15px;
-    color: #2C3E50;
+    color: #2b5f91;
     font-weight: 600;
     margin-bottom: 4px;
   }
@@ -833,11 +855,38 @@
     position: absolute;
     left: 9px;
     bottom: 9px;
-    width: 100px;
-    height: 65px;
+    width: 108px;
+    height: 68px;
     border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(79, 161, 242, 0.08);
+  }
+
+  .search-bar-hover {
+    opacity: 0.92;
+  }
+
+  .card-hover {
+    transform: scale(0.985);
+    opacity: 0.96;
+  }
+
+  .calories-card-hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+  }
+
+  .tag-hover {
+    background: rgba(79, 161, 242, 0.18);
+  }
+
+  .link-hover {
+    opacity: 0.88;
+  }
+
+  .action-item-hover {
+    transform: translateY(-2px);
+    opacity: 0.96;
   }
 
   .action-img {

@@ -1,23 +1,22 @@
 <template>
   <view class="plan-progress-container">
     <!-- 头像区域 -->
-    <image src="/static/首页人物图.png" mode="aspectFit" class="avatar-img"></image>
+    <view class="hero-card">
+      <image :src="assetHomeAvatar" mode="aspectFit" class="avatar-img"></image>
+    </view>
 
     <!-- 核心信息区域 -->
-    <view class="info-section">
+    <view class="info-section card-panel">
       <text class="info-text">你已来到轻跃<text class="highlight">5</text>天</text>
-      累计记录<text class="highlight">4</text>天
-      <text>\n</text>
+      <text class="info-line">累计记录<text class="highlight">4</text>天</text>
       <text class="detail-link">请到“我的”去看详细记录</text>
-      <text>\n</text>
-      累计坚持方案<text class="highlight">4</text>天
-      <text>\n</text>
+      <text class="info-line">累计坚持方案<text class="highlight">4</text>天</text>
       <text class="detail-link">请到“首页”去看方案记录</text>
 
     </view>
 
     <!-- 体重趋势图区域 -->
-    <view class="chart-section">
+    <view class="chart-section card-panel">
       <text class="chart-title">你的体重趋势图</text>
       <view class="chart-wrapper">
         <!-- Y轴刻度 -->
@@ -39,12 +38,12 @@
     </view>
 
     <!-- 剩余天数区域 -->
-    <view class="remaining-section">
+    <view class="remaining-section card-panel">
       <text class="remaining-text">距离达成目标还需坚持<text class="highlight">24</text>天</text>
     </view>
 
     <!-- 鼓励语区域 -->
-    <view class="encourage-section">
+    <view class="encourage-section card-panel encourage-card">
       <text class="encourage-text">加油</text>
     </view>
   </view>
@@ -52,11 +51,13 @@
 
 <script>
   import * as echarts from 'echarts'; // 适配uni-app的echarts引入路径
+  const assetHomeAvatar = new URL('../../static/首页人物图.png', import.meta.url).href;
 
   export default {
     name: 'PlanProgress',
     data() {
       return {
+        assetHomeAvatar,
         // 模拟后端返回的体重数据（可替换为真实接口数据）
         weightData: [450, 520, 380, 650, 580, 420, 550, 800, 680, 520, 600, 550],
         chartInstance: null
@@ -153,12 +154,36 @@
   .plan-progress-container {
     width: 100%;
     min-height: 100vh;
-    background-color: #ffffff;
+    height: 100vh;
+    background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px 16px;
+    padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
     box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hero-card {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.12);
+    padding: 12px 0 6px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .card-panel {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.1);
+    padding: 16px 14px;
+    box-sizing: border-box;
+    margin-bottom: 14px;
   }
 
   /* 头像区域 */
@@ -166,22 +191,29 @@
 
   /*首页人物图*/
   .avatar-img {
-    width: 280px;
-    height: 350px;
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
   }
 
   /* 信息区域 */
   .info-section {
-    width: 100%;
     text-align: center;
-    margin-bottom: 24px;
   }
 
   .info-text {
     font-size: 18px;
     color: #333333;
     display: block;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .info-line {
+    display: block;
+    font-size: 16px;
+    color: #333333;
+    margin-bottom: 4px;
   }
 
 
@@ -194,15 +226,15 @@
   }
 
   .detail-link {
+    display: block;
     font-size: 12px;
     color: #999999;
-    margin-left: 8px;
+    margin-bottom: 10px;
   }
 
   /* 图表区域 */
   .chart-section {
-    width: 100%;
-    margin-bottom: 24px;
+    padding-top: 14px;
   }
 
   .chart-title {
@@ -210,7 +242,8 @@
     color: #333333;
     display: block;
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
   }
 
   .chart-wrapper {
@@ -218,10 +251,14 @@
     height: 200px;
     display: flex;
     align-items: center;
+    background: #F7FBFF;
+    border-radius: 12px;
+    padding: 10px 8px;
+    box-sizing: border-box;
   }
 
   .y-axis {
-    width: 60px;
+    width: 52px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -242,6 +279,7 @@
   .line-chart {
     width: 100%;
     height: 160px;
+    border-radius: 8px;
   }
 
   .x-axis {
@@ -257,20 +295,24 @@
 
   /* 剩余天数区域 */
   .remaining-section {
-    width: 100%;
     text-align: center;
-    margin-bottom: 32px;
   }
 
   .remaining-text {
     font-size: 16px;
     color: #333333;
+    font-weight: 500;
   }
 
   /* 鼓励语区域 */
   .encourage-section {
-    width: 100%;
     text-align: center;
+    margin-bottom: 0;
+  }
+
+  .encourage-card {
+    background: linear-gradient(135deg, rgba(79, 161, 242, 0.14), rgba(128, 208, 255, 0.14));
+    border: 1px solid rgba(79, 161, 242, 0.16);
   }
 
   .encourage-text {
