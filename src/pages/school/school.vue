@@ -13,10 +13,10 @@
 
       <view class="grid">
         <view class="grid-item" v-for="item in items" :key="item.name" @click="onItemClick(item)">
-          <view class="icon-wrap" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">
-            <image :src="item.img" class="icon" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
+          <view class="icon-wrap">
+            <image :src="item.img" class="icon" mode="aspectFit" />
           </view>
-          <image :src="item.wordImg" class="label-img" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
+          <image :src="item.wordImg" class="label-img" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -24,111 +24,52 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-
-// 保持搜索框不变；项目内已有图标请根据实际素材替换路径
-const items = reactive([
+const items = [
   { name: 'map', label: '地图', img: '/static/school/main/map.png', wordImg: '/static/school/main/map_word.png' },
   { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png', wordImg: '/static/school/main/timetable_word.png' },
   { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png', wordImg: '/static/school/main/fitness_word.png' },
   { name: 'facilities', label: '校内设施', img: '/static/school/main/facilities.png', wordImg: '/static/school/main/facilities_word.png' },
   { name: 'canteen', label: '食堂', img: '/static/school/main/canteen.png', wordImg: '/static/school/main/canteen_word.png' },
   { name: 'others', label: '其他服务', img: '/static/school/main/others.png', wordImg: '/static/school/main/others_word.png' }
-])
+]
+
+const routeMap = {
+  map: '/pages/school/map/map',
+  timetable: '/pages/school/schedule/schedule',
+  fitness: '/pages/school/fitness/fitness',
+  facilities: '/pages/school/facilities/facilities',
+  canteen: '/pages/school/canteen/canteen',
+  others: '/pages/school/others/others'
+}
+
+const fallbackToHashRoute = (url) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.location.hash = `#${url}`
+}
 
 const onItemClick = (item) => {
-  if (item.name === 'map') {
-    try {
+  const url = routeMap[item.name]
+  if (!url) {
+    return
+  }
+
+  try {
+    // @ts-ignore
+    if (typeof uni !== 'undefined' && typeof uni.navigateTo === 'function') {
       // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 使用 uni.navigateTo 跳转到 map 页面（school/map）
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/map/map' })
-        return
-      }
-    } catch (e) {
-      // ignore
+      uni.navigateTo({
+        url,
+        fail: () => fallbackToHashRoute(url)
+      })
+      return
     }
-    // 浏览器环境 fallback
-    const href = '/#/pages/school/map/map'
-    window.location.href = href
-    return
+  } catch (e) {
+    fallbackToHashRoute(url)
   }
 
-  if (item.name === 'timetable') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 schedule 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/schedule/schedule' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/schedule/schedule'
-    window.location.href = href
-    return
-  }
-
-  if (item.name === 'fitness') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 fitness 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/fitness/fitness' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/fitness/fitness'
-    window.location.href = href
-    return
-  }
-
-  if (item.name === 'facilities') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 facilities 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/facilities/facilities' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/facilities/facilities'
-    window.location.href = href
-    return
-  }
-
-  if (item.name === 'canteen') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 canteen 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/canteen/canteen' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/canteen/canteen'
-    window.location.href = href
-    return
-  }
-
-  if (item.name === 'others') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 others 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/others/others' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/others/others'
-    window.location.href = href
-    return
-  }
+  fallbackToHashRoute(url)
 }
 </script>
 
@@ -136,14 +77,15 @@ const onItemClick = (item) => {
 .page {
   position: relative;
   width: 100%;
-  height: 100vh; /* 固定窗口高度，禁止页面高度随内容增长 */
+  min-height: 100vh;
   background: #fff;
-  overflow: hidden; /* 禁止滚动 */
+  overflow-y: auto;
+  overflow-x: hidden;
   font-family: "PingFang SC", "Helvetica Neue", "Microsoft Yahei", Arial, sans-serif;
 }
 
 .bg {
-  position: absolute;
+  position: fixed;
   left: 0;
   top: 0;
   width: 100vw; /* 使背景占满视口宽度 */
@@ -157,10 +99,9 @@ const onItemClick = (item) => {
 .container {
   position: relative;
   z-index: 2;
-  height: 100vh; /* 与页面同高，内容超出将被裁切 */
-  padding: 40rpx 30rpx 120rpx;
+  min-height: 100vh;
+  padding: 40rpx 30rpx calc(180rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
-  overflow: hidden; /* 防止容器内部产生滚动 */
 }
 
 .search {
@@ -245,6 +186,6 @@ const onItemClick = (item) => {
 @media (max-width: 360px) {
   .icon-wrap { width: 260rpx; height: 260rpx; }
   .label-img { width: 140rpx; height: 44rpx }
-  .container { padding-bottom: 80rpx; }
+  .container { padding-bottom: calc(140rpx + env(safe-area-inset-bottom)); }
 }
 </style>
