@@ -204,6 +204,13 @@ let canvasCtx = null
 let waveIndex = 0
 let frameCount = 0
 
+const getWaveformCanvas = () => {
+  // #ifdef H5
+  return document.getElementById('waveformCanvas')
+  // #endif
+  return null
+}
+
 // 加载本地最佳记录
 onMounted(() => {
   try {
@@ -344,7 +351,7 @@ const createParticles = () => {
       particle.vy += 0.1 // 重力
       particle.opacity = 1 - progress
 
-      requestAnimationFrame(updateParticle)
+      setTimeout(updateParticle, 16)
     }
 
     updateParticle()
@@ -352,7 +359,7 @@ const createParticles = () => {
 }
 
 const initCanvasWaveform = () => {
-  const canvas = document.getElementById('waveformCanvas')
+  const canvas = getWaveformCanvas()
   if (!canvas) return
 
   canvasCtx = canvas.getContext('2d')
@@ -371,7 +378,7 @@ const updateWaveform = (yValue) => {
   frameCount++
   if (frameCount % 3 === 0) return // 每3帧更新一次
 
-  const canvas = document.getElementById('waveformCanvas')
+  const canvas = getWaveformCanvas()
   if (!canvas) return
 
   const width = canvas.offsetWidth

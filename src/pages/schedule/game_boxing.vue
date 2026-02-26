@@ -223,6 +223,7 @@ const PUNCH_THRESHOLD = 1.5 // g
 const DEBOUNCE_TIME = 200 // ms
 
 let timerInterval = null
+let comboTimer = null
 let justHit = ref(false)
 
 // 计算属性
@@ -362,8 +363,10 @@ const triggerPunch = (accelValue) => {
   }
 
   // 重置连击计时器
-  clearTimeout(window.comboTimer)
-  window.comboTimer = setTimeout(() => {
+  if (comboTimer) {
+    clearTimeout(comboTimer)
+  }
+  comboTimer = setTimeout(() => {
     comboCount.value = 0
   }, 2000)
 
@@ -439,8 +442,9 @@ const stopGame = () => {
   if (timerInterval) {
     clearInterval(timerInterval)
   }
-  if (window.comboTimer) {
-    clearTimeout(window.comboTimer)
+  if (comboTimer) {
+    clearTimeout(comboTimer)
+    comboTimer = null
   }
   uni.offAccelerometerChange()
 }
