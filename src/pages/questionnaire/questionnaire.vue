@@ -1,5 +1,6 @@
 <template>
   <view class="questionnaire-container">
+    <scroll-view class="questionnaire-scroll" scroll-y="true" :show-scrollbar="false">
     <!-- 顶部标签栏 -->
     <view class="tab-bar">
       <view class="tab-item" :class="{ active: currentTab === 'base' }" @click="switchTab('base')">基础信息</view>
@@ -147,6 +148,7 @@
         <button class="submit-btn" @click="handleHabitSubmit">提交</button>
       </view>
     </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -605,10 +607,17 @@
 
 <style scoped>
   .questionnaire-container {
-    min-height: 100vh;
+    height: 100vh;
     background-color: #ffffff;
+    box-sizing: border-box;
+  }
+
+  .questionnaire-scroll {
+    height: 100%;
     /* 调整左右间距：从20rpx改为60rpx，上下保持20rpx */
     padding: 20rpx 60rpx;
+    padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+    padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
   }
 
