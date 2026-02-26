@@ -1,250 +1,92 @@
-# 🏃‍♂️ 健康生活助手 - 小程序项目
+# 🎯 TJU GO HEALTHY · Uni-App 小程序
 
-一个集健身打卡、运动游戏、饮食推荐、学习课程于一体的全能健康管理小程序。助你养成健康习惯，享受科学运动！
+面向天津大学同学的健康管理小程序：打卡计划、运动游戏、饮品食谱、校园与社区，一套代码多端运行。🧑‍🎓
 
-## ✨ 核心功能
+## ✨ 亮点功能
+- 🏠 首页与导航：聚合推荐入口，快速跳转打卡、社区、校园
+- 🔐 登录认证：登录页独立模块，便于后续接入统一认证
+- 🗓️ 计划与打卡：任务管理、喝水提醒、断食方案对比
+- 🕹️ 运动游戏：深蹲（game_squat）、平衡（game_balance）、拳击（game_boxing），传感器实时反馈
+- 🍵 饮品与食谱：热门饮品/食谱列表、收藏、搜索、详情
+- 🏫 校园与社区：学校页、社区动态/聊天/排行、发布/私聊
+- 🙋 个人中心：账号与安全、方案/收藏/测评、年度/数据小结
 
-### 📅 每日打卡
-- ✅ **健身打卡** - 记录每日运动完成情况
-- 💧 **喝水提醒** - 科学补水，保持水分平衡
-- 🥗 **饮食记录** - 追踪每日营养摄入
-- 📊 **数据统计** - 本地数据持久化，查看自己的健康趋势
+## 🛠 技术栈
+- Vue 3 + `<script setup>`
+- Uni-App（多端：微信/支付宝/百度小程序 + H5 调试）
+- Vite + SCSS
 
-### 💪 体感运动游戏
-- 🏋️ **深蹲挑战** - 通过设备传感器检测深蹲动作
-- ⚖️ **平衡训练** - 提升身体控制力
-- 👊 **拳击游戏** - 爆发力训练，趣味互动
-- 🎯 **实时反馈** - 立即获得运动成绩与建议
-
-### 🍽️ 饮品推荐
-- 🌟 **热门精选** - 精心推荐的低卡、健康饮品
-- 🏷️ **智能分类** - 按类型、热量、咖啡因含量筛选
-- ❤️ **收藏功能** - 保存喜爱的饮品
-- 🔍 **快速搜索** - 实时搜索，秒速找到心仪饮品
-
-### 📖 食谱推荐
-- 👨‍🍳 **精选食谱** - 健身达人食谱，营养搭配合理
-- ⏱️ **快手菜** - 15分钟快速上桌
-- 🔥 **营养信息** - 详细的热量、蛋白质数据
-- 🏆 **分难度等级** - 从初级到进阶，循序渐进
-
-### 📚 学习课程
-- 🎓 **精品课程** - 营养学、健身、饮食知识
-- 💎 **多平台资源** - Coursera、edX、网易云课堂等
-- ⭐ **评分系统** - 了解课程质量与用户口碑
-- 📖 **详细成课程果评估** - 4-12周见效，数据可追踪
-
-### ⏰ 断食计划
-- 🕐 **16:8 轻断食** - 最受推荐的初级方案
-- 📅 **5:2 断食法** - 灵活的中级方案
-- 🥗 **轻断食** - 低热量饮食指南
-- 📊 **方案对比** - 对比表展示各方案优缺点
-- 💡 **科学指导** - 常见问题解答、健康提示
-
-### 🔍 全局搜索
-- ⚡ **实时搜索** - 搜索饮品、食谱、课程
-- 📝 **搜索建议** - 混合搜索结果展示
-- 🎯 **快速导航** - 直接跳转到详情页
-
-### 📚 健康知识库
-- 🧠 **科学知识** - 最新的健康科学资讯
-- 💪 **运动指南** - 不同人群的运动建议
-- 🥗 **营养学知识** - 宏量营养素、微量营养素详解
-
-## 🛠️ 技术栈
-
-| 技术 | 说明 |
-|------|------|
-| **Vue.js 3** | 渐进式前端框架 |
-| **UniApp** | 一套代码多端部署小程序方案 |
-| **SCSS** | CSS预处理器 |
-| **uni.request** | API请求库 |
-| **LocalStorage** | 本地数据持久化 |
-
-## 📁 项目结构
-
+## 📁 目录概览
 ```
 src/
 ├── pages/
-│   ├── schedule/              # 主功能模块
-│   │   ├── schedule.vue       # 首页 - 打卡、游戏、推荐等
-│   │   ├── drinks.vue         # 饮品推荐
-│   │   ├── drinks_detail.vue  # 饮品详情
-│   │   ├── recipes.vue        # 食谱推荐
-│   │   ├── recipe_detail.vue  # 食谱详情
-│   │   ├── courses.vue        # 课程推荐
-│   │   ├── games.vue          # 游戏列表
-│   │   ├── game_squat.vue     # 深蹲游戏
-│   │   ├── game_balance.vue   # 平衡游戏
-│   │   ├── game_boxing.vue    # 拳击游戏
-│   │   └── fasting.vue        # 断食计划
-│   ├── home/
-│   │   └── home.vue           # 首页
-│   ├── login/
-│   │   └── login.vue          # 登录页
-│   ├── my/
-│   │   └── my.vue             # 个人中心
-│   ├── school/
-│   │   └── school.vue         # 校园信息
-│   └── communication/
-│       └── communication.vue   # 交流讨论
-├── static/
-│   ├── tab/                   # 底部导航图标
-│   ├── 首页功能图标/          # 功能模块图标
-│   └── fasting/               # 断食计划配图
-├── App.vue                    # 应用根组件
-├── main.js                    # 入口文件
-├── manifest.json              # 应用配置
-└── pages.json                 # 页面配置
+│   ├── home/          # 首页（聚合与导航）
+│   ├── login/         # 登录页
+│   ├── schedule/      # 打卡与推荐 + 运动游戏
+│   │   ├── schedule.vue / fasting.vue
+│   │   ├── drinks.vue / drinks_detail.vue
+│   │   ├── recipes.vue / recipe_detail.vue
+│   │   ├── courses.vue / courses_detail.vue
+│   │   ├── games.vue / game_squat.vue / game_balance.vue / game_boxing.vue
+│   ├── communication/ # 社区、排行、私聊、发布
+│   ├── school/        # 校园页
+│   └── my/            # 个人中心及子页
+├── static/            # tab 图标与功能配图
+├── App.vue
+├── main.js
+├── pages.json         # 路由与 tabBar 配置
+└── manifest.json      # 小程序/应用配置
 ```
 
 ## 🚀 快速开始
+> 建议 Node.js ≥ 16，使用 npm。
 
-### 环境要求
-- Node.js 14.0+
-- npm 或 yarn
-
-### 安装依赖
-
+安装依赖：
 ```bash
 npm install
-# 或
-yarn install
 ```
 
-### 开发模式
-
+本地调试：
 ```bash
-npm run dev
-# 默认运行在 http://localhost:5173
+# H5 调试
+npm run dev:h5
+
+# 微信小程序预览（需本地微信开发者工具配合）
+npm run dev:mp-weixin
+
 ```
 
-### 编译构建
-
+构建：
 ```bash
-npm run build
+# H5 构建
+npm run build:h5
+
+# 微信小程序打包
+npm run build:mp-weixin
 ```
 
-### 项目配置
+常用脚本（节选）：
+- `dev:mp-*` / `build:mp-*`：多端小程序（支付宝、百度、QQ、抖音等）
+- `dev:h5:ssr` / `build:h5:ssr`：H5 SSR 模式
 
-编辑 `vite.config.js` 查看和修改 Vite 配置。
+## ⚙️ 配置要点
+- 页面路由与 tabBar：见 [src/pages.json](src/pages.json)
+- 平台与权限：见 [src/manifest.json](src/manifest.json)
+- H5 专用 DOM/Canvas 访问已做条件编译（运动波形在 H5 下启用）
 
-编辑 `src/manifest.json` 查看和修改应用配置。
+## 📌 注意事项
+- 静态资源统一放入 [static](static)，避免使用 @/assets 这类 Vite 专属别名路径
+- 传感器相关（加速度/陀螺仪）需在对应小程序端授权
+- 若二次迁移到 HBuilderX 传统结构，请同步根目录的 [App.vue](App.vue)、[src/pages.json](src/pages.json)、[src/manifest.json](src/manifest.json)、[src/uni.scss](src/uni.scss) 以及 pages/、static/
 
-## 🔌 API 集成
+## 🧭 Roadmap
+- [ ] 云端备份与多端同步
+- [ ] 分享邀请/社交互动
+- [ ] 运动成绩可视化增强
+- [ ] AI 运动建议
 
-### 后端接口文档
-
-详见 [api-document.md](./api-document.md)
-
-### 核心端点
-
-| 接口 | 方法 | 描述 |
-|------|------|------|
-| `/api/search` | GET | 全局搜索（饮品、食谱、课程） |
-| `/api/drinks` | GET | 饮品列表（支持筛选） |
-| `/api/recipes` | GET | 食谱列表 |
-| `/api/courses` | GET | 课程推荐列表 |
-
-**示例请求：**
-
-```javascript
-// 搜索饮品
-uni.request({
-  url: 'http://127.0.0.1:3000/api/search?q=绿茶',
-  method: 'GET',
-  success: (res) => {
-    console.log(res.data)
-  }
-})
-
-// 获取饮品列表（推荐）
-uni.request({
-  url: 'http://127.0.0.1:3000/api/drinks?type=recommend',
-  method: 'GET',
-  success: (res) => {
-    console.log(res.data)
-  }
-})
-```
-
-## 💾 本地数据存储
-
-应用使用 `uni.setStorageSync` 和 `uni.getStorageSync` 进行本地数据持久化：
-
-```javascript
-// 保存用户打卡记录
-uni.setStorageSync('tasks', taskArray)
-
-// 获取收藏的饮品
-const favorites = uni.getStorageSync('drink_favorites') || []
-
-// 保存运动最佳成绩
-uni.setStorageSync('best_scores', scoresObj)
-```
-
-## 🎨 设计规范
-
-### 色系
-- 主色：`#4FA1F2` (蓝色)
-- 辅色：`#80D0FF` (浅蓝)
-- 背景：`#E3F2FD` (极浅蓝)
-- 成功：`#4ECDC4` (青绿)
-- 警告：`#FFB347` (橙色)
-- 危险：`#FF6B6B` (红色)
-
-### 组件规范
-- 卡片：16rpx 圆角，4rpx 阴影
-- 按钮：高度 80rpx，圆角 12rpx
-- 输入框：高度 80rpx，圆角 20rpx
-- 图片占位：`aspectFill` 模式
-
-## 📱 支持平台
-
-- ✅ 微信小程序
-- ✅ 支付宝小程序
-- ✅ 百度小程序
-- ✅ H5（开发调试）
-
-## 📝 主要功能特性
-
-### 数据同步
-- 🔄 本地与服务器数据同步
-- ⏱️ 打卡任务实时更新
-- 📊 成绩数据云端备份
-
-### 用户体验
-- 🎯 流畅的页面动画
-- 👆 优化的触摸反馈
-- 🌙 亮色/暗色主题支持（未来版本）
-
-### 性能优化
-- ⚡ 懒加载图片
-- 🚀 虚拟滚动长列表
-- 📦 代码分割与动态导入
-
-## 🐛 已知问题与改进
-
-- [ ] 添加数据云端备份功能
-- [ ] 支持社交分享（邀请好友）
-- [ ] 增强的数据统计与可视化
-- [ ] AI运动指导建议
-- [ ] 离线模式支持
-
-## 📧 贡献指南
-
-欢迎提交Bug报告和功能建议！
-
-## 📄 许可证
-
-MIT License - 详见 [LICENSE](./LICENSE)
-
-## 🙌 致谢
-
-感谢所有为健康生活而努力的用户！🎉
+## 📄 License
+MIT
 
 ---
-
-**最后更新：2026年2月23日** ⏰
-
-有任何问题或建议，欢迎反馈！💌
+Made with 💙 at TJU · Last update: 2026-02-26
