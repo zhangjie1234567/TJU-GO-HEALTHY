@@ -1,9 +1,17 @@
 {
   "pages": [
     {
-      "path": "pages/schedule/schedule",
+      "path": "pages/login/login",
       "style": {
-        "navigationBarTitleText": "计划"
+        "navigationBarTitleText": "登录",
+        "navigationBarHidden": true
+      }
+    },
+    {
+      "path": "pages/questionnaire/questionnaire",
+      "style": {
+        "navigationBarTitleText": "问卷",
+        "navigationBarHidden": true
       }
     },
     {
@@ -19,9 +27,105 @@
       }
     },
     {
+      "path": "pages/schedule/schedule",
+      "style": {
+        "navigationBarTitleText": "计划"
+      }
+    },
+    {
       "path": "pages/communication/communication",
       "style": {
         "navigationBarTitleText": "社区"
+      }
+    },
+    {
+      "path": "pages/home/home_search_bar",
+      "style": {
+        "navigationBarTitleText": "首页搜索栏"
+      }
+    },
+    {
+      "path": "pages/home/search_bar_detail",
+      "style": {
+        "navigationBarTitleText": "食物详情"
+      }
+    },
+    {
+      "path": "pages/home/search_bar_morefruits",
+      "style": {
+        "navigationBarTitleText": "热门水果"
+      }
+    },
+    {
+      "path": "pages/home/search_bar_morevegetables",
+      "style": {
+        "navigationBarTitleText": "热门蔬菜"
+      }
+    },
+    {
+      "path": "pages/home/plan_progress",
+      "style": {
+        "navigationBarTitleText": "计划进度"
+      }
+    },
+    {
+      "path": "pages/home/ai_chat",
+      "style": {
+        "navigationBarTitleText": "AI对话"
+      }
+    },
+    {
+      "path": "pages/home/my_plan",
+      "style": {
+        "navigationBarTitleText": "我的方案"
+      }
+    },
+    {
+      "path": "pages/home/record_weight",
+      "style": {
+        "navigationBarTitleText": "记录体重"
+      }
+    },
+    {
+      "path": "pages/home/drink_water",
+      "style": {
+        "navigationBarTitleText": "喝水"
+      }
+    },
+    {
+      "path": "pages/home/exercise",
+      "style": {
+        "navigationBarTitleText": "运动"
+      }
+    },
+    {
+      "path": "pages/home/diary",
+      "style": {
+        "navigationBarTitleText": "日记"
+      }
+    },
+    {
+      "path": "pages/home/select_breakfast",
+      "style": {
+        "navigationBarTitleText": "选择早餐"
+      }
+    },
+    {
+      "path": "pages/home/select_lunch",
+      "style": {
+        "navigationBarTitleText": "选择午餐"
+      }
+    },
+    {
+      "path": "pages/home/select_dinner",
+      "style": {
+        "navigationBarTitleText": "选择晚餐"
+      }
+    },
+    {
+      "path": "pages/home/select_otherfood",
+      "style": {
+        "navigationBarTitleText": "选择其他"
       }
     },
     {

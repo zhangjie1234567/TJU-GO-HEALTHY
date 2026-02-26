@@ -11,10 +11,23 @@
    - [1.2 问卷填写](#12-问卷填写)  
 
 2. [首页相关接口](#2-首页相关接口)  
-   - [2.1 动态卡通形象接口](#21-动态卡通形象接口)  
-   - [2.2 AI对话接口](#22-ai对话接口)  
-   - [2.3 我的方案接口](#23-我的方案接口)  
-
+  - [2.1 食物搜索接口](#21-食物搜索接口)  
+  - [2.2 食物详情接口](#22-食物详情接口)  
+  - [2.3 食物收藏接口](#23-食物收藏接口)
+  - [2.4 计划进度查询接口](#24-计划进度查询接口)  
+  - [2.5 我的方案查询接口](#25-我的方案查询接口)  
+  - [2.6 AI对话接口](#26-ai对话接口)  
+  - [2.7 日记列表查询接口](#27-日记列表查询接口)  
+  - [2.8 新增/编辑/删除日记接口](#28-新增编辑删除日记接口)  
+  - [2.9 体重记录查询接口](#29-体重记录查询接口)  
+  - [2.10 新增体重记录接口](#210-新增体重记录接口)  
+  - [2.11 修改目标体重接口](#211-修改目标体重接口)  
+  - [2.12 今日喝水量查询接口](#212-今日喝水量查询接口)  
+  - [2.13 新增喝水记录接口](#213-新增喝水记录接口)  
+  - [2.14 修改喝水目标接口](#214-修改喝水目标接口)  
+  - [2.15 今日运动记录查询接口](#215-今日运动记录查询接口)  
+  - [2.16 新增运动记录接口](#216-新增运动记录接口)  
+ 
 3. [学校相关接口](#3-学校相关接口)  
    - [3.1 学校地图接口](#31-学校地图接口)  
    - [3.2 课程表接口](#32-课程表接口)  
@@ -40,265 +53,595 @@
 
 ## 1. 用户认证相关接口
 
-### 1.1 用户登录
+### 1.1 用户登录接口
 
-- **接口URL**：`/login`  
-- **请求方法**：POST  
-- **接口描述**：用户登录接口，验证用户身份并返回token  
+**接口名称**：学生认证登录
+**接口路径**：/api/auth/login
+**请求方式**：POST
+**请求头**：Content-Type: application/json
 
-#### 请求参数
+| 参数名     | 类型   | 是否必填 | 说明         |
+| ---------- | ------ | -------- | ------------ |
+| name       | string | 是       | 学生姓名     |
+| studentId  | string | 是       | 学号（10位数字） |
+| rememberMe | bool   | 否       | 是否记住登录 |
 
-| 参数名   | 类型   | 必填 | 描述     |
-| -------- | ------ | ---- | -------- |
-| username | string | 是   | 学号     |
-| password | string | 是   | 密码     |
-
-#### 请求示例
-
+**请求示例**：
 ```json
 {
-  "username": "20200123456",
-  "password": "123456"
+  "name": "张三",
+  "studentId": "2023123456",
+  "rememberMe": true
 }
-响应参数
-参数名	类型	描述
-code	number	状态码，200表示成功
-msg	string	返回信息
-token	string	登录成功后返回的token
-响应示例
+```
+
+**返回数据**（成功）：
+```json
 {
-  "code": 200,
-  "msg": "登录成功",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-1.2 问卷填写
-接口URL：/survey
-请求方法：POST
-接口描述：提交用户问卷信息，保存用户偏好
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-answers	object	是	问卷内容json格式
-请求示例
-{
-  "userId": "12345",
-  "answers": {
-    "goal": "减脂",
-    "weight": 70,
-    "height": 175,
-    "exerciseFrequency": "每周3次"
-  }
-}
-响应参数
-参数名	类型	描述
-code	number	状态码
-msg	string	返回信息
-响应示例
-{
-  "code": 200,
-  "msg": "提交成功"
-}
-2. 首页相关接口
-2.1 动态卡通形象接口
-接口URL：/home/avatar
-请求方法：GET
-接口描述：根据用户体重、运动记录获取动态卡通形象与目标进展
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-响应参数
-参数名	类型	描述
-code	number	状态码
-avatar	string	卡通头像URL
-progress	object	目标进展详情
-响应示例
-{
-  "code": 200,
-  "avatar": "https://example.com/avatar/user123.png",
-  "progress": {
-    "currentWeight": 68,
-    "targetWeight": 65,
-    "completionRate": 60
-  }
-}
-2.2 AI对话接口
-接口URL：/ai/conversation
-请求方法：POST
-接口描述：支持拍照识别卡路里，语音识别，返回AI回复及推荐食谱
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-type	string	是	数据类型(image/audio/text)
-data	string	是	base64编码或者文本内容
-请求示例
-{
-  "userId": "12345",
-  "type": "image",
-  "data": "base64编码的图片数据"
-}
-响应参数
-参数名	类型	描述
-code	number	状态码
-reply	string	AI回复内容
-calories	number	识别卡路里值
-recipe	object	推荐食谱信息
-响应示例
-{
-  "code": 200,
-  "reply": "这是一份炒饭，约含500卡路里",
-  "calories": 500,
-  "recipe": {
-    "name": "低卡炒饭",
-    "ingredients": ["糙米", "鸡蛋", "蔬菜"]
-  }
-}
-2.3 我的方案接口
-接口URL：/plan/my
-请求方法：GET
-接口描述：获取用户当前减脂或增重方案详情
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-响应参数
-参数名	类型	描述
-code	number	状态码
-plan	object	方案详情
-响应示例
-{
-  "code": 200,
-  "plan": {
-    "type": "减脂",
-    "dailyCalories": 1800,
-    "exercisePlan": "每周5次有氧运动",
-    "duration": "3个月"
-  }
-}
-3. 学校相关接口
-3.1 学校地图接口
-接口URL：/school/map
-请求方法：GET
-接口描述：获取学校食堂及运动场馆地图信息
-请求参数
-参数名	类型	必填	描述
-schoolId	string	是	学校ID
-响应参数
-参数名	类型	描述
-code	number	状态码
-map	object	地图信息
-响应示例
-{
-  "code": 200,
-  "map": {
-    "canteens": [
-      {"id": "1", "name": "第一食堂", "location": {"lat": 39.9, "lng": 116.4}},
-      {"id": "2", "name": "第二食堂", "location": {"lat": 39.91, "lng": 116.41}}
-    ],
-    "gyms": [
-      {"id": "1", "name": "体育馆", "location": {"lat": 39.92, "lng": 116.42}}
-    ]
-  }
-}
-3.2 课程表接口
-接口URL：/school/timetable
-请求方法：GET
-接口描述：获取学生课程表信息
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-响应参数
-参数名	类型	描述
-code	number	状态码
-timetable	array	课程表数据
-响应示例
-{
-  "code": 200,
-  "timetable": [
-    {
-      "day": "周一",
-      "courses": [
-        {"time": "08:00-09:40", "name": "高等数学", "location": "教学楼A101"},
-        {"time": "10:00-11:40", "name": "英语", "location": "教学楼B202"}
-      ]
+  "code": 0,
+  "data": {
+    "token": "string",
+    "user": {
+      "name": "张三",
+      "studentId": "2023123456"
     }
-  ]
-}
-3.3 食堂菜谱推荐接口
-接口URL：/school/canteen/menu
-请求方法：GET
-接口描述：根据课程安排和体测情况推荐食堂菜谱
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-schedule	object	否	课程安排信息
-响应参数
-参数名	类型	描述
-code	number	状态码
-menu	array	菜谱列表
-calories	number	卡路里合计
-响应示例
-{
-  "code":200,
-  "menu":[
-    {"dishName":"清蒸鱼","calories":200,"canteen":"第一食堂"},
-    {"dishName":"蔬菜沙拉","calories":80,"canteen":"第二食堂"}
-  ],
-  "calories":280
-}
-3.4 体测数据接口
-接口URL：/school/fitness/test
-请求方法：GET
-接口描述：获取体测数据和制定运动方案
-请求参数
-参数名	类型	必填	描述
-userId	string	是	用户ID
-响应参数
-参数名	类型	描述
-code	number	状态码
-testData	object	体测数据
-plan	object	运动方案
-响应示例
-{
-  "code": 200,
-  "testData": {
-    "height": 175,
-    "weight": 70,
-    "bmi": 22.9,
-    "bodyFat": 18,
-    "vitalCapacity": 3500
   },
-  "plan": {
-    "recommendation": "适度有氧运动",
-    "exercises": [
-      {"type": "跑步", "duration": "30分钟", "frequency": "每周3次"},
-      {"type": "游泳", "duration": "45分钟", "frequency": "每周2次"}
-    ]
+  "msg": "认证成功"
+}
+```
+
+**异常码说明**：
+| 状态码 | 说明         |
+| ------ | ------------ |
+| 200    | 成功         |
+| 400    | 参数错误     |
+| 401    | 学号或姓名错误|
+| 500    | 服务器错误   |
+
+---
+### 1.2 问卷填写接口
+
+**接口名称**：健康问卷填写
+**接口路径**：/api/questionnaire/submit
+**请求方式**：POST
+**请求头**：Content-Type: application/json，Authorization: Bearer {token}
+
+| 参数名      | 类型   | 是否必填 | 说明         |
+| ----------- | ------ | -------- | ------------ |
+| baseInfo    | object | 是       | 基础信息     |
+| habitInfo   | object | 是       | 日常习惯     |
+
+**baseInfo 字段说明**：
+| 字段        | 类型   | 是否必填 | 说明         |
+| ----------- | ------ | -------- | ------------ |
+| gender      | string | 是       | 性别         |
+| height      | string | 是       | 身高（cm）   |
+| weight      | string | 是       | 体重（kg）   |
+| bmi         | string | 否       | BMI值        |
+| bodyType    | string | 否       | 体型         |
+| age         | string | 是       | 年龄         |
+| target      | string | 是       | 期望目标     |
+| parts       | array  | 是       | 改善部位     |
+| targetWeight| string | 是       | 目标体重（kg）|
+
+**habitInfo 字段说明**：
+| 字段              | 类型   | 是否必填 | 说明         |
+| ----------------- | ------ | -------- | ------------ |
+| exerciseFreq      | string | 是       | 每周运动次数 |
+| exerciseTypes     | array  | 否       | 运动类型     |
+| exerciseDuration  | string | 否       | 单次运动时长 |
+| foodAllergies     | array  | 是       | 食物过敏/忌口|
+| foodAllergyDetails| object | 否       | 过敏详情     |
+
+**请求示例**：
+```json
+{
+  "baseInfo": {
+    "gender": "男",
+    "height": "175cm",
+    "weight": "70kg",
+    "bmi": "22.9",
+    "bodyType": "正常",
+    "age": "20",
+    "target": "减肥",
+    "parts": ["腹部", "腿部"],
+    "targetWeight": "65kg"
+  },
+  "habitInfo": {
+    "exerciseFreq": "3-4",
+    "exerciseTypes": ["low", "medium"],
+    "exerciseDuration": "31-60",
+    "foodAllergies": ["seafood", "nuts"],
+    "foodAllergyDetails": {"seafood": "虾过敏", "nuts": "花生过敏"}
   }
 }
-3.5 服务接口（校医、心理咨询）
-接口URL：/school/service/consultation
-请求方法：POST
-接口描述：线上校医及心理咨询服务
-请求参数
-参数名	类型	必填	描述
-serviceType	string	是	服务类型（校医/心理咨询）
-userId	string	是	用户ID
-请求示例
+```
+
+**返回数据**（成功）：
+```json
 {
-  "serviceType": "心理咨询",
-  "userId": "12345"
+  "code": 0,
+  "msg": "问卷提交成功"
 }
-响应参数
-参数名	类型	描述
-code	number	状态码
-url	string	服务访问链接
-info	string	服务相关信息
-响应示例
-{
-  "code": 200,
-  "url": "https://consult.example.com/session/12345",
-  "info": "心理咨询服务已开通，点击链接进入"
-}
-4. 计划相关接口
+```
+
+**异常码说明**：
+| 状态码 | 说明         |
+| ------ | ------------ |
+| 200    | 成功         |
+| 400    | 参数错误     |
+| 401    | 未登录/认证失效 |
+| 500    | 服务器错误   |
+
+---
+## 2.首页相关接口
+
+### 1. 食物搜索接口
+
+- **接口名称**：食物搜索
+- **接口路径**：/api/search
+- **请求方式**：GET
+- **请求头**：Content-Type: application/json
+
+
+  | 参数名 | 类型   | 是否必填 | 说明         |
+  | ------ | ------ | -------- | ------------ |
+  | q      | string | 是       | 搜索关键词   |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+        "calorie": "30千卡/100克",
+        "image": "string",
+        "collected": false
+      }
+      // ...更多食物
+    ],
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | 200    | 成功         |
+  | 400    | 参数错误     |
+  | 500    | 服务器错误   |
+
+---
+### 2. 食物详情接口
+
+- **接口名称**：食物详情查询
+- **接口路径**：/api/food/{id}
+- **请求方式**：GET
+- **路径参数**：
+  | 参数名 | 类型 | 是否必填 | 说明     |
+  | ------ | ---- | -------- | -------- |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "effect": "string",
+      "feature": "string",
+      "nutrition": [
+        { "name": "水分", "value": "90g" }
+        // ...更多营养成分
+      ],
+      "relatedRecipes": [
+          "id": 101,
+          "name": "草莓沙拉",
+          "image": "string",
+          "collected": false
+        }
+        // ...更多相关菜品
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 404    | 未找到       |
+  | 500    | 服务器错误   |
+
+### 3. 食物收藏接口
+
+- **接口路径**：/api/food/{id}/collect
+- **请求方式**：POST
+- **请求头**：Content-Type: application/json
+- **路径参数**：
+  | 参数名 | 类型 | 是否必填 | 说明     |
+  | ------ | ---- | -------- | -------- |
+  | id     | int  | 是       | 食物ID   |
+- **请求体参数**：
+  | 参数名   | 类型    | 是否必填 | 说明         |
+  | -------- | ------- | -------- | ------------ |
+  | collected| boolean | 是       | true收藏，false取消收藏 |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 404    | 未找到       |
+  | 500    | 服务器错误   |
+
+### 4. 计划进度查询接口
+
+- **接口名称**：用户计划进度查询
+- **接口路径**：/api/plan/progress
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "daysArrived": 5,
+      "daysRecorded": 4,
+      "daysPersisted": 4,
+      "daysRemaining": 24,
+      "weightTrend": [450, 520, 380, ...]
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 5. 我的方案查询接口
+
+- **接口名称**：我的饮食/运动方案查询
+- **接口路径**：/api/plan/my
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "diet": "string",
+      "exercise": "string"
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 6. AI对话接口
+
+- **接口名称**：AI健康对话
+- **接口路径**：/api/ai/chat
+- **请求方式**：POST
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名        | 类型   | 是否必填 | 说明           |
+  | ------------- | ------ | -------- | -------------- |
+  | messages      | array  | 是       | 聊天消息数组   |
+  | questionnaire | object | 否       | 问卷信息（可选）|
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "reply": "AI回复内容"
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 7. 日记列表查询接口
+
+- **接口名称**：日记列表查询
+- **接口路径**：/api/diary/list
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": [
+      {
+        "id": 123,
+        "date": "2026-02-25 10:00",
+        "text": "string"
+      }
+      // ...更多日记
+    ],
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 8. 新增/编辑/删除日记接口
+
+- **接口名称**：新增/编辑/删除日记
+- **接口路径**：
+  - 新增：/api/diary/add （POST）
+  - 编辑：/api/diary/{id}/edit （PUT）
+  - 删除：/api/diary/{id}/delete （DELETE）
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**（新增/编辑）：
+  | 参数名 | 类型   | 是否必填 | 说明     |
+  | ------ | ------ | -------- | -------- |
+  | text   | string | 是       | 日记内容 |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 404    | 未找到       |
+  | 500    | 服务器错误   |
+
+### 9. 体重记录查询接口
+
+- **接口名称**：体重历史记录查询
+- **接口路径**：/api/weight/list
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": [
+      {
+        "date": "2026-02-25",
+        "weight": 60.5
+      }
+      // ...更多记录
+    ],
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 10. 新增体重记录接口
+
+- **接口名称**：新增体重记录
+- **接口路径**：/api/weight/add
+- **请求方式**：POST
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名 | 类型   | 是否必填 | 说明     |
+  | ------ | ------ | -------- | -------- |
+  | date   | string | 是       | 日期     |
+  | weight | number | 是       | 体重(kg) |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 11. 修改目标体重接口
+
+- **接口名称**：修改目标体重
+- **接口路径**：/api/weight/target
+- **请求方式**：PUT
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名 | 类型   | 是否必填 | 说明         |
+  | ------ | ------ | -------- | ------------ |
+  | weight | number | 是       | 目标体重(kg) |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+
+### 12. 今日喝水量查询接口
+
+- **接口名称**：今日喝水量查询
+- **接口路径**：/api/drink/today
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "todayDrank": 1200,
+      "drinkGoal": 1800
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 13. 新增喝水记录接口
+
+- **接口名称**：新增喝水记录
+- **接口路径**：/api/drink/add
+- **请求方式**：POST
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名 | 类型   | 是否必填 | 说明     |
+  | ------ | ------ | -------- | -------- |
+  | value  | number | 是       | 本次喝水量(ml) |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 14. 修改喝水目标接口
+
+- **接口名称**：修改喝水目标
+- **接口路径**：/api/drink/goal
+- **请求方式**：PUT
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名 | 类型   | 是否必填 | 说明         |
+  | ------ | ------ | -------- | ------------ |
+  | goal   | number | 是       | 喝水目标(ml) |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+
+### 15. 今日运动记录查询接口
+
+- **接口名称**：今日运动记录查询
+- **接口路径**：/api/exercise/today
+- **请求方式**：GET
+- **请求头**：Authorization: Bearer {token}
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "todayCalorie": 500,
+      "exerciseGoal": 500,
+      "records": [
+        {
+          "id": 1,
+          "name": "步行",
+          "icon": "string",
+          "duration": 30,
+          "calorie": 63
+        }
+        // ...更多记录
+      ]
+    },
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+
+### 16. 新增运动记录接口
+
+- **接口名称**：新增运动记录
+- **接口路径**：/api/exercise/add
+- **请求方式**：POST
+- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求体参数**：
+  | 参数名   | 类型   | 是否必填 | 说明         |
+  | -------- | ------ | -------- | ------------ |
+  | name     | string | 是       | 运动名称     |
+  | icon     | string | 否       | 图标         |
+  | duration | number | 是       | 时长(分钟)   |
+  | calorie  | number | 是       | 消耗卡路里   |
+- **返回数据**（成功）：
+  ```json
+  {
+    "code": 0,
+    "msg": "success"
+  }
+  ```
+- **异常码说明**：
+  | 状态码 | 说明         |
+  | ------ | ------------ |
+  | 200    | 成功         |
+  | 401    | 未登录       |
+  | 500    | 服务器错误   |
+
+---
+## 3.学校相关接口
+
+## 4.计划相关接口
 4.1 饮食与运动计划接口
 接口URL：/plan/food
 请求方法：GET

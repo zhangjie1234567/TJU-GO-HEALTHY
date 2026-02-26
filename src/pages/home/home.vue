@@ -3,32 +3,31 @@
     <!-- 食物搜索栏 - 增加点击反馈、优化语义 -->
     <view class="food-search-bar" @click="goToHomeSearchBar" hover-class="search-bar-hover">
       <text class="food-search-placeholder">请输入你想了解的食物并点击查看详情</text>
-      <image class="food-search-icon" src="/static/首页功能图标/搜索图标.png" mode="aspectFit" lazy-load />
+      <image class="food-search-icon" src="/static/搜索图标.png" mode="aspectFit" lazy-load />
     </view>
-
     <!-- 人物形象和AI对话横向排列 - 修复响应式、增加点击反馈 -->
     <view class="home-top-row">
       <!-- 人物形象卡片 - 增加点击反馈 -->
       <view class="card-row-item" @click="goToPlanProgress" hover-class="card-hover">
-        <image class="avatar-img" src="/static/首页功能图标/首页人物图.png" mode="aspectFill" lazy-load />
+        <image class="avatar-img" src="/static/首页人物图.png" mode="aspectFill" lazy-load />
       </view>
       <!-- AI对话卡片 - 补全点击事件、增加点击反馈、优化布局 -->
       <view class="card-row-item" @click="goToAIChat" hover-class="card-hover">
         <!-- 左下：两个圆圈横排 -->
         <view class="ai-circle-group ai-circle-group-l">
-          <image class="ai-circle" src="/static/首页功能图标/AI对话小圆圈.png" lazy-load />
-          <image class="ai-circle" src="/static/首页功能图标/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
         </view>
         <!-- 右上：两个圆圈横排 -->
         <view class="ai-circle-group ai-circle-group-r">
-          <image class="ai-circle" src="/static/首页功能图标/AI对话小圆圈.png" lazy-load />
-          <image class="ai-circle" src="/static/首页功能图标/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
+          <image class="ai-circle" src="/static/AI对话小圆圈.png" lazy-load />
         </view>
 
         <view class="ai-dialog-main">
           <!-- 蓝色圆角框定位在主图正中间 -->
           <view class="ai-dialog-main-bg"></view>
-          <image class="ai-dialog-main-img" src="/static/首页功能图标/首页AI对话模块主图.png" mode="aspectFit" lazy-load />
+          <image class="ai-dialog-main-img" src="/static/首页AI对话模块主图.png" mode="aspectFit" lazy-load />
         </view>
         <view class="ai-dialog-desc">
           拍照识别卡路里<br />语音分析情绪<br />定制食谱
@@ -42,11 +41,11 @@
         <view class="plan-header-card" @click="goToMyPlan" hover-class="card-hover">
           <view class="plan-header-content">
             <view class="plan-icon-bg">
-              <image class="plan-icon-img" src="/static/首页功能图标/我的方案图标.png" mode="aspectFit" lazy-load />
+              <image class="plan-icon-img" src="/static/我的方案图标.png" mode="aspectFit" lazy-load />
             </view>
             <text class="plan-title">我的方案</text>
             <view class="plan-icon-bg">
-              <image class="plan-icon-img" src="/static/首页功能图标/我的方案图标.png" mode="aspectFit" lazy-load />
+              <image class="plan-icon-img" src="/static/我的方案图标.png" mode="aspectFit" lazy-load />
             </view>
           </view>
         </view>
@@ -73,8 +72,45 @@
             <text class="tag" @click="goToSelect('other')" hover-class="tag-hover">+ 零食</text>
           </view>
         </view>
-        <view class="health-link" @click="goToHealthRemind" hover-class="link-hover">
+        <view class="health-link" @click="showRemindPopup = true" hover-class="link-hover">
           <text class="link-text">— 一键设置健康提醒 —</text>
+        </view>
+        <!-- 健康提醒弹窗 -->
+        <view v-if="showRemindPopup" class="popup-mask" @click.self="closeRemindPopup">
+          <view class="popup-content">
+            <view class="popup-title">请选择要设置的提醒</view>
+            <view class="popup-item" v-for="item in remindItems" :key="item.key" @click="selectRemind(item)">
+              <text>{{ item.label }}</text>
+            </view>
+            <view class="popup-cancel" @click="closeRemindPopup">取消</view>
+          </view>
+        </view>
+        <!-- 时间选择器弹窗 -->
+        <view v-if="showTimePicker" class="popup-mask" @click.self="closeTimePicker">
+          <view class="popup-content">
+            <view class="popup-title">请选择提醒时间</view>
+            <picker-view :value="pickerValue" @change="onTimeChange" class="picker-view">
+              <picker-view-column>
+                <view v-for="(y, i) in years" :key="i">{{y}}年</view>
+              </picker-view-column>
+              <picker-view-column>
+                <view v-for="(m, i) in months" :key="i">{{m}}月</view>
+              </picker-view-column>
+              <picker-view-column>
+                <view v-for="(d, i) in days" :key="i">{{d}}日</view>
+              </picker-view-column>
+              <picker-view-column>
+                <view v-for="(h, i) in hours" :key="i">{{h}}时</view>
+              </picker-view-column>
+              <picker-view-column>
+                <view v-for="(min, i) in minutes" :key="i">{{min}}分</view>
+              </picker-view-column>
+            </picker-view>
+            <view class="popup-btn-row">
+              <view class="popup-btn" @click="closeTimePicker">取消</view>
+              <view class="popup-btn confirm" @click="confirmTime">确定</view>
+            </view>
+          </view>
         </view>
         <view class="quick-actions">
           <view v-for="item in quickActions" :key="item.name" class="action-item" @click="goToAction(item.route)"
@@ -128,42 +164,106 @@
 
   //跳转到首页搜索栏页面
   function goToHomeSearchBar() {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    uni.navigateTo({
+      url: '/pages/home/home_search_bar/home_search_bar?from=home'
     });
   }
   // 跳转到计划进度页面
   function goToPlanProgress() {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    uni.navigateTo({
+      url: '/pages/home/plan_progress/plan_progress?from=home'
     });
   }
   // 跳转到AI对话页面
   function goToAIChat() {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    uni.navigateTo({
+      url: '/pages/home/ai_chat/ai_chat?from=home'
     });
   }
-  // 跳转到健康提醒页面
-  function goToHealthRemind() {
+  // 健康提醒弹窗相关
+  import {
+    ref as vueRef
+  } from 'vue';
+  const showRemindPopup = vueRef(false);
+  const showTimePicker = vueRef(false);
+  const remindItems = [{
+      key: 'weight',
+      label: '设置体重提醒'
+    },
+    {
+      key: 'drink',
+      label: '设置饮水提醒'
+    },
+    {
+      key: 'exercise',
+      label: '设置运动提醒'
+    },
+    {
+      key: 'fasting',
+      label: '设置断食提醒'
+    }
+  ];
+  const selectedRemind = vueRef(null);
+
+  function closeRemindPopup() {
+    showRemindPopup.value = false;
+  }
+
+  function selectRemind(item) {
+    selectedRemind.value = item;
+    showRemindPopup.value = false;
+    showTimePicker.value = true;
+  }
+
+  function closeTimePicker() {
+    showTimePicker.value = false;
+  }
+  // 时间选择器数据
+  const now = new Date();
+  const years = [];
+  for (let y = now.getFullYear(); y <= now.getFullYear() + 2; y++) years.push(y);
+  const months = Array.from({
+    length: 12
+  }, (_, i) => i + 1);
+  const days = Array.from({
+    length: 31
+  }, (_, i) => i + 1);
+  const hours = Array.from({
+    length: 24
+  }, (_, i) => i);
+  const minutes = Array.from({
+    length: 60
+  }, (_, i) => i);
+  // pickerValue: [年, 月, 日, 时, 分]的下标
+  const pickerValue = vueRef([
+    0, now.getMonth(), now.getDate() - 1, now.getHours(), now.getMinutes()
+  ]);
+
+  function onTimeChange(e) {
+    pickerValue.value = e.detail.value;
+  }
+
+  function confirmTime() {
+    // 获取选择的时间
+    const y = years[pickerValue.value[0]];
+    const m = months[pickerValue.value[1]];
+    const d = days[pickerValue.value[2]];
+    const h = hours[pickerValue.value[3]];
+    const min = minutes[pickerValue.value[4]];
+    const timeStr =
+      `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+    // 这里可以调用日历API或保存提醒逻辑
     uni.showToast({
-      title: '功能开发中',
+      title: `已为“${selectedRemind.value.label}”设置提醒\n${timeStr}`,
       icon: 'none',
-      duration: 2000
+      duration: 2500
     });
+    showTimePicker.value = false;
   }
   // 跳转到我的方案页面
   function goToMyPlan() {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    uni.navigateTo({
+      url: '/pages/home/my_plan/my_plan?from=home'
     });
   }
   // 快捷功能区数据
@@ -189,7 +289,7 @@
       name: '断食',
       icon: '/static/首页功能图标/断食图标.png',
       img: '/static/首页功能图标/断食图.png',
-      route: '/pages/home/fasting/fasting',
+      route: '/pages/schedule/fasting',
     },
     {
       name: '日记',
@@ -200,10 +300,8 @@
   ];
   // 跳转到对应功能页面
   function goToAction(route) {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    uni.navigateTo({
+      url: route + '?from=home'
     });
   }
   // 卡路里数据
@@ -215,10 +313,14 @@
   });
   // 跳转到选择页面
   function goToSelect(type) {
-    uni.showToast({
-      title: '功能开发中',
-      icon: 'none',
-      duration: 2000
+    let map = {
+      breakfast: '/pages/home/select_breakfast/select_breakfast',
+      lunch: '/pages/home/select_lunch/select_lunch',
+      dinner: '/pages/home/select_dinner/select_dinner',
+      other: '/pages/home/select_otherfood/select_otherfood',
+    };
+    uni.navigateTo({
+      url: map[type] + '?from=home'
     });
   }
   // 加载卡路里数据
@@ -242,9 +344,97 @@
 </script>
 
 <style scoped>
+  .popup-mask {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .popup-content {
+    background: #fff;
+    border-radius: 12px;
+    min-width: 260px;
+    max-width: 90vw;
+    padding: 24px 18px 18px 18px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .popup-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .popup-item {
+    padding: 12px 0;
+    text-align: center;
+    font-size: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .popup-item:last-child {
+    border-bottom: none;
+  }
+
+  .popup-item:active {
+    background: #f5f7fa;
+  }
+
+  .popup-cancel {
+    margin-top: 16px;
+    color: #888;
+    text-align: center;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .picker-view {
+    width: 100%;
+    height: 220px;
+    margin: 12px 0;
+    background: #f7f7fa;
+    border-radius: 8px;
+  }
+
+  .popup-btn-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+
+  .popup-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 16px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    margin: 0 6px;
+    cursor: pointer;
+  }
+
+  .popup-btn.confirm {
+    background: #53B1EF;
+    color: #fff;
+    font-weight: 600;
+  }
+
   /* 顶部人物形象和AI对话横向排列 */
   .home-top-row {
-    width: 366px;
+    width: 340px;
     display: flex;
     flex-direction: row;
     gap: 4px;
@@ -359,14 +549,14 @@
     border-radius: 10px;
     box-shadow: 0 2px 12px rgba(79, 161, 242, 0.08);
     padding: 18px 16px 16px 16px;
-    margin: 0 auto;
+    margin: 0 20px 8px 20px;
     display: flex;
     flex-direction: column;
     gap: 16px;
     box-sizing: border-box;
     overflow-x: hidden !important;
     /* 强制禁止子容器横向溢出 */
-    max-width: 100%;
+    max-width: 90%;
     /* 新增：适配不同屏幕宽度，避免超出视口 */
   }
 
@@ -457,7 +647,7 @@
   /* 我的方案卡片区 */
   .plan-header-card {
     width: 100%;
-    background: #fff;
+    background: #ffffff;
     border-radius: 10px;
     box-shadow: 0 2px 12px rgba(79, 161, 242, 0.12);
     padding: 12px 0;
@@ -493,7 +683,7 @@
   .plan-icon-bg {
     width: 38px;
     height: 36px;
-    background: #1890FF;
+    background: #4D96FF;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -513,13 +703,13 @@
   .calories-cards {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
   }
 
   .card-group {
     display: flex;
     justify-content: space-between;
-    gap: 8px;
+    gap: 4px;
   }
 
   .calories-card {
@@ -527,7 +717,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #fff;
+    background: #FDD3D0;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(79, 161, 242, 0.08);
     padding: 18px 0;
