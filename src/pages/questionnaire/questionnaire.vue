@@ -586,8 +586,53 @@
         foodAllergyDetails: form.value.foodAllergyDetails
       }
     }
-    // 3. 打印数据（实际项目中替换为接口请求）
-    console.log('完整问卷数据:', allQuestionnaireData)
+    // 3. 保存问卷数据到本地存储（供AI对话使用）
+    try {
+      uni.setStorageSync('questionnaireData', allQuestionnaireData)
+      // ✅ 新增：保存基础信息以便其他页面使用
+      uni.setStorageSync('questionnaireBaseInfo', allQuestionnaireData.baseInfo)
+      // ✅ 标记问卷已完成
+      uni.setStorageSync('questionnaireCompleted', 'true')
+      console.log('完整问卷数据已保存:', allQuestionnaireData)
+    } catch (e) {
+      console.error('保存问卷数据失败:', e)
+    }
+
+    // ✅ 新增：同步体重数据到record_weight
+    try {
+      const now = new Date()
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+      
+      // 初始化体重记录列表（当前体重作为第一条记录）
+      const currentWeight = parseFloat(weight.value)
+      const weightList = [{
+        date: dateStr,
+        weight: currentWeight
+      }]
+      uni.setStorageSync('weightList', JSON.stringify(weightList))
+      
+      // 保存目标体重
+      const targetWeightValue = parseFloat(targetWeight.value)
+      uni.setStorageSync('targetWeight', targetWeightValue.toString())
+      
+      // 初始化首次使用日期（用于计算使用天数）
+      if (!uni.getStorageSync('app_first_use_date')) {
+        uni.setStorageSync('app_first_use_date', dateStr)
+      }
+      
+      // 初始化每日记录（记录天数为1）
+      const dailyRecords = {}
+      dailyRecords[dateStr] = {
+        date: dateStr,
+        hasRecord: true,
+        timestamp: Date.now()
+      }
+      uni.setStorageSync('daily_records', JSON.stringify(dailyRecords))
+      
+      console.log('✅ 体重数据已同步:', { currentWeight, targetWeightValue, dateStr })
+    } catch (e) {
+      console.error('同步体重数据失败:', e)
+    }
 
     // 4. 提示提交成功
     uni.showToast({

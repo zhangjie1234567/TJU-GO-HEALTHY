@@ -2,191 +2,252 @@
   <view class="food-detail-page">
     <!-- 顶部食物信息区 -->
     <view class="food-header">
-      <image class="food-cover" :src="foodData.image || '/static/default.gif'" mode="aspectFill" />
+      <image class="food-cover" :src="foodData.image" mode="aspectFill" />
       <view class="food-basic-info">
-        <view class="food-name">{{ foodData.name || '未知食物' }}</view>
-        <view class="food-category">{{ foodData.category || '未知种类' }}</view>
+        <view class="food-name">{{ foodData.name }}</view>
+        <view class="food-category-tag">
+          <text class="category-icon">🏷️</text>
+          <text>{{ foodData.category }}</text>
+        </view>
         <view class="food-calorie">
-          <text class="calorie-value">{{ foodData.calorieValue || '0' }}</text>
-          <text class="calorie-unit">kcal(千卡)/100g(克)</text>
+          <text class="calorie-value">{{ foodData.energy }}</text>
+          <text class="calorie-unit">kcal/100g</text>
+        </view>
+        <!-- 收藏按钮 -->
+        <view class="detail-collect-btn" @click="handleToggleCollect">
+          <text class="collect-icon">{{ isCollectedState ? '★' : '☆' }}</text>
+          <text class="collect-text">{{ isCollectedState ? '已收藏' : '收藏' }}</text>
         </view>
       </view>
     </view>
 
+    <!-- 标签 -->
+    <view v-if="foodData.tags && foodData.tags.length > 0" class="tags-section">
+      <text v-for="tag in foodData.tags" :key="tag" class="food-tag">{{ tag }}</text>
+    </view>
 
     <!-- 作用与特征区 -->
-    <view class="food-features">
-      <view class="feature-item">
-        <text class="feature-label">作用：</text>
-        <text class="feature-text">{{ foodData.effect || '暂无数据' }}</text>
+    <view class="info-section">
+      <view class="info-card">
+        <view class="info-label">
+          <text class="info-icon">✨</text>
+          <text class="info-title">功效作用</text>
+        </view>
+        <text class="info-text">{{ foodData.effect }}</text>
       </view>
-      <view class="feature-item">
-        <text class="feature-label">特征：</text>
-        <text class="feature-text">{{ foodData.feature || '暂无数据' }}</text>
+      <view class="info-card">
+        <view class="info-label">
+          <text class="info-icon">🔍</text>
+          <text class="info-title">食物特征</text>
+        </view>
+        <text class="info-text">{{ foodData.feature }}</text>
       </view>
     </view>
 
     <!-- 营养成分表 -->
     <view class="nutrition-section">
-      <view class="section-title">成分表（每100g）</view>
+      <view class="section-header">
+        <text class="section-icon">📊</text>
+        <text class="section-title">营养成分（每100g）</text>
+      </view>
+      
+      <!-- 主要营养素（大卡片） -->
+      <view class="main-nutrients">
+        <view class="nutrient-big-card">
+          <text class="nutrient-value">{{ foodData.nutrition.protein }}g</text>
+          <text class="nutrient-label">蛋白质</text>
+          <view class="nutrient-bar">
+            <view class="nutrient-bar-fill" :style="{ width: getNutrientPercent('protein') }"></view>
+          </view>
+        </view>
+        <view class="nutrient-big-card">
+          <text class="nutrient-value">{{ foodData.nutrition.fat }}g</text>
+          <text class="nutrient-label">脂肪</text>
+          <view class="nutrient-bar">
+            <view class="nutrient-bar-fill" :style="{ width: getNutrientPercent('fat') }"></view>
+          </view>
+        </view>
+        <view class="nutrient-big-card">
+          <text class="nutrient-value">{{ foodData.nutrition.carbohydrate }}g</text>
+          <text class="nutrient-label">碳水</text>
+          <view class="nutrient-bar">
+            <view class="nutrient-bar-fill" :style="{ width: getNutrientPercent('carbohydrate') }"></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 详细营养成分 -->
       <view class="nutrition-grid">
-        <view class="nutrition-item" v-for="(item, index) in foodData.nutrition" :key="index">
-          <text class="nutrition-name">{{ item.name }}</text>
-          <text class="nutrition-value">{{ item.value }}</text>
+        <view class="nutrition-item">
+          <text class="nutrition-name">💧 水分</text>
+          <text class="nutrition-value">{{ foodData.nutrition.water }}g</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🌾 膳食纤维</text>
+          <text class="nutrition-value">{{ foodData.nutrition.fiber }}g</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🥕 维生素A</text>
+          <text class="nutrition-value">{{ foodData.nutrition.vitaminA }}μg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🅱️ 维生素B1</text>
+          <text class="nutrition-value">{{ foodData.nutrition.vitaminB1 }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🅱️ 维生素B2</text>
+          <text class="nutrition-value">{{ foodData.nutrition.vitaminB2 }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🍊 维生素C</text>
+          <text class="nutrition-value">{{ foodData.nutrition.vitaminC }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🌻 维生素E</text>
+          <text class="nutrition-value">{{ foodData.nutrition.vitaminE }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🦴 钙</text>
+          <text class="nutrition-value">{{ foodData.nutrition.calcium }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🩸 铁</text>
+          <text class="nutrition-value">{{ foodData.nutrition.iron }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🧂 钠</text>
+          <text class="nutrition-value">{{ foodData.nutrition.sodium }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">💊 胆固醇</text>
+          <text class="nutrition-value">{{ foodData.nutrition.cholesterol }}mg</text>
         </view>
       </view>
     </view>
 
-    <!-- 相关菜品 -->
+    <!-- 相关菜品推荐 -->
     <view class="recipes-section">
-      <view class="section-title">相关菜品</view>
+      <view class="section-header">
+        <text class="section-icon">👨‍🍳</text>
+        <text class="section-title">推荐菜品</text>
+      </view>
       <view class="recipes-grid">
-        <view class="recipe-card" v-for="(recipe, index) in relatedRecipes" :key="index">
-          <image class="recipe-cover" :src="recipe.image || '/static/default.gif'" mode="aspectFill" />
-          <view class="recipe-name">{{ recipe.name || '未知菜品' }}</view>
-          <view class="collect-btn" @click.stop="toggleCollect(recipe)">
-            <image :src="item.collected ? '/static/search_bar/收藏-active.png' : '/static/search_bar/收藏.png'"
-              mode="aspectFit" class="collect-icon" />
-          </view>
+        <view 
+          v-for="(recipe, index) in foodData.relatedRecipes" 
+          :key="index" 
+          class="recipe-card"
+        >
+          <view class="recipe-icon">🍽️</view>
+          <text class="recipe-name">{{ recipe }}</text>
         </view>
       </view>
     </view>
+
+    <!-- 底部占位 -->
+    <view style="height: 40px;"></view>
   </view>
 </template>
 
 <script setup>
-  import {
-    ref,
-    reactive
-  } from 'vue'
-  import {
-    onLoad
-  } from '@dcloudio/uni-app'
+  import { ref, computed } from 'vue'
+  import { onLoad } from '@dcloudio/uni-app'
+  import { getFoodDetail, toggleCollection, isCollected } from './foodDataService.js'
 
-  // ========== 核心：foodData 定义在这里 ==========
-  // 1. 先定义默认模拟数据（无后端/无参数时兜底，不会报错）
-  const foodData = reactive({
-    name: '未知食物',
-    category: '未知种类',
-    calorieValue: '0',
-    image: '/static/default.gif', // 改用GIF默认图
-    effect: '暂无数据',
-    feature: '暂无数据',
-    // 营养成分默认值
-    nutrition: [{
-        name: '水分',
-        value: '0.00g'
-      },
-      {
-        name: '蛋白质',
-        value: '0.00g'
-      },
-      {
-        name: '脂肪',
-        value: '0.00g'
-      },
-      {
-        name: '碳水化合物',
-        value: '0.00g'
-      },
-      {
-        name: '膳食纤维',
-        value: '0.00g'
-      },
-      {
-        name: '维生素A',
-        value: '0.00μgRAE'
-      },
-      {
-        name: '维生素B1',
-        value: '0.00mg'
-      },
-      {
-        name: '维生素B2',
-        value: '0.00mg'
-      },
-      {
-        name: '维生素C',
-        value: '0.00mg'
-      },
-      {
-        name: '维生素E',
-        value: '0.00mg'
-      },
-      {
-        name: '钠',
-        value: '0.0mg'
-      },
-      {
-        name: '钙',
-        value: '0mg'
-      },
-      {
-        name: '铁',
-        value: '0.0mg'
-      },
-      {
-        name: '胆固醇',
-        value: '0mg'
-      }
-    ],
-    // 相关菜品默认值（带收藏状态）
-    relatedRecipes: [{
-        name: '食谱名称1',
-        image: '/static/default.gif',
-        collected: false
-      },
-      {
-        name: '食谱名称2',
-        image: '/static/default.gif',
-        collected: false
-      },
-      {
-        name: '食谱名称3',
-        image: '/static/default.gif',
-        collected: false
-      },
-      {
-        name: '食谱名称4',
-        image: '/static/default.gif',
-        collected: false
-      }
-    ]
+  // ========== 数据状态 ==========
+  const foodData = ref({
+    id: '',
+    name: '加载中...',
+    category: '',
+    image: '',
+    energy: 0,
+    nutrition: {
+      water: 0,
+      protein: 0,
+      fat: 0,
+      carbohydrate: 0,
+      fiber: 0,
+      vitaminA: 0,
+      vitaminB1: 0,
+      vitaminB2: 0,
+      vitaminC: 0,
+      vitaminE: 0,
+      calcium: 0,
+      iron: 0,
+      sodium: 0,
+      cholesterol: 0
+    },
+    effect: '',
+    feature: '',
+    relatedRecipes: [],
+    tags: []
   })
 
-  // 2. 页面加载时，读取上个页面传递的参数（覆盖默认值）
-  onLoad((options) => {
-    // 只有传递了foodData参数，才会替换默认值；无参数则用上面的默认值，不会报错
-    if (options.foodData) {
-      try {
-        const data = JSON.parse(options.foodData)
-        // 合并传递的参数到foodData（只替换有值的字段，无值的保留默认）
-        Object.keys(data).forEach(key => {
-          if (data[key] !== undefined && data[key] !== null) {
-            foodData[key] = data[key]
-          }
-        })
-        // 确保相关菜品有收藏状态（避免报错）
-        if (Array.isArray(foodData.relatedRecipes)) {
-          foodData.relatedRecipes.forEach(recipe => {
-            if (recipe.collected === undefined) {
-              recipe.collected = false
-            }
-          })
-        }
-      } catch (e) {
-        console.log('参数解析失败，使用默认数据：', e)
-        // 解析失败也不会报错，继续用默认值
+  const isCollectedState = ref(false)
+  const isLoading = ref(true)
+
+  // ========== 生命周期 ==========
+  onLoad(async (options) => {
+    if (!options.foodId) {
+      uni.showToast({ title: '参数错误', icon: 'none' })
+      return
+    }
+
+    try {
+      // 从数据服务获取食物详情
+      const detail = await getFoodDetail(options.foodId)
+      
+      if (detail) {
+        foodData.value = detail
+        isCollectedState.value = isCollected(detail.id)
+      } else {
+        uni.showToast({ title: '食物不存在', icon: 'none' })
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
       }
+    } catch (error) {
+      console.error('加载食物详情失败', error)
+      uni.showToast({ title: '加载失败', icon: 'none' })
+    } finally {
+      isLoading.value = false
     }
   })
 
-  // 切换收藏状态（本地临时）
-  const toggleCollect = (recipe) => {
-    recipe.collected = !recipe.collected
+  // ========== 营养成分百分比计算 ==========
+  // 用于可视化展示（基于参考值）
+  const getNutrientPercent = (type) => {
+    const nutrition = foodData.value.nutrition
+    let value = 0
+    let referenceValue = 100 // 参考值
+    
+    switch(type) {
+      case 'protein':
+        value = nutrition.protein
+        referenceValue = 60 // 成人每日推荐蛋白质摄入量约60g
+        break
+      case 'fat':
+        value = nutrition.fat
+        referenceValue = 60 // 成人每日推荐脂肪摄入量约60g
+        break
+      case 'carbohydrate':
+        value = nutrition.carbohydrate
+        referenceValue = 300 // 成人每日推荐碳水摄入量约300g
+        break
+    }
+    
+    const percent = Math.min((value / referenceValue) * 100 * 100, 100) // 放大显示效果
+    return `${percent}%`
+  }
+
+  // ========== 收藏功能 ==========
+  const handleToggleCollect = () => {
+    const newState = toggleCollection(foodData.value.id)
+    isCollectedState.value = newState
+    
     uni.showToast({
-      title: recipe.collected ? '已收藏' : '已取消收藏',
-      icon: 'none'
+      title: newState ? '已添加到收藏' : '已取消收藏',
+      icon: 'none',
+      duration: 1500
     })
   }
 </script>
@@ -194,162 +255,309 @@
 <style scoped>
   .food-detail-page {
     min-height: 100vh;
-    background-color: #f5f5f5;
+    background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
     padding-bottom: 20px;
   }
 
-  /* 顶部食物信息区 */
+  /* ========== 顶部食物信息区 ========== */
   .food-header {
     display: flex;
-    align-items: center;
-    background-color: #fff;
-    padding: 16px;
+    align-items: flex-start;
+    background: white;
+    padding: 20px 16px;
     margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
   }
 
   .food-cover {
-    width: 100px;
-    height: 100px;
-    border-radius: 8px;
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
     margin-right: 16px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .food-basic-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .food-name {
-    font-size: 20px;
-    font-weight: 500;
+    font-size: 22px;
+    font-weight: 700;
     color: #333;
-    margin-bottom: 4px;
+    line-height: 1.3;
   }
 
-  .food-category {
+  .food-category-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: rgba(79, 161, 242, 0.1);
+    border-radius: 12px;
+    align-self: flex-start;
+  }
+
+  .category-icon {
     font-size: 14px;
-    color: #666;
-    margin-bottom: 8px;
+  }
+
+  .food-category-tag text:last-child {
+    font-size: 13px;
+    color: #4FA1F2;
+    font-weight: 600;
   }
 
   .food-calorie {
     display: flex;
     align-items: baseline;
+    gap: 4px;
   }
 
   .calorie-value {
-    font-size: 24px;
-    font-weight: 600;
-    color: #ff6b6b;
-    margin-right: 4px;
+    font-size: 32px;
+    font-weight: 700;
+    color: #FF6B6B;
+    line-height: 1;
   }
 
   .calorie-unit {
-    font-size: 14px;
+    font-size: 13px;
     color: #999;
   }
 
-  /* 作用与特征区 */
-  .food-features {
-    background-color: #fff;
-    padding: 16px;
+  .detail-collect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 20px;
+    align-self: flex-start;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .detail-collect-btn:active {
+    background: rgba(255, 215, 0, 0.2);
+    transform: scale(0.95);
+  }
+
+  .detail-collect-btn .collect-icon {
+    font-size: 18px;
+    color: #FFD700;
+  }
+
+  .detail-collect-btn .collect-text {
+    font-size: 13px;
+    color: #D4AF37;
+    font-weight: 600;
+  }
+
+  /* ========== 标签区 ========== */
+  .tags-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+    background: white;
     margin-bottom: 12px;
   }
 
-  .feature-item {
-    margin-bottom: 8px;
+  .food-tag {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, rgba(79, 161, 242, 0.1), rgba(128, 208, 255, 0.1));
+    border: 1px solid rgba(79, 161, 242, 0.2);
+    border-radius: 14px;
+    font-size: 12px;
+    color: #4FA1F2;
+    font-weight: 600;
   }
 
-  .feature-item:last-child {
-    margin-bottom: 0;
+  /* ========== 信息卡片区 ========== */
+  .info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px;
+    margin-bottom: 12px;
   }
 
-  .feature-label {
-    font-size: 14px;
-    font-weight: 500;
+  .info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
+  }
+
+  .info-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .info-icon {
+    font-size: 18px;
+  }
+
+  .info-title {
+    font-size: 15px;
+    font-weight: 600;
     color: #333;
   }
 
-  .feature-text {
+  .info-text {
     font-size: 14px;
     color: #666;
+    line-height: 1.8;
   }
 
-  /* 营养成分表 */
+  /* ========== 营养成分区 ========== */
   .nutrition-section {
-    background-color: #fff;
-    padding: 16px;
-    margin-bottom: 12px;
+    background: white;
+    padding: 20px 16px;
+    margin: 0 16px 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .section-icon {
+    font-size: 20px;
   }
 
   .section-title {
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 17px;
+    font-weight: 700;
     color: #333;
-    margin-bottom: 12px;
   }
 
+  /* 主要营养素（三大营养素） */
+  .main-nutrients {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .nutrient-big-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 10px;
+    background: linear-gradient(135deg, rgba(79, 161, 242, 0.08), rgba(128, 208, 255, 0.08));
+    border: 1px solid rgba(79, 161, 242, 0.15);
+    border-radius: 12px;
+  }
+
+  .nutrient-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #4FA1F2;
+    margin-bottom: 6px;
+  }
+
+  .nutrient-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+  }
+
+  .nutrient-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(79, 161, 242, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .nutrient-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4FA1F2, #80D0FF);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* 详细营养成分网格 */
   .nutrition-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px 16px;
+    gap: 12px 16px;
   }
 
   .nutrition-item {
     display: flex;
     justify-content: space-between;
-    font-size: 14px;
+    align-items: center;
+    padding: 10px;
+    background: rgba(79, 161, 242, 0.04);
+    border-radius: 8px;
   }
 
   .nutrition-name {
+    font-size: 13px;
     color: #666;
   }
 
   .nutrition-value {
+    font-size: 14px;
+    font-weight: 600;
     color: #333;
   }
 
-  /* 相关菜品区 */
+  /* ========== 相关菜品区 ========== */
   .recipes-section {
-    background-color: #fff;
-    padding: 16px;
+    background: white;
+    padding: 20px 16px;
+    margin: 0 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
   }
 
   .recipes-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 12px;
   }
 
   .recipe-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 16px 12px;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.08), rgba(255, 193, 7, 0.08));
+    border: 1px solid rgba(255, 107, 107, 0.15);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .recipe-cover {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+  .recipe-card:active {
+    transform: scale(0.95);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.12), rgba(255, 193, 7, 0.12));
+  }
+
+  .recipe-icon {
+    font-size: 36px;
     margin-bottom: 8px;
   }
 
   .recipe-name {
-    font-size: 14px;
+    font-size: 13px;
     color: #333;
-    margin-bottom: 8px;
-  }
-
-  /* 收藏按钮 */
-  .collect-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0px 0px;
-    border-radius: 6px;
-  }
-
-  .collect-icon {
-    width: 70px;
-    height: 80px;
+    font-weight: 600;
+    text-align: center;
   }
 </style>

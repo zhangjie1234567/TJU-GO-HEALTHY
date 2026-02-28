@@ -4,76 +4,217 @@
     <view class="search-box">
       <view class="search-bar">
         <text class="search-icon">🔍</text>
-        <input v-model="searchQuery" @input="performSearch" type="text" class="search-input"
-          placeholder="请输入其他加餐食物名称" />
-        <text class="menu-icon" @click="clearSearch">✕</text>
+        <input 
+          v-model="searchQuery" 
+          @input="handleInput" 
+          @focus="handleFocus"
+          @confirm="performSearch"
+          type="text" 
+          class="search-input"
+          placeholder="请输入加餐食物名称" 
+          confirm-type="search"
+        />
+        <text v-if="searchQuery" class="menu-icon" @click="clearSearch">✕</text>
+      </view>
+    </view>
+
+    <!-- 搜索建议面板 -->
+    <view v-if="showSearchPanel && searchQuery" class="search-panel">
+      <!-- 搜索建议 -->
+      <view v-if="searchSuggestions.length > 0" class="suggestions-section">
+        <view class="panel-title">搜索建议</view>
+        <view class="suggestions-list">
+          <view 
+            v-for="item in searchSuggestions" 
+            :key="item.id" 
+            class="suggestion-item"
+            @click="selectSuggestion(item)"
+          >
+            <image class="suggestion-img" :src="item.image" mode="aspectFill" />
+            <view class="suggestion-info">
+              <text class="suggestion-name">{{ item.name }}</text>
+              <text class="suggestion-category">{{ item.category }}</text>
+            </view>
+            <text class="arrow-icon">→</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 搜索历史 -->
+    <view v-if="showSearchPanel && !searchQuery && searchHistory.length > 0" class="history-section">
+      <view class="history-header">
+        <text class="panel-title">搜索历史</text>
+        <text class="clear-history" @click="clearHistory">清空</text>
+      </view>
+      <view class="history-tags">
+        <view 
+          v-for="(keyword, index) in searchHistory" 
+          :key="index" 
+          class="history-tag"
+          @click="searchFromHistory(keyword)"
+        >
+          <text class="history-text">{{ keyword }}</text>
+          <text class="remove-icon" @click.stop="removeHistory(keyword)">✕</text>
+        </view>
       </view>
     </view>
 
     <!-- 搜索结果板块 -->
-    <view v-if="searchQuery" class="search-results">
+    <view v-if="hasSearched" class="search-results">
       <view class="results-header">
         <text class="results-title">搜索结果</text>
         <text class="results-count" v-if="!isSearching">(共{{ searchResults.length }}个)</text>
         <text class="results-count" v-else>搜索中...</text>
       </view>
-      <view v-if="searchResults.length > 0" class="results-grid">
-        <view v-for="(item, index) in searchResults" :key="index" class="result-item"
-          @click="handleSearchItemClick(item)">
-          <text class="result-emoji">{{ item.emoji || '📦' }}</text>
-          <text class="result-name">{{ item.name }}</text>
-          <text class="result-category">{{ item.category }}</text>
+      
+      <view v-if="isSearching" class="loading-state">
+        <text class="loading-icon">⏳</text>
+        <text class="loading-text">搜索中...</text>
+      </view>
+      
+      <view v-else-if="searchResults.length > 0" class="results-list">
+        <view 
+          v-for="item in searchResults" 
+          :key="item.id" 
+          class="food-card"
+          @click="goToDetail(item)"
+        >
+          <image class="food-img" :src="item.image" mode="aspectFill" />
+          <view class="food-info">
+            <view class="food-name">{{ item.name }}</view>
+            <view class="food-calorie">{{ item.energy }}千卡/100克</view>
+            <view class="food-tags">
+              <text v-for="tag in item.tags.slice(0, 2)" :key="tag" class="tag">{{ tag }}</text>
+            </view>
+          </view>
+          <view class="collect-btn" @click.stop="handleToggleCollect(item)">
+            <text class="collect-icon">{{ item.collected ? '★' : '☆' }}</text>
+          </view>
         </view>
       </view>
-      <view v-else-if="!isSearching" class="empty-results">
-        <text>未找到匹配的内容</text>
+      
+      <view v-else class="empty-results">
+        <text class="empty-icon">🔍</text>
+        <text class="empty-text">未找到匹配的加餐食物</text>
+      </view>
+    </view>
+
+    <!-- 推荐加餐（未搜索时显示） -->
+    <view v-if="!hasSearched" class="recommend-section">
+      <view class="section-title">🍪 推荐加餐食物</view>
+      <view class="food-list">
+        <view 
+          v-for="item in recommendList" 
+          :key="item.id" 
+          class="food-card"
+          @click="goToDetail(item)"
+        >
+          <image class="food-img" :src="item.image" mode="aspectFill" />
+          <view class="food-info">
+            <view class="food-name">{{ item.name }}</view>
+            <view class="food-calorie">{{ item.energy }}千卡/100克</view>
+            <view class="food-tags">
+              <text v-for="tag in item.tags.slice(0, 2)" :key="tag" class="tag">{{ tag }}</text>
+            </view>
+          </view>
+          <view class="collect-btn" @click.stop="handleToggleCollect(item)">
+            <text class="collect-icon">{{ item.collected ? '★' : '☆' }}</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-  import {
-    ref
-  } from 'vue'
+  import { ref, onMounted } from 'vue'
+  import { 
+    searchFoods, 
+    getSearchSuggestions,
+    saveSearchHistory,
+    getSearchHistory,
+    clearSearchHistory,
+    removeSearchHistory as removeSearchHistoryItem,
+    toggleCollection,
+    isCollected,
+    getPopularFoods
+  } from './foodDataService.js'
+
   // 搜索数据
   const searchQuery = ref('')
   const searchResults = ref([])
+  const searchSuggestions = ref([])
+  const searchHistory = ref([])
   const isSearching = ref(false)
+  const showSearchPanel = ref(false)
+  const hasSearched = ref(false)
+  const recommendList = ref([])
+  
+  // 防抖定时器
+  let debounceTimer = null
 
-  // 搜索函数
+  // 页面加载
+  onMounted(async () => {
+    searchHistory.value = getSearchHistory()
+    // 加载推荐加餐食物
+    const allFoods = await getPopularFoods('', 20)
+    recommendList.value = allFoods.map(item => ({
+      ...item,
+      collected: isCollected(item.id)
+    }))
+  })
+
+  // 输入框输入事件（实时搜索建议）
+  const handleInput = () => {
+    showSearchPanel.value = true
+    
+    // 防抖处理
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+    
+    debounceTimer = setTimeout(async () => {
+      if (searchQuery.value.trim()) {
+        searchSuggestions.value = await getSearchSuggestions(searchQuery.value)
+      } else {
+        searchSuggestions.value = []
+      }
+    }, 300)
+  }
+
+  // 输入框聚焦事件
+  const handleFocus = () => {
+    showSearchPanel.value = true
+  }
+
+  // 执行搜索
   const performSearch = async () => {
     if (!searchQuery.value.trim()) {
-      searchResults.value = []
+      uni.showToast({ title: '请输入搜索关键词', icon: 'none' })
       return
     }
-
+    
+    showSearchPanel.value = false
+    hasSearched.value = true
     isSearching.value = true
+    
     try {
-      const response = await uni.request({
-        url: 'http://127.0.0.1:3000/api/search',
-        method: 'GET',
-        data: {
-          q: searchQuery.value
-        },
-        timeout: 5000
-      })
-
-      if (response.statusCode === 200 && response.data.code === 0) {
-        searchResults.value = (response.data.data || []).slice(0, 8)
-      } else {
-        searchResults.value = []
-        uni.showToast({
-          title: '搜索失败，请重试',
-          icon: 'none'
-        })
-      }
+      // 保存搜索历史
+      saveSearchHistory(searchQuery.value)
+      searchHistory.value = getSearchHistory()
+      
+      // 执行搜索
+      const results = await searchFoods(searchQuery.value, '')
+      
+      // 添加收藏状态
+      searchResults.value = results.map(item => ({
+        ...item,
+        collected: isCollected(item.id)
+      }))
     } catch (error) {
-      console.error('搜索请求失败:', error)
-      uni.showToast({
-        title: '网络错误',
-        icon: 'none'
-      })
+      console.error('搜索失败', error)
+      uni.showToast({ title: '搜索失败', icon: 'none' })
       searchResults.value = []
     } finally {
       isSearching.value = false
@@ -83,16 +224,53 @@
   // 清除搜索
   const clearSearch = () => {
     searchQuery.value = ''
+    searchSuggestions.value = []
+    searchResults.value = []
+    hasSearched.value = false
+    showSearchPanel.value = true
   }
 
-  // 处理搜索结果点击
-  const handleSearchItemClick = (item) => {
-    if (item.type === 'drink') {
-      goToPage('/pages/schedule/drinks')
-    } else if (item.type === 'recipe') {
-      goToPage('/pages/schedule/recipes')
-    }
-    clearSearch()
+  // 选择搜索建议（直接跳转详情）
+  const selectSuggestion = (item) => {
+    goToDetail(item)
+  }
+
+  // 从历史记录搜索
+  const searchFromHistory = (keyword) => {
+    searchQuery.value = keyword
+    performSearch()
+  }
+
+  // 删除单条历史记录
+  const removeHistory = (keyword) => {
+    removeSearchHistoryItem(keyword)
+    searchHistory.value = getSearchHistory()
+  }
+
+  // 清空历史记录
+  const clearHistory = () => {
+    clearSearchHistory()
+    searchHistory.value = []
+    uni.showToast({ title: '已清空历史记录', icon: 'none' })
+  }
+
+  // 跳转到详情页
+  const goToDetail = (item) => {
+    uni.navigateTo({
+      url: `/pages/home/search_bar_detail?foodId=${item.id}`
+    })
+  }
+
+  // 切换收藏
+  const handleToggleCollect = (item) => {
+    const newState = toggleCollection(item.id)
+    item.collected = newState
+    
+    uni.showToast({
+      title: newState ? '已收藏' : '已取消收藏',
+      icon: 'none',
+      duration: 1500
+    })
   }
 </script>
 
@@ -111,7 +289,7 @@
 
   // 搜索栏
   .search-box {
-    margin-bottom: 30rpx;
+    margin-bottom: 24rpx;
 
     .search-bar {
       background: white;
@@ -143,14 +321,122 @@
     }
   }
 
-  // 搜索结果
-  .search-results {
+  // 搜索建议面板
+  .search-panel {
     background: white;
     border-radius: 16rpx;
     padding: 20rpx;
-    margin-bottom: 30rpx;
+    margin-bottom: 24rpx;
+    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.08);
+  }
+
+  .suggestions-section {
+    .panel-title {
+      font-size: 28rpx;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 16rpx;
+    }
+
+    .suggestions-list {
+      .suggestion-item {
+        display: flex;
+        align-items: center;
+        padding: 12rpx;
+        border-radius: 8rpx;
+        margin-bottom: 8rpx;
+        background: rgba(79, 161, 242, 0.05);
+
+        &:active {
+          background: rgba(79, 161, 242, 0.15);
+        }
+
+        .suggestion-img {
+          width: 60rpx;
+          height: 60rpx;
+          border-radius: 8rpx;
+          margin-right: 12rpx;
+        }
+
+        .suggestion-info {
+          flex: 1;
+
+          .suggestion-name {
+            display: block;
+            font-size: 28rpx;
+            color: #333;
+            margin-bottom: 4rpx;
+          }
+
+          .suggestion-category {
+            display: block;
+            font-size: 22rpx;
+            color: #999;
+          }
+        }
+
+        .arrow-icon {
+          font-size: 32rpx;
+          color: $main-blue;
+        }
+      }
+    }
+  }
+
+  // 搜索历史
+  .history-section {
+    background: white;
+    border-radius: 16rpx;
+    padding: 20rpx;
+    margin-bottom: 24rpx;
     box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.08);
 
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16rpx;
+
+      .panel-title {
+        font-size: 28rpx;
+        font-weight: 700;
+        color: #333;
+      }
+
+      .clear-history {
+        font-size: 24rpx;
+        color: $main-blue;
+      }
+    }
+
+    .history-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12rpx;
+
+      .history-tag {
+        display: flex;
+        align-items: center;
+        gap: 8rpx;
+        padding: 8rpx 16rpx;
+        background: rgba(79, 161, 242, 0.1);
+        border-radius: 20rpx;
+
+        .history-text {
+          font-size: 24rpx;
+          color: #333;
+        }
+
+        .remove-icon {
+          font-size: 20rpx;
+          color: #999;
+        }
+      }
+    }
+  }
+
+  // 搜索结果
+  .search-results {
     .results-header {
       display: flex;
       gap: 12rpx;
@@ -168,51 +454,128 @@
       }
     }
 
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12rpx;
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80rpx 0;
 
-      .result-item {
-        background: linear-gradient(135deg, rgba(79, 161, 242, 0.1), rgba(128, 208, 255, 0.1));
-        border-radius: 12rpx;
-        padding: 16rpx;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
+      .loading-icon {
+        font-size: 64rpx;
+        margin-bottom: 16rpx;
+      }
 
-        &:active {
-          transform: scale(0.95);
-          background: rgba(79, 161, 242, 0.2);
-        }
+      .loading-text {
+        font-size: 28rpx;
+        color: #999;
+      }
+    }
 
-        .result-emoji {
-          display: block;
-          font-size: 40rpx;
-          margin-bottom: 8rpx;
-        }
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16rpx;
+    }
 
-        .result-name {
-          display: block;
-          font-size: 22rpx;
-          font-weight: 600;
-          color: #333;
-          margin-bottom: 4rpx;
-        }
+    .empty-results {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80rpx 0;
 
-        .result-category {
-          display: block;
-          font-size: 18rpx;
-          color: #999;
+      .empty-icon {
+        font-size: 64rpx;
+        margin-bottom: 16rpx;
+      }
+
+      .empty-text {
+        font-size: 28rpx;
+        color: #999;
+      }
+    }
+  }
+
+  // 推荐食物
+  .recommend-section {
+    .section-title {
+      font-size: 32rpx;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 20rpx;
+    }
+
+    .food-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16rpx;
+    }
+  }
+
+  // 食物卡片
+  .food-card {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 12rpx;
+    padding: 16rpx;
+    box-shadow: 0 2rpx 8rpx rgba(79, 161, 242, 0.08);
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    .food-img {
+      width: 100rpx;
+      height: 100rpx;
+      border-radius: 12rpx;
+      margin-right: 16rpx;
+    }
+
+    .food-info {
+      flex: 1;
+
+      .food-name {
+        font-size: 28rpx;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8rpx;
+      }
+
+      .food-calorie {
+        font-size: 24rpx;
+        color: #666;
+        margin-bottom: 8rpx;
+      }
+
+      .food-tags {
+        display: flex;
+        gap: 8rpx;
+
+        .tag {
+          padding: 4rpx 12rpx;
+          background: rgba(79, 161, 242, 0.1);
+          border-radius: 12rpx;
+          font-size: 20rpx;
+          color: $main-blue;
         }
       }
     }
 
-    .empty-results {
-      text-align: center;
-      padding: 32rpx 0;
-      color: #999;
-      font-size: 24rpx;
+    .collect-btn {
+      width: 56rpx;
+      height: 56rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(79, 161, 242, 0.1);
+
+      .collect-icon {
+        font-size: 32rpx;
+        color: $main-blue;
+      }
     }
   }
 </style>
