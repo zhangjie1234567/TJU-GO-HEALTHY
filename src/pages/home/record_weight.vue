@@ -43,8 +43,19 @@
     </view>
     <view v-if="weightList.length > 1" class="rw-trend">
       <text class="rw-trend-title">体重趋势</text>
-      <view class="rw-trend-bar">
-        <view v-for="item in weightList" :key="item.date" class="rw-trend-dot" :style="trendDotStyle(item.weight)">
+      <view class="rw-trend-container">
+        <!-- Y轴刻度 -->
+        <view class="rw-trend-axis">
+          <view v-for="(tick, idx) in yAxisTicks" :key="idx" class="rw-axis-tick">
+            <text class="rw-axis-label">{{ tick }}</text>
+          </view>
+        </view>
+        <!-- 趋势点 -->
+        <view class="rw-trend-bar">
+          <view v-for="item in trendList" :key="item.date" class="rw-trend-item">
+            <view class="rw-trend-dot" :style="trendDotStyle(item.weight)"></view>
+            <text class="rw-trend-date">{{ item.date }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -150,6 +161,23 @@
     return (diff >= 0 ? diff : 0).toFixed(2)
   })
 
+  // 趋势按时间正序展示
+  const trendList = computed(() => weightList.value.slice().reverse())
+
+  // Y轴刻度计算
+  const yAxisTicks = computed(() => {
+    if (weightList.value.length === 0) return []
+    const weights = weightList.value.map(w => w.weight)
+    const min = Math.min(...weights)
+    const max = Math.max(...weights)
+    const step = Math.ceil((max - min) / 3 * 4) / 4 || 1
+    const ticks = []
+    for (let i = Math.floor(min); i <= Math.ceil(max); i += step) {
+      ticks.push(i.toFixed(1))
+    }
+    return ticks.length > 0 ? ticks : [min.toFixed(1), max.toFixed(1)]
+  })
+
   // 趋势点样式
   function trendDotStyle(weight) {
     // 以最大最小体重映射高度
@@ -158,7 +186,7 @@
     const range = max - min || 1
     const percent = ((weight - min) / range)
     return {
-      bottom: `${percent * 60 + 10}px`,
+      marginBottom: `${percent * 60 + 10}px`,
       background: percent > 0.5 ? '#53B1EF' : '#FDD0D0'
     }
   }
@@ -175,17 +203,19 @@
     font-size: 18px;
     color: #53B1EF;
     font-weight: 600;
-    margin: 0 47px;
+    margin: 0 8px;
+    white-space: nowrap;
+    flex: 1;
   }
 
   .rw-edit-btn {
-    background: #fff;
-    color: #53B1EF;
-    border: 1px solid #53B1EF;
-    font-size: 15px;
-    padding: 6px 32px;
+    background: #53B1EF;
+    color: #fff;
     border-radius: 8px;
-    margin-left: 8px;
+    font-size: 16px;
+    padding: 8px 18px;
+    font-weight: 600;
+    border: none;
   }
 
   .rw-popup-mask {
@@ -426,30 +456,65 @@
     font-size: 16px;
     color: #53B1EF;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .rw-trend-container {
+    display: flex;
+    gap: 8px;
+  }
+
+  .rw-trend-axis {
+    display: flex;
+    flex-direction: column-reverse;
+    min-width: 30px;
+    justify-content: space-between;
+    padding-right: 4px;
+  }
+
+  .rw-axis-tick {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 20px;
+  }
+
+  .rw-axis-label {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
   }
 
   .rw-trend-bar {
-    position: relative;
-    height: 80px;
+    height: 110px;
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 12px;
     margin-top: 8px;
+    flex: 1;
+  }
+
+  .rw-trend-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 40px;
+    box-sizing: border-box;
   }
 
   .rw-trend-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    position: absolute;
-    left: 0;
-    transition: bottom 0.3s;
+    transition: margin-bottom 0.3s;
   }
 
-  /* 动态定位dot */
-  .rw-trend-bar>.rw-trend-dot {
-    position: relative;
-    left: unset;
+  .rw-trend-date {
+    font-size: 12px;
+    color: #7a8ba0;
+    margin-top: 6px;
+    white-space: nowrap;
   }
 </style>

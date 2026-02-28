@@ -328,31 +328,74 @@
 
 ### 6. AI对话接口
 
-- **接口名称**：AI健康对话
-- **接口路径**：/api/ai/chat
+- **接口名称**：AI健康对话（基于DeepSeek-R1-Distill-Qwen-32B模型）
+- **接口路径**：https://route.showapi.com/3257-1
 - **请求方式**：POST
-- **请求头**：Content-Type: application/json，Authorization: Bearer {token}
+- **请求头**：Content-Type: application/json
+- **URL参数**：
+  | 参数名 | 类型   | 是否必填 | 说明           |
+  | ------ | ------ | -------- | -------------- |
+  | appKey | string | 是       | ShowAPI的appKey |
 - **请求体参数**：
-  | 参数名        | 类型   | 是否必填 | 说明           |
-  | ------------- | ------ | -------- | -------------- |
-  | messages      | array  | 是       | 聊天消息数组   |
-  | questionnaire | object | 否       | 问卷信息（可选）|
+  | 参数名      | 类型   | 是否必填 | 说明                              |
+  | ----------- | ------ | -------- | --------------------------------- |
+  | model       | string | 是       | 模型名称：deepseek-r1-distill-qwen-32b |
+  | stream      | boolean| 否       | 是否流式输出（默认false）         |
+  | messages    | array  | 是       | 对话消息数组                      |
+  | temperature | number | 否       | 温度参数（0-1，默认0.3）          |
+
+- **messages数组格式**：
+  ```json
+  [
+    { "role": "system", "content": "你是一个专业的健康助手" },
+    { "role": "user", "content": "用户的问题" }
+  ]
+  ```
+
+- **请求示例**：
+  ```json
+  {
+    "model": "deepseek-r1-distill-qwen-32b",
+    "stream": false,
+    "messages": [
+      { "role": "system", "content": "你是一个专业的健康助手" },
+      { "role": "user", "content": "如何保持健康的饮食习惯？" }
+    ],
+    "temperature": 0.3
+  }
+  ```
+
 - **返回数据**（成功）：
   ```json
   {
-    "code": 0,
-    "data": {
-      "reply": "AI回复内容"
-    },
-    "msg": "success"
+    "showapi_res_code": 0,
+    "showapi_fee_num": 1,
+    "showapi_res_id": "ce135f6739294c63be0c021b76b6fbff",
+    "showapi_res_error": "",
+    "showapi_res_body": {
+      "choices": [
+        {
+          "message": {
+            "role": "assistant",
+            "content": "保持健康的饮食习惯建议..."
+          }
+        }
+      ]
+    }
   }
   ```
+
 - **异常码说明**：
-  | 状态码 | 说明         |
-  | ------ | ------------ |
-  | 200    | 成功         |
-  | 401    | 未登录       |
-  | 500    | 服务器错误   |
+  | 状态码 | 说明                      |
+  | ------ | ------------------------- |
+  | 0      | 成功                      |
+  | -1     | 系统调用错误              |
+  | -2     | 可调用次数或金额为0       |
+  | -3     | 读取超时                  |
+  | -4     | 服务端返回数据解析错误    |
+  | -1004  | appKey验证有误            |
+  | -1006  | app无权调用接口           |
+  | -1007  | 没有订购套餐              |
 
 ---
 

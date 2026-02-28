@@ -1,323 +1,541 @@
 <template>
   <view class="plan-progress-container">
-    <!-- 头像区域 -->
+    <!-- 动态人物形象区域 -->
     <view class="hero-card">
-      <image :src="assetHomeAvatar" mode="aspectFit" class="avatar-img"></image>
+      <view class="avatar-container">
+        <text class="avatar-emoji">📈</text>
+        <text class="avatar-desc">{{ progressData.avatarDesc }}</text>
+        <view class="bmi-badge">
+          <text class="bmi-label">BMI</text>
+          <text class="bmi-value">{{ progressData.bmi }}</text>
+        </view>
+      </view>
     </view>
 
-    <!-- 核心信息区域 -->
+    <!-- 核心信息区域 - 4种天数统计 -->
     <view class="info-section card-panel">
-      <text class="info-text">你已来到轻跃<text class="highlight">5</text>天</text>
-      <text class="info-line">累计记录<text class="highlight">4</text>天</text>
-      <text class="detail-link">请到“我的”去看详细记录</text>
-      <text class="info-line">累计坚持方案<text class="highlight">4</text>天</text>
-      <text class="detail-link">请到“首页”去看方案记录</text>
-
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-icon">📅</text>
+          <text class="info-value">{{ progressData.useDays }}</text>
+          <text class="info-label">使用天数</text>
+        </view>
+        <view class="info-item">
+          <text class="info-icon">✍️</text>
+          <text class="info-value">{{ progressData.recordDays }}</text>
+          <text class="info-label">记录天数</text>
+        </view>
+      </view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-icon">💪</text>
+          <text class="info-value">{{ progressData.planDays }}</text>
+          <text class="info-label">坚持方案</text>
+        </view>
+        <view class="info-item">
+          <text class="info-icon">🎯</text>
+          <text class="info-value">{{ progressData.remainingDays }}</text>
+          <text class="info-label">剩余天数</text>
+        </view>
+      </view>
+      <view class="progress-tip">
+        <text class="tip-icon">💡</text>
+        <text class="tip-text">{{ progressTip }}</text>
+      </view>
     </view>
 
     <!-- 体重趋势图区域 -->
     <view class="chart-section card-panel">
-      <text class="chart-title">你的体重趋势图</text>
-      <view class="chart-wrapper">
-        <!-- Y轴刻度 -->
-        <view class="y-axis">
-          <text>1,088.99</text>
-          <text>600.00</text>
-          <text>200.00</text>
-          <text>0</text>
+      <view class="chart-header">
+        <text class="chart-title">📈 体重趋势</text>
+        <view v-if="hasWeightData" class="weight-info">
+          <text class="weight-current">当前 {{ currentWeightDisplay }}kg</text>
+          <text class="weight-target">目标 {{ targetWeightDisplay }}kg</text>
         </view>
-        <!-- 图表主体 -->
-        <view class="chart-area">
-          <view class="line-chart" id="weightChart"></view>
-          <!-- X轴刻度 -->
-          <view class="x-axis">
-            <text v-for="i in 12" :key="i">{{ i }}</text>
+      </view>
+      
+      <!-- 无数据提示 -->
+      <view v-if="!hasWeightData" class="chart-empty">
+        <text class="empty-icon">📊</text>
+        <text class="empty-text">暂无体重数据</text>
+        <text class="empty-hint">请先记录至少2天的体重</text>
+        <button class="record-btn" @click="goToRecordWeight">去记录体重</button>
+      </view>
+      
+      <!-- 只有1条数据提示 -->
+      <view v-else-if="progressData.weightList.length === 1" class="chart-empty">
+        <text class="empty-icon">📝</text>
+        <text class="empty-text">数据不足</text>
+        <text class="empty-hint">再记录一天即可查看趋势图</text>
+        <button class="record-btn" @click="goToRecordWeight">去记录体重</button>
+      </view>
+      
+      <!-- 趋势图 -->
+      <view v-else class="trend-wrapper">
+        <view class="trend-container">
+          <!-- Y轴刻度 -->
+          <view class="trend-axis">
+            <view v-for="(tick, idx) in yAxisTicks" :key="idx" class="axis-tick">
+              <text class="axis-label">{{ tick }}</text>
+            </view>
+          </view>
+          <!-- 趋势点 -->
+          <view class="trend-bar">
+            <view v-for="item in trendList" :key="item.date" class="trend-item">
+              <view class="trend-dot" :style="trendDotStyle(item.weight)"></view>
+              <text class="trend-date">{{ item.date }}</text>
+            </view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 剩余天数区域 -->
-    <view class="remaining-section card-panel">
-      <text class="remaining-text">距离达成目标还需坚持<text class="highlight">24</text>天</text>
-    </view>
-
     <!-- 鼓励语区域 -->
     <view class="encourage-section card-panel encourage-card">
-      <text class="encourage-text">加油</text>
+      <text class="encourage-text">{{ encouragementText }}</text>
     </view>
   </view>
 </template>
 
 <script>
-  import * as echarts from 'echarts'; // 适配uni-app的echarts引入路径
-  const assetHomeAvatar = new URL('../../static/首页人物图.png', import.meta.url).href;
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { getUserProgressData, getEncouragementText } from './userProgressService.js';
 
-  export default {
-    name: 'PlanProgress',
-    data() {
-      return {
-        assetHomeAvatar,
-        // 模拟后端返回的体重数据（可替换为真实接口数据）
-        weightData: [450, 520, 380, 650, 580, 420, 550, 800, 680, 520, 600, 550],
-        chartInstance: null
-      };
-    },
-    onReady() {
-      // uni-app中在onReady生命周期初始化图表（确保节点已渲染）
-      this.initChart();
-    },
-    methods: {
-      // 初始化体重趋势图
-      initChart() {
-        const chartDom = uni.createSelectorQuery().in(this).select('#weightChart');
-        chartDom.fields({
-          node: true,
-          size: true
-        }, (res) => {
-          if (!res.node) return;
+export default {
+  name: 'PlanProgress',
+  setup() {
+    // 进度数据
+    const progressData = ref({
+      useDays: 0,
+      recordDays: 0,
+      planDays: 0,
+      remainingDays: 0,
+      weightList: [],
+      currentWeight: 0,
+      targetWeight: 0,
+      bmi: 0,
+      bmiStatus: 'normal',
+      avatarEmoji: '📈',
+      avatarDesc: '健康状态良好',
+      progressPercent: 0
+    });
 
-          const canvasNode = res.node;
-          const ctx = canvasNode.getContext('2d');
-          const dpr = uni.getSystemInfoSync().pixelRatio;
-          canvasNode.width = res.width * dpr;
-          canvasNode.height = res.height * dpr;
-          ctx.scale(dpr, dpr);
+    // 计算属性
+    const hasWeightData = computed(() => {
+      return progressData.value.weightList && progressData.value.weightList.length > 0;
+    });
 
-          this.chartInstance = echarts.init(canvasNode);
-          const option = {
-            tooltip: {
-              trigger: 'axis',
-              axisPointer: {
-                type: 'cross'
-              }
-            },
-            grid: {
-              left: 0,
-              right: 0,
-              bottom: 0,
-              top: 0,
-              containLabel: false
-            },
-            xAxis: {
-              type: 'category',
-              boundaryGap: false,
-              data: Array.from({
-                length: 12
-              }, (_, i) => i + 1),
-              show: false
-            },
-            yAxis: {
-              type: 'value',
-              show: false
-            },
-            series: [{
-              name: '体重',
-              type: 'line',
-              smooth: true,
-              data: this.weightData,
-              areaStyle: {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
-                    offset: 0,
-                    color: 'rgba(135, 206, 250, 0.8)'
-                  },
-                  {
-                    offset: 1,
-                    color: 'rgba(135, 206, 250, 0.2)'
-                  }
-                ])
-              },
-              lineStyle: {
-                color: '#419bf9',
-                width: 2
-              },
-              itemStyle: {
-                color: '#419bf9'
-              }
-            }]
-          };
-          this.chartInstance.setOption(option);
-        }).exec();
-      },
-    },
-    onUnload() {
-      // 销毁图表实例，避免内存泄漏
-      if (this.chartInstance) {
-        this.chartInstance.dispose();
+    const currentWeightDisplay = computed(() => {
+      return progressData.value.currentWeight > 0 
+        ? progressData.value.currentWeight.toFixed(1) 
+        : '--';
+    });
+
+    const targetWeightDisplay = computed(() => {
+      return progressData.value.targetWeight > 0 
+        ? progressData.value.targetWeight.toFixed(1) 
+        : '--';
+    });
+
+    const encouragementText = computed(() => {
+      return getEncouragementText(progressData.value);
+    });
+
+    const progressTip = computed(() => {
+      const { progressPercent, remainingDays } = progressData.value;
+      if (progressPercent >= 80) {
+        return '快达成目标了，坚持住！';
+      } else if (progressPercent >= 50) {
+        return '已完成一半，继续努力！';
+      } else if (remainingDays > 0) {
+        return `预计还需 ${remainingDays} 天达成目标`;
+      } else {
+        return '开始你的健康之旅吧！';
       }
+    });
+
+    // 趋势列表（时间正序）
+    const trendList = computed(() => {
+      return progressData.value.weightList ? progressData.value.weightList.slice().reverse() : [];
+    });
+
+    // Y轴刻度计算
+    const yAxisTicks = computed(() => {
+      if (!progressData.value.weightList || progressData.value.weightList.length === 0) return [];
+      const weights = progressData.value.weightList.map(w => w.weight);
+      const min = Math.min(...weights);
+      const max = Math.max(...weights);
+      const step = Math.ceil((max - min) / 3 * 4) / 4 || 1;
+      const ticks = [];
+      for (let i = Math.floor(min); i <= Math.ceil(max); i += step) {
+        ticks.push(i.toFixed(1));
+      }
+      return ticks.length > 0 ? ticks : [min.toFixed(1), max.toFixed(1)];
+    });
+
+    // 趋势点样式
+    function trendDotStyle(weight) {
+      const weights = progressData.value.weightList.map(w => w.weight);
+      const min = Math.min(...weights);
+      const max = Math.max(...weights);
+      const range = max - min || 1;
+      const percent = ((weight - min) / range);
+      return {
+        marginBottom: `${percent * 60 + 10}px`,
+        background: percent > 0.5 ? '#53B1EF' : '#FDD0D0'
+      };
     }
-  };
+
+    // 加载数据
+    const loadData = () => {
+      try {
+        const data = getUserProgressData();
+        progressData.value = data;
+        console.log('加载用户进度数据:', data);
+      } catch (error) {
+        console.error('加载进度数据失败:', error);
+        uni.showToast({
+          title: '数据加载失败',
+          icon: 'none'
+        });
+      }
+    };
+
+    // 跳转到体重记录页面
+    const goToRecordWeight = () => {
+      uni.navigateTo({
+        url: '/pages/home/record_weight'
+      });
+    };
+
+    // 生命周期
+    onMounted(() => {
+      loadData();
+    });
+
+    return {
+      progressData,
+      hasWeightData,
+      currentWeightDisplay,
+      targetWeightDisplay,
+      encouragementText,
+      progressTip,
+      trendList,
+      yAxisTicks,
+      trendDotStyle,
+      goToRecordWeight
+    };
+  }
+};
 </script>
 
 <style scoped>
-  /* 全局容器 - 1:1还原设计稿尺寸和布局 */
-  .plan-progress-container {
-    width: 100%;
-    min-height: 100vh;
-    height: 100vh;
-    background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
-    box-sizing: border-box;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+/* 全局容器 */
+.plan-progress-container {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
-  .hero-card {
-    width: 100%;
-    background: #ffffff;
-    border-radius: 18px;
-    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.12);
-    padding: 12px 0 6px;
-    margin-bottom: 14px;
-    display: flex;
-    justify-content: center;
-  }
+/* 卡片基础样式 */
+.card-panel {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(79, 161, 242, 0.1);
+  padding: 20px 16px;
+  box-sizing: border-box;
+  margin-bottom: 14px;
+}
 
-  .card-panel {
-    width: 100%;
-    background: #ffffff;
-    border-radius: 18px;
-    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.1);
-    padding: 16px 14px;
-    box-sizing: border-box;
-    margin-bottom: 14px;
-  }
+/* 动态人物形象区域 */
+.hero-card {
+  width: 100%;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(79, 161, 242, 0.15);
+  padding: 24px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
 
-  /* 头像区域 */
+.avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
 
+.avatar-emoji {
+  font-size: 50px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
 
-  /*首页人物图*/
-  .avatar-img {
-    width: 220px;
-    height: 220px;
-    object-fit: contain;
-  }
+.avatar-desc {
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+}
 
-  /* 信息区域 */
-  .info-section {
-    text-align: center;
-  }
+.bmi-badge {
+  position: absolute;
+  top: 8px;
+  right: -40px;
+  background: linear-gradient(135deg, #419bf9 0%, #5fb3ff 100%);
+  border-radius: 20px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(79, 161, 242, 0.3);
+}
 
-  .info-text {
-    font-size: 18px;
-    color: #333333;
-    display: block;
-    margin-bottom: 10px;
-    font-weight: 600;
-  }
+.bmi-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2px;
+}
 
-  .info-line {
-    display: block;
-    font-size: 16px;
-    color: #333333;
-    margin-bottom: 4px;
-  }
+.bmi-value {
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: bold;
+}
 
+/* 信息区域 - 网格布局 */
+.info-section {
+  padding: 18px 16px;
+}
 
+.info-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
-  /*天数字体高光*/
-  .highlight {
-    color: #419bf9;
-    font-weight: bold;
-    font-size: 20px;
-  }
+.info-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 16px 12px;
+  box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
+}
 
-  .detail-link {
-    display: block;
-    font-size: 12px;
-    color: #999999;
-    margin-bottom: 10px;
-  }
+.info-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
 
-  /* 图表区域 */
-  .chart-section {
-    padding-top: 14px;
-  }
+.info-value {
+  font-size: 28px;
+  color: #419bf9;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
 
-  .chart-title {
-    font-size: 16px;
-    color: #333333;
-    display: block;
-    text-align: center;
-    margin-bottom: 12px;
-    font-weight: 600;
-  }
+.info-label {
+  font-size: 13px;
+  color: #999;
+}
 
-  .chart-wrapper {
-    width: 100%;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    background: #F7FBFF;
-    border-radius: 12px;
-    padding: 10px 8px;
-    box-sizing: border-box;
-  }
+.progress-tip {
+  margin-top: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fff9e6 0%, #fffdf5 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 
-  .y-axis {
-    width: 52px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #999999;
-    text-align: right;
-    padding-right: 8px;
-    box-sizing: border-box;
-  }
+.tip-icon {
+  font-size: 18px;
+}
 
-  .chart-area {
-    flex: 1;
-    height: 100%;
-    position: relative;
-  }
+.tip-text {
+  font-size: 14px;
+  color: #ff9800;
+  font-weight: 500;
+}
 
-  .line-chart {
-    width: 100%;
-    height: 160px;
-    border-radius: 8px;
-  }
+/* 图表区域 */
+.chart-section {
+  padding: 20px 16px;
+}
 
-  .x-axis {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    font-size: 12px;
-    color: #999999;
-  }
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
 
-  /* 剩余天数区域 */
-  .remaining-section {
-    text-align: center;
-  }
+.chart-title {
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
 
-  .remaining-text {
-    font-size: 16px;
-    color: #333333;
-    font-weight: 500;
-  }
+.weight-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
 
-  /* 鼓励语区域 */
-  .encourage-section {
-    text-align: center;
-    margin-bottom: 0;
-  }
+.weight-current {
+  font-size: 13px;
+  color: #419bf9;
+  font-weight: 500;
+}
 
-  .encourage-card {
-    background: linear-gradient(135deg, rgba(79, 161, 242, 0.14), rgba(128, 208, 255, 0.14));
-    border: 1px solid rgba(79, 161, 242, 0.16);
-  }
+.weight-target {
+  font-size: 13px;
+  color: #4CAF50;
+  font-weight: 500;
+}
 
-  .encourage-text {
-    font-size: 24px;
-    color: #419bf9;
-    font-weight: bold;
-  }
+/* 图表画布 */
+.trend-wrapper {
+  width: 100%;
+  padding: 12px 0;
+  box-sizing: border-box;
+}
+
+.trend-container {
+  display: flex;
+  gap: 8px;
+}
+
+.trend-axis {
+  display: flex;
+  flex-direction: column-reverse;
+  min-width: 30px;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+.axis-tick {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 20px;
+}
+
+.axis-label {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.trend-bar {
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex: 1;
+}
+
+.trend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 40px;
+  box-sizing: border-box;
+}
+
+.trend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transition: margin-bottom 0.3s;
+}
+
+.trend-date {
+  font-size: 12px;
+  color: #7a8ba0;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* 空状态 */
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  min-height: 220px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 20px;
+}
+
+.record-btn {
+  background: linear-gradient(135deg, #419bf9 0%, #5fb3ff 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(79, 161, 242, 0.3);
+}
+
+.record-btn:active {
+  opacity: 0.8;
+}
+
+/* 鼓励语区域 */
+.encourage-section {
+  text-align: center;
+  margin-bottom: 0;
+  padding: 24px 20px;
+}
+
+.encourage-card {
+  background: linear-gradient(135deg, rgba(79, 161, 242, 0.12), rgba(128, 208, 255, 0.08));
+  border: 1px solid rgba(79, 161, 242, 0.2);
+}
+
+.encourage-text {
+  font-size: 20px;
+  color: #419bf9;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
 </style>

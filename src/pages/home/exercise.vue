@@ -35,13 +35,28 @@
       <button class="ex-add-btn" @click="showAdd = true">添加运动</button>
     </view>
     <!-- 添加运动弹窗 -->
-    <view v-if="showAdd" class="ex-popup-mask">
+    <view v-if="showAdd" class="ex-popup-mask" @click.self="showAdd = false">
       <view class="ex-popup-content">
         <view class="ex-popup-title">添加运动</view>
-        <picker :range="exerciseTypes" :value="selectedType" @change="onTypeChange">
-          <view class="ex-popup-picker">{{ exerciseTypes[selectedType].name }}</view>
-        </picker>
+        <!-- 运动类型选择 -->
+        <view class="ex-type-list">
+          <view
+            v-for="(type, index) in exerciseTypes"
+            :key="index"
+            class="ex-type-item"
+            :class="{ active: selectedType === index }"
+            @click="selectedType = index"
+          >
+            <text class="ex-type-icon">{{ type.icon }}</text>
+            <text class="ex-type-name">{{ type.name }}</text>
+          </view>
+        </view>
         <input v-model="addDuration" type="number" class="ex-popup-input" placeholder="请输入时长(分钟)" />
+        <!-- 自定义运动时显示额外输入 -->
+        <template v-if="exerciseTypes[selectedType].custom">
+          <input v-model="customName" class="ex-popup-input" placeholder="请输入运动名称" />
+          <input v-model="customCaloriePerMin" type="number" class="ex-popup-input" placeholder="每分钟消耗热量(大卡)" />
+        </template>
         <view class="ex-popup-btn-row">
           <button class="ex-popup-btn" @click="showAdd = false">取消</button>
           <button class="ex-popup-btn confirm" @click="addExercise">添加</button>
@@ -63,32 +78,24 @@
   const showAdd = ref(false)
   const addDuration = ref('')
   const selectedType = ref(0)
+  const customName = ref('')
+  const customCaloriePerMin = ref('')
 
-  const exerciseTypes = [{
-      icon: '👣',
-      name: '步行(3km/h)',
-      caloriePerMin: 2.1
-    },
-    {
-      icon: '🏃‍♂️',
-      name: '跑步(9.6km/h)',
-      caloriePerMin: 8.8
-    },
-    {
-      icon: '🚴‍♂️',
-      name: '骑行(15km/h)',
-      caloriePerMin: 5.5
-    },
-    {
-      icon: '🏊‍♂️',
-      name: '游泳',
-      caloriePerMin: 7.0
-    },
-    {
-      icon: '🧘‍♂️',
-      name: '瑜伽',
-      caloriePerMin: 3.0
-    },
+  const exerciseTypes = [
+    { icon: '👣', name: '步行(3km/h)',   caloriePerMin: 2.1 },
+    { icon: '🏃', name: '跑步(9.6km/h)', caloriePerMin: 8.8 },
+    { icon: '🚴', name: '骑行(15km/h)',  caloriePerMin: 5.5 },
+    { icon: '🏊', name: '游泳',           caloriePerMin: 7.0 },
+    { icon: '🧘', name: '瑜伽',           caloriePerMin: 3.0 },
+    { icon: '💃', name: '跳舞',           caloriePerMin: 5.0 },
+    { icon: '🏓', name: '乒乓球',         caloriePerMin: 4.5 },
+    { icon: '🏸', name: '羽毛球',         caloriePerMin: 6.0 },
+    { icon: '🏐', name: '排球',           caloriePerMin: 5.0 },
+    { icon: '🏀', name: '篮球',           caloriePerMin: 7.5 },
+    { icon: '🎾', name: '网球',           caloriePerMin: 7.0 },
+    { icon: '🎱', name: '壁球',           caloriePerMin: 9.0 },
+    { icon: '🪝', name: '跳绳',           caloriePerMin: 10.0 },
+    { icon: '✏️', name: '自定义',         caloriePerMin: 0, custom: true },
   ]
 
   const totalMinutes = computed(() => {
@@ -117,25 +124,33 @@
     uni.setStorageSync('exerciseRecords', JSON.stringify(d))
   }
 
-  function onTypeChange(e) {
-    selectedType.value = e.detail.value
-  }
-
   function addExercise() {
     const duration = parseInt(addDuration.value)
     if (!duration || duration < 1 || duration > 300) {
-      uni.showToast({
-        title: '请输入合理时长',
-        icon: 'none'
-      })
+      uni.showToast({ title: '请输入合理时长', icon: 'none' })
       return
     }
     const type = exerciseTypes[selectedType.value]
-    const calorie = Math.round(type.caloriePerMin * duration)
+    let name = type.name
+    let caloriePerMin = type.caloriePerMin
+    if (type.custom) {
+      if (!customName.value.trim()) {
+        uni.showToast({ title: '请输入运动名称', icon: 'none' })
+        return
+      }
+      const customCal = parseFloat(customCaloriePerMin.value)
+      if (!customCal || customCal <= 0) {
+        uni.showToast({ title: '请输入每分钟消耗热量', icon: 'none' })
+        return
+      }
+      name = customName.value.trim()
+      caloriePerMin = customCal
+    }
+    const calorie = Math.round(caloriePerMin * duration)
     records.value.push({
       id: Date.now(),
       icon: type.icon,
-      name: type.name,
+      name,
       duration,
       calorie
     })
@@ -143,6 +158,8 @@
     saveExercise()
     showAdd.value = false
     addDuration.value = ''
+    customName.value = ''
+    customCaloriePerMin.value = ''
   }
 </script>
 
@@ -314,15 +331,47 @@
   .ex-popup-title {
     font-size: 18px;
     font-weight: 600;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     text-align: center;
   }
 
-  .ex-popup-picker {
+  .ex-type-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .ex-type-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f7f7fa;
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .ex-type-item.active {
+    background: #e3f2fd;
+    border-color: #2196f3;
+  }
+
+  .ex-type-icon {
+    font-size: 22px;
+  }
+
+  .ex-type-name {
     font-size: 15px;
-    color: #2196f3;
-    margin-bottom: 10px;
-    text-align: center;
+    color: #333;
+  }
+
+  .ex-type-item.active .ex-type-name {
+    color: #1976d2;
+    font-weight: 600;
   }
 
   .ex-popup-input {

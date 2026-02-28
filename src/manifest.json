@@ -42,9 +42,18 @@
     },
     "quickapp" : {},
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "wxdf1091aee32ad078",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "postcss" : true,
+            "minified" : true,
+            "networkTimeout" : {
+                "request" : 30000,
+                "downloadFile" : 30000,
+                "uploadFile" : 30000,
+                "connectSocket" : 30000
+            }
         },
         "usingComponents" : true
     },
