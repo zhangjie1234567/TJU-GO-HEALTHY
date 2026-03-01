@@ -1,0 +1,2778 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TJU-GO-HEALTHY 校园健康小程序 API",
+    "description": "基于 Vue3 + Uni-App 的校园健康小程序后端接口文档，涵盖用户认证、首页健康记录、学校服务、计划管理、社区互动、个人中心等模块。",
+    "version": "1.0.0",
+    "contact": {
+      "name": "TJU-GO-HEALTHY 开发团队"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "本地开发服务器"
+    },
+    {
+      "url": "https://your-production-server.com",
+      "description": "生产服务器"
+    }
+  ],
+  "tags": [
+    { "name": "1. 用户认证", "description": "登录、问卷填写等认证相关接口" },
+    { "name": "2. 首页", "description": "食物搜索、健康记录、AI对话、体重/喝水/运动/日记等接口" },
+    { "name": "3. 学校", "description": "地图、课表、食堂、体测、设施、服务等接口" },
+    { "name": "4. 计划", "description": "饮食运动计划、运动游戏、全局搜索、饮品、食谱、课程推荐等接口" },
+    { "name": "5. 社区", "description": "排行榜、用户排名、发帖、评论等接口" },
+    { "name": "6. 个人中心", "description": "用户信息、收藏、数据小结等接口" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "CommonSuccess": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "example": 0 },
+          "msg": { "type": "string", "example": "success" }
+        }
+      },
+      "CommonError": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "example": 400 },
+          "msg": { "type": "string", "example": "参数错误" }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "张三" },
+          "studentId": { "type": "string", "example": "2023123456" },
+          "avatar": { "type": "string", "example": "😊" }
+        }
+      },
+      "FoodItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "food_001" },
+          "name": { "type": "string", "example": "苹果" },
+          "category": { "type": "string", "example": "水果" },
+          "calorie": { "type": "string", "example": "52千卡/100克" },
+          "image": { "type": "string", "example": "https://..." },
+          "collected": { "type": "boolean", "example": false }
+        }
+      },
+      "FoodNutrition": {
+        "type": "object",
+        "properties": {
+          "water": { "type": "number", "example": 85.6, "description": "水分(g)" },
+          "protein": { "type": "number", "example": 0.2, "description": "蛋白质(g)" },
+          "fat": { "type": "number", "example": 0.2, "description": "脂肪(g)" },
+          "carbohydrate": { "type": "number", "example": 13.5, "description": "碳水化合物(g)" },
+          "fiber": { "type": "number", "example": 1.2, "description": "膳食纤维(g)" },
+          "vitaminA": { "type": "number", "example": 3, "description": "维生素A(μg)" },
+          "vitaminB1": { "type": "number", "example": 0.06, "description": "维生素B1(mg)" },
+          "vitaminB2": { "type": "number", "example": 0.02, "description": "维生素B2(mg)" },
+          "vitaminC": { "type": "number", "example": 4, "description": "维生素C(mg)" },
+          "vitaminE": { "type": "number", "example": 0.21, "description": "维生素E(mg)" },
+          "calcium": { "type": "number", "example": 4, "description": "钙(mg)" },
+          "iron": { "type": "number", "example": 0.6, "description": "铁(mg)" },
+          "sodium": { "type": "number", "example": 0.8, "description": "钠(mg)" },
+          "cholesterol": { "type": "number", "example": 0, "description": "胆固醇(mg)" }
+        }
+      },
+      "FoodDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "image": { "type": "string" },
+          "energy": { "type": "number", "description": "热量(kcal/100g)" },
+          "effect": { "type": "string", "description": "食物功效" },
+          "feature": { "type": "string", "description": "食物特点" },
+          "nutrition": { "$ref": "#/components/schemas/FoodNutrition" },
+          "relatedRecipes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" },
+                "image": { "type": "string" },
+                "collected": { "type": "boolean" }
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "WeightRecord": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "date": { "type": "string", "example": "2024-01-15" },
+          "weight": { "type": "number", "example": 65.5 }
+        }
+      },
+      "DiaryRecord": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "date": { "type": "string", "example": "2024-01-15" },
+          "text": { "type": "string" }
+        }
+      },
+      "ExerciseRecord": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "example": "步行" },
+          "icon": { "type": "string" },
+          "duration": { "type": "integer", "description": "时长(分钟)" },
+          "calorie": { "type": "integer", "description": "消耗卡路里" }
+        }
+      },
+      "DrinkItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "example": "经典绿茶" },
+          "category": { "type": "string", "example": "茶类" },
+          "cal": { "type": "string", "example": "0-2 千卡" },
+          "caffeine": { "type": "string", "example": "25-35mg" },
+          "badge": { "type": "string", "example": "推荐" },
+          "image": { "type": "string" },
+          "desc": { "type": "string" }
+        }
+      },
+      "DrinkDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "intro": { "type": "string", "description": "简介" },
+          "nutrition": {
+            "type": "array",
+            "description": "营养成分(每250ml)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "value": { "type": "string" }
+              }
+            }
+          },
+          "benefits": {
+            "type": "array",
+            "description": "健康益处",
+            "items": { "type": "string" }
+          },
+          "caffeine": { "type": "string" },
+          "cal": { "type": "string" }
+        }
+      },
+      "RecipeItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "example": "蛋白质沙拉碗" },
+          "category": { "type": "string", "example": "沙拉" },
+          "cal": { "type": "string", "example": "200 千卡" },
+          "protein": { "type": "string", "example": "25g" },
+          "image": { "type": "string" },
+          "desc": { "type": "string" }
+        }
+      },
+      "CourseItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "difficulty": { "type": "string" },
+          "duration": { "type": "string" },
+          "image": { "type": "string" },
+          "desc": { "type": "string" }
+        }
+      },
+      "CanteenMenu": {
+        "type": "object",
+        "properties": {
+          "canteenId": { "type": "string" },
+          "canteenName": { "type": "string" },
+          "date": { "type": "string" },
+          "menus": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mealType": { "type": "string", "example": "早餐" },
+                "dishes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "price": { "type": "number" },
+                      "image": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AssessmentReport": {
+        "type": "object",
+        "properties": {
+          "createdAt": { "type": "string", "description": "测评时间" },
+          "age": { "type": "integer" },
+          "height": { "type": "number", "description": "身高(cm)" },
+          "weight": { "type": "number", "description": "体重(kg)" },
+          "gender": { "type": "string" },
+          "bmi": { "type": "number" },
+          "bodyType": { "type": "string" },
+          "targetWeight": { "type": "number" },
+          "healthScore": { "type": "integer", "description": "健康评分(0-100)" },
+          "exerciseFreq": { "type": "string" },
+          "exerciseTypes": { "type": "array", "items": { "type": "string" } },
+          "exerciseDuration": { "type": "string" },
+          "foodAllergies": { "type": "array", "items": { "type": "string" } },
+          "fastingAcceptance": { "type": "string" },
+          "goals": { "type": "array", "items": { "type": "string" } },
+          "suggestions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "YearlyReport": {
+        "type": "object",
+        "properties": {
+          "year": { "type": "integer" },
+          "activeDays": { "type": "integer" },
+          "goalsCompleted": { "type": "integer" },
+          "achievements": { "type": "array", "items": { "type": "string" } },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "desc": { "type": "string" },
+                "progress": { "type": "integer", "description": "进度(0-100)" }
+              }
+            }
+          },
+          "highlights": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "DailySummaryRecord": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "example": "2024-01-15" },
+          "distance": { "type": "number", "description": "跑步距离(km)" },
+          "fasting": { "type": "number", "description": "断食时长(h)" },
+          "weight": { "type": "number", "description": "体重(kg)" },
+          "water": { "type": "number", "description": "喝水量(ml)" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": ["1. 用户认证"],
+        "summary": "学生认证登录",
+        "description": "使用学生姓名和学号进行登录认证，返回 token 及用户信息",
+        "operationId": "authLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "studentId"],
+                "properties": {
+                  "name": { "type": "string", "description": "学生姓名", "example": "张三" },
+                  "studentId": { "type": "string", "description": "学号（10位数字）", "example": "2023123456" },
+                  "rememberMe": { "type": "boolean", "description": "是否记住登录", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string", "description": "JWT Token" },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "name": { "type": "string", "example": "张三" },
+                            "studentId": { "type": "string", "example": "2023123456" },
+                            "avatar": { "type": "string" }
+                          }
+                        }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "参数错误" },
+          "401": { "description": "认证失败" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/questionnaire/submit": {
+      "post": {
+        "tags": ["1. 用户认证"],
+        "summary": "健康问卷填写提交",
+        "description": "提交用户基础健康信息及日常习惯问卷，包括BMI、体型、目标、运动习惯、食物过敏等",
+        "operationId": "questionnaireSubmit",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["baseInfo", "habitInfo"],
+                "properties": {
+                  "baseInfo": {
+                    "type": "object",
+                    "required": ["gender", "height", "weight", "age", "target", "parts", "targetWeight"],
+                    "properties": {
+                      "gender": { "type": "string", "description": "性别", "example": "男" },
+                      "height": { "type": "string", "description": "身高(cm)", "example": "175cm" },
+                      "weight": { "type": "string", "description": "体重(kg)", "example": "70kg" },
+                      "bmi": { "type": "string", "description": "BMI值", "example": "22.9" },
+                      "bodyType": { "type": "string", "description": "体型", "example": "正常" },
+                      "age": { "type": "string", "description": "年龄", "example": "20" },
+                      "target": { "type": "string", "description": "期望目标，如：减肥/增重/保持健康", "example": "减肥" },
+                      "parts": {
+                        "type": "array",
+                        "description": "希望改善的部位",
+                        "items": { "type": "string" },
+                        "example": ["腹部", "腿部"]
+                      },
+                      "targetWeight": { "type": "string", "description": "目标体重(kg)", "example": "65kg" }
+                    }
+                  },
+                  "habitInfo": {
+                    "type": "object",
+                    "required": ["exerciseFreq", "foodAllergies"],
+                    "properties": {
+                      "exerciseFreq": { "type": "string", "description": "每周运动次数", "example": "3-4" },
+                      "exerciseTypes": {
+                        "type": "array",
+                        "description": "运动类型（多选）",
+                        "items": { "type": "string" },
+                        "example": ["low", "medium"]
+                      },
+                      "exerciseDuration": { "type": "string", "description": "单次运动时长(分钟)", "example": "31-60" },
+                      "foodAllergies": {
+                        "type": "array",
+                        "description": "食物过敏/忌口，可选none表示无过敏",
+                        "items": { "type": "string" },
+                        "example": ["seafood", "nuts"]
+                      },
+                      "foodAllergyDetails": {
+                        "type": "object",
+                        "description": "过敏详情",
+                        "example": { "seafood": "虾过敏", "nuts": "花生过敏" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "提交成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "问卷提交成功" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "参数错误" },
+          "401": { "description": "未登录/认证失效" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "食物搜索",
+        "description": "根据关键词搜索食物，支持按分类筛选，返回食物列表（含热量、图片、是否收藏）",
+        "operationId": "foodSearch",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "搜索关键词",
+            "schema": { "type": "string", "example": "苹果" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "食物分类（如：水果、蔬菜、谷物、肉类等），不传则搜索全部",
+            "schema": { "type": "string", "example": "水果" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/FoodItem" }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "参数错误" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/food/{id}": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "食物详情查询",
+        "description": "根据食物ID获取详细营养成分、食物功效、相关食谱等信息",
+        "operationId": "foodDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "食物ID",
+            "schema": { "type": "string", "example": "food_001" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": { "$ref": "#/components/schemas/FoodDetail" },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "未找到" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/food/collect": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "食物收藏/取消收藏",
+        "description": "切换食物的收藏状态，已收藏则取消，未收藏则添加收藏",
+        "operationId": "foodCollect",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["foodId"],
+                "properties": {
+                  "foodId": { "type": "string", "description": "食物ID", "example": "food_001" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "操作成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "collected": { "type": "boolean", "description": "当前收藏状态" }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/plan/progress": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "用户计划进度查询",
+        "description": "获取用户当前计划的打卡进度，包括到达天数、记录天数、坚持天数、剩余天数及体重趋势",
+        "operationId": "planProgress",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "daysArrived": { "type": "integer", "description": "到达天数", "example": 5 },
+                        "daysRecorded": { "type": "integer", "description": "记录天数", "example": 4 },
+                        "daysPersisted": { "type": "integer", "description": "坚持天数", "example": 4 },
+                        "daysRemaining": { "type": "integer", "description": "剩余天数", "example": 24 },
+                        "weightTrend": {
+                          "type": "array",
+                          "description": "近期体重趋势数据",
+                          "items": { "type": "number" },
+                          "example": [450, 520, 380]
+                        }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/plan/my": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "我的饮食/运动方案查询",
+        "description": "获取AI为用户生成的个性化饮食方案和运动方案文本",
+        "operationId": "myPlan",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "diet": { "type": "string", "description": "AI生成的饮食方案文本" },
+                        "exercise": { "type": "string", "description": "AI生成的运动方案文本" }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/ai/chat": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "AI健康对话",
+        "description": "基于 DeepSeek-R1-Distill-Qwen-32B 模型的AI健康助手对话接口，通过ShowAPI代理调用。支持携带用户健康问卷数据生成个性化建议。",
+        "operationId": "aiChat",
+        "parameters": [
+          {
+            "name": "appKey",
+            "in": "query",
+            "required": true,
+            "description": "ShowAPI appKey",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["model", "messages"],
+                "properties": {
+                  "model": { "type": "string", "description": "模型名称", "example": "deepseek-r1-distill-qwen-32b" },
+                  "stream": { "type": "boolean", "description": "是否流式输出", "default": false },
+                  "messages": {
+                    "type": "array",
+                    "description": "对话消息数组",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+                        "content": { "type": "string" }
+                      }
+                    },
+                    "example": [
+                      { "role": "system", "content": "你是一个专业的健康助手" },
+                      { "role": "user", "content": "如何保持健康的饮食习惯？" }
+                    ]
+                  },
+                  "temperature": { "type": "number", "description": "温度参数(0-1)", "default": 0.3 }
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          { "url": "https://route.showapi.com/3257-1", "description": "ShowAPI代理服务器" }
+        ],
+        "responses": {
+          "200": {
+            "description": "对话成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "showapi_res_code": { "type": "integer", "example": 0 },
+                    "showapi_fee_num": { "type": "integer", "example": 1 },
+                    "showapi_res_id": { "type": "string" },
+                    "showapi_res_error": { "type": "string", "example": "" },
+                    "showapi_res_body": {
+                      "type": "object",
+                      "properties": {
+                        "choices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "message": {
+                                "type": "object",
+                                "properties": {
+                                  "role": { "type": "string", "example": "assistant" },
+                                  "content": { "type": "string" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-showapi-error-codes": {
+          "0": "成功",
+          "-1": "系统调用错误",
+          "-2": "可调用次数或金额为0",
+          "-3": "读取超时",
+          "-4": "服务端返回数据解析错误",
+          "-1004": "appKey验证有误",
+          "-1006": "app无权调用接口",
+          "-1007": "没有订购套餐"
+        }
+      }
+    },
+    "/api/diary/list": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "日记列表查询",
+        "description": "获取用户所有健康日记列表，按日期降序排列",
+        "operationId": "diaryList",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/DiaryRecord" }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/diary/add": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "新增日记",
+        "description": "新增一条健康日记",
+        "operationId": "diaryAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string", "description": "日记内容" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/diary/{id}/edit": {
+      "put": {
+        "tags": ["2. 首页"],
+        "summary": "编辑日记",
+        "description": "编辑指定ID的日记内容",
+        "operationId": "diaryEdit",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "日记ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": { "type": "string", "description": "日记内容" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "编辑成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "404": { "description": "未找到" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/diary/{id}/delete": {
+      "delete": {
+        "tags": ["2. 首页"],
+        "summary": "删除日记",
+        "description": "删除指定ID的日记",
+        "operationId": "diaryDelete",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "日记ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "404": { "description": "未找到" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/weight/list": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "体重记录查询",
+        "description": "获取用户历史体重记录及目标体重",
+        "operationId": "weightList",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "targetWeight": { "type": "number", "description": "目标体重(kg)", "example": 65 },
+                        "records": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/WeightRecord" }
+                        }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/weight/add": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "新增体重记录",
+        "description": "新增一条体重记录",
+        "operationId": "weightAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["weight"],
+                "properties": {
+                  "weight": { "type": "number", "description": "体重(kg)", "example": 65.5 },
+                  "date": { "type": "string", "description": "记录日期，不填默认今天", "example": "2024-01-15" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/weight/target": {
+      "put": {
+        "tags": ["2. 首页"],
+        "summary": "修改目标体重",
+        "description": "更新用户设定的目标体重",
+        "operationId": "weightTarget",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["weight"],
+                "properties": {
+                  "weight": { "type": "number", "description": "目标体重(kg)", "example": 65 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/drink/today": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "今日喝水量查询",
+        "description": "获取用户今日喝水量及喝水目标",
+        "operationId": "drinkToday",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "todayDrank": { "type": "integer", "description": "今日已喝水量(ml)", "example": 1200 },
+                        "drinkGoal": { "type": "integer", "description": "每日喝水目标(ml)", "example": 1800 }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/drink/add": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "新增喝水记录",
+        "description": "新增一次喝水记录",
+        "operationId": "drinkAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amount"],
+                "properties": {
+                  "amount": { "type": "integer", "description": "喝水量(ml)", "example": 250 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/drink/goal": {
+      "put": {
+        "tags": ["2. 首页"],
+        "summary": "修改喝水目标",
+        "description": "更新用户每日喝水目标",
+        "operationId": "drinkGoal",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["goal"],
+                "properties": {
+                  "goal": { "type": "integer", "description": "每日目标喝水量(ml)", "example": 2000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/exercise/today": {
+      "get": {
+        "tags": ["2. 首页"],
+        "summary": "今日运动记录查询",
+        "description": "获取用户今日所有运动记录及总消耗卡路里、运动目标",
+        "operationId": "exerciseToday",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "todayCalorie": { "type": "integer", "description": "今日消耗卡路里(kcal)", "example": 500 },
+                        "exerciseGoal": { "type": "integer", "description": "每日运动目标(kcal)", "example": 500 },
+                        "records": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/ExerciseRecord" }
+                        }
+                      }
+                    },
+                    "msg": { "type": "string", "example": "success" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/exercise/add": {
+      "post": {
+        "tags": ["2. 首页"],
+        "summary": "新增运动记录",
+        "description": "新增一条运动记录，支持预设运动类型或自定义运动",
+        "operationId": "exerciseAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "duration", "calorie"],
+                "properties": {
+                  "name": { "type": "string", "description": "运动名称", "example": "步行" },
+                  "icon": { "type": "string", "description": "运动图标", "example": "🚶" },
+                  "duration": { "type": "integer", "description": "时长(分钟)", "example": 30 },
+                  "calorie": { "type": "integer", "description": "消耗卡路里(kcal)", "example": 63 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/exercise/goal": {
+      "put": {
+        "tags": ["2. 首页"],
+        "summary": "修改运动目标",
+        "description": "更新用户每日运动消耗卡路里目标",
+        "operationId": "exerciseGoal",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["goal"],
+                "properties": {
+                  "goal": { "type": "integer", "description": "每日运动目标(kcal)", "example": 600 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" },
+          "500": { "description": "服务器错误" }
+        }
+      }
+    },
+    "/api/school/map": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "学校地图/地点信息",
+        "description": "获取校园内各地点信息（食堂、图书馆、体育场等），含地图跳转关键词",
+        "operationId": "schoolMap",
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string", "example": "第一食堂" },
+                          "type": { "type": "string", "example": "食堂" },
+                          "keyword": { "type": "string", "description": "高德地图搜索关键词" },
+                          "description": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/school/schedule": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "课程表查询",
+        "description": "获取用户本周课程表",
+        "operationId": "schoolSchedule",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "description": "周次，不填默认本周",
+            "schema": { "type": "integer", "example": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": { "type": "integer", "description": "星期几(1-7)" },
+                          "courses": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": { "type": "string" },
+                                "teacher": { "type": "string" },
+                                "location": { "type": "string" },
+                                "startSection": { "type": "integer" },
+                                "endSection": { "type": "integer" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/api/school/canteen/menu": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "食堂菜谱推荐",
+        "description": "获取各园区食堂今日菜谱推荐，支持按园区筛选（留/梅/竹/兰/菊/桃）",
+        "operationId": "canteenMenu",
+        "parameters": [
+          {
+            "name": "canteenId",
+            "in": "query",
+            "required": false,
+            "description": "食堂ID，不填返回全部食堂",
+            "schema": { "type": "string", "example": "liu" }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "日期，不填默认今天",
+            "schema": { "type": "string", "example": "2024-01-15" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CanteenMenu" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/school/canteen/diary": {
+      "post": {
+        "tags": ["3. 学校"],
+        "summary": "发布干饭日记",
+        "description": "用户发布今日食堂用餐日记（含图片、评价、菜品等）",
+        "operationId": "canteenDiary",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": { "type": "string", "description": "日记内容" },
+                  "canteenId": { "type": "string", "description": "食堂ID" },
+                  "dishes": { "type": "array", "items": { "type": "string" }, "description": "菜品列表" },
+                  "rating": { "type": "integer", "description": "评分(1-5)", "example": 4 },
+                  "images": { "type": "array", "items": { "type": "string" }, "description": "图片URL列表" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发布成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/api/school/fitness": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "体测数据查询",
+        "description": "获取用户体测各项成绩、得分及等级（1000米跑、引体向上、平板支撑、仰卧起坐等）",
+        "operationId": "schoolFitness",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalScore": { "type": "number", "example": 88.5 },
+                        "level": { "type": "string", "example": "良好" },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string", "example": "1000米跑" },
+                              "value": { "type": "string", "example": "3分56秒" },
+                              "score": { "type": "integer", "example": 92 },
+                              "level": { "type": "string", "example": "优秀" }
+                            }
+                          }
+                        },
+                        "analysis": { "type": "string", "description": "综合分析建议" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/api/school/facilities": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "校内设施查询",
+        "description": "获取校内设施信息（饮水机、打印机、打印店、超市等）位置及状态",
+        "operationId": "schoolFacilities",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "设施类型（water/print/store）",
+            "schema": { "type": "string", "example": "water" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "type": { "type": "string" },
+                          "location": { "type": "string" },
+                          "status": { "type": "string", "example": "正常" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/school/facilities/records": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "设施消费记录查询",
+        "description": "获取用户在校内设施（饮水机、打印等）的消费记录",
+        "operationId": "facilityRecords",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "facilityName": { "type": "string" },
+                          "amount": { "type": "number" },
+                          "date": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/api/school/service": {
+      "get": {
+        "tags": ["3. 学校"],
+        "summary": "校园服务信息查询（校医/心理咨询）",
+        "description": "获取校医室、心理咨询室等服务的地址、联系方式、开放时间",
+        "operationId": "schoolService",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "服务类型（medical/psychology）",
+            "schema": { "type": "string", "example": "medical" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "type": { "type": "string" },
+                          "address": { "type": "string" },
+                          "phone": { "type": "string" },
+                          "openTime": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/food": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "食物/饮品营养成分及卡路里查询",
+        "description": "查询指定食物或饮品的营养成分、卡路里等信息，用于饮食计划推荐",
+        "operationId": "planFood",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "description": "食物或饮品名称",
+            "schema": { "type": "string", "example": "苹果" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "info": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string", "example": "苹果" },
+                        "category": { "type": "string", "example": "水果" }
+                      }
+                    },
+                    "nutrition": {
+                      "type": "object",
+                      "properties": {
+                        "protein": { "type": "number", "example": 0.3 },
+                        "carbs": { "type": "number", "example": 14 },
+                        "fiber": { "type": "number", "example": 2.4 },
+                        "vitaminC": { "type": "number", "example": 4.6 }
+                      }
+                    },
+                    "calories": { "type": "number", "example": 52 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/game": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "体感运动游戏信息查询",
+        "description": "获取运动游戏详情及用户成绩，支持深蹲挑战、平衡保持、拳击训练等游戏",
+        "operationId": "planGame",
+        "parameters": [
+          {
+            "name": "gameId",
+            "in": "query",
+            "required": true,
+            "description": "游戏ID（squat=深蹲挑战, balance=平衡保持, boxing=拳击训练）",
+            "schema": { "type": "string", "example": "squat" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "gameInfo": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string", "example": "深蹲挑战" },
+                        "description": { "type": "string" },
+                        "difficulty": { "type": "string", "example": "中等" }
+                      }
+                    },
+                    "score": { "type": "number", "example": 850 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/game/record": {
+      "post": {
+        "tags": ["4. 计划"],
+        "summary": "提交运动游戏成绩",
+        "description": "提交用户完成体感运动游戏的成绩（深蹲次数、拳击次数、平衡时长等）",
+        "operationId": "planGameRecord",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["gameId", "score"],
+                "properties": {
+                  "gameId": { "type": "string", "description": "游戏ID", "example": "squat" },
+                  "score": { "type": "number", "description": "游戏得分或完成次数", "example": 30 },
+                  "duration": { "type": "integer", "description": "游戏时长(秒)", "example": 120 },
+                  "calorie": { "type": "number", "description": "消耗卡路里", "example": 50 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "提交成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/plan/search": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "全局搜索（饮品/食谱/课程）",
+        "description": "在计划模块全局搜索饮品、食谱、课程等内容",
+        "operationId": "planSearch",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "搜索关键词",
+            "schema": { "type": "string", "example": "绿茶" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "name": { "type": "string" },
+                          "category": { "type": "string" },
+                          "type": { "type": "string", "enum": ["drink", "recipe", "course"] },
+                          "emoji": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/drinks": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "热门饮品列表",
+        "description": "获取推荐饮品列表，含热量、咖啡因含量、分类等信息",
+        "operationId": "planDrinks",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "饮品分类（茶类/咖啡/果汁等）",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/DrinkItem" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/drinks/{id}": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "饮品详情查询",
+        "description": "获取指定饮品的详细信息，包含营养成分(每250ml)、健康益处、咖啡因含量等",
+        "operationId": "planDrinkDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "饮品ID",
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": { "$ref": "#/components/schemas/DrinkDetail" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "未找到" }
+        }
+      }
+    },
+    "/plan/recipes": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "热门食谱列表",
+        "description": "获取推荐食谱列表，含热量、蛋白质、分类等信息",
+        "operationId": "planRecipes",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "食谱分类（沙拉/汤/主食等）",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/RecipeItem" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/courses": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "课程推荐列表",
+        "description": "获取健身/健康课程推荐列表，含难度、时长、分类等信息",
+        "operationId": "planCourses",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "课程分类",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "description": "难度（入门/初级/中级/高级）",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CourseItem" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plan/tasks": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "每日打卡任务列表",
+        "description": "获取用户今日打卡任务列表，含完成状态",
+        "operationId": "planTasks",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "name": { "type": "string" },
+                          "done": { "type": "boolean" },
+                          "punchedToday": { "type": "boolean" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/plan/tasks/punch": {
+      "post": {
+        "tags": ["4. 计划"],
+        "summary": "任务打卡",
+        "description": "对指定任务进行今日打卡",
+        "operationId": "planTaskPunch",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["taskId"],
+                "properties": {
+                  "taskId": { "type": "integer", "description": "任务ID" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "打卡成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/plan/fasting": {
+      "get": {
+        "tags": ["4. 计划"],
+        "summary": "断食计划信息查询",
+        "description": "获取间歇性断食计划的科普信息、注意事项、FAQ等",
+        "operationId": "planFasting",
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "intro": { "type": "string" },
+                        "methods": { "type": "array", "items": { "type": "string" } },
+                        "warnings": { "type": "array", "items": { "type": "string" } },
+                        "faq": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "question": { "type": "string" },
+                              "answer": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/community/rank": {
+      "get": {
+        "tags": ["5. 社区"],
+        "summary": "减重方法/食谱/运动方式评分排行榜",
+        "description": "获取社区内减重方案、食谱、运动方式等的评分和热度排行榜",
+        "operationId": "communityRank",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "排行类别（减重方案/食谱/运动）",
+            "schema": { "type": "string", "example": "减重方案" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "ranks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": { "type": "integer", "example": 1 },
+                          "name": { "type": "string", "example": "低碳水饮食法" },
+                          "rating": { "type": "number", "example": 4.8 },
+                          "users": { "type": "integer", "description": "使用人数", "example": 1520 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/community/user/rank": {
+      "get": {
+        "tags": ["5. 社区"],
+        "summary": "用户运动量/打卡天数排行榜",
+        "description": "获取用户在运动量、打卡天数等维度的排行榜",
+        "operationId": "communityUserRank",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": true,
+            "description": "排行类别（exercise=运动量, punch=打卡天数）",
+            "schema": { "type": "string", "example": "exercise" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "ranks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": { "type": "integer", "example": 1 },
+                          "userId": { "type": "string", "example": "user001" },
+                          "nickname": { "type": "string", "example": "运动达人" },
+                          "value": { "type": "number", "example": 150 },
+                          "unit": { "type": "string", "example": "公里" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/community/post": {
+      "post": {
+        "tags": ["5. 社区"],
+        "summary": "发布健康动态",
+        "description": "用户发布健康相关动态（含图片、可见性设置）",
+        "operationId": "communityPost",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "content"],
+                "properties": {
+                  "userId": { "type": "string", "description": "用户ID" },
+                  "content": { "type": "string", "description": "动态内容" },
+                  "visibility": { "type": "string", "description": "可见性（public/friend/private）", "default": "public" },
+                  "images": { "type": "array", "items": { "type": "string" }, "description": "图片URL数组" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发布成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "get": {
+        "tags": ["5. 社区"],
+        "summary": "获取社区动态列表",
+        "description": "获取社区健康动态列表，支持分页",
+        "operationId": "communityPostList",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "userId": { "type": "string" },
+                          "nickname": { "type": "string" },
+                          "avatar": { "type": "string" },
+                          "content": { "type": "string" },
+                          "images": { "type": "array", "items": { "type": "string" } },
+                          "likeCount": { "type": "integer" },
+                          "commentCount": { "type": "integer" },
+                          "createdAt": { "type": "string" }
+                        }
+                      }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/community/message": {
+      "get": {
+        "tags": ["5. 社区"],
+        "summary": "消息列表查询",
+        "description": "获取用户私信/通知消息列表",
+        "operationId": "communityMessages",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "fromUser": { "type": "string" },
+                          "content": { "type": "string" },
+                          "isRead": { "type": "boolean" },
+                          "createdAt": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/community/chat": {
+      "get": {
+        "tags": ["5. 社区"],
+        "summary": "聊天记录查询",
+        "description": "获取与指定用户的聊天记录",
+        "operationId": "communityChat",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "targetUserId",
+            "in": "query",
+            "required": true,
+            "description": "对话目标用户ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "fromUserId": { "type": "string" },
+                          "content": { "type": "string" },
+                          "createdAt": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "post": {
+        "tags": ["5. 社区"],
+        "summary": "发送聊天消息",
+        "description": "向指定用户发送私信",
+        "operationId": "communityChatSend",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["targetUserId", "content"],
+                "properties": {
+                  "targetUserId": { "type": "string" },
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发送成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/profile": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "获取用户个人信息",
+        "description": "获取用户基本信息（昵称、头像、学号等）",
+        "operationId": "userProfile",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "data": { "$ref": "#/components/schemas/UserInfo" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "put": {
+        "tags": ["6. 个人中心"],
+        "summary": "更新用户个人信息",
+        "description": "更新用户昵称、头像、密码等信息",
+        "operationId": "userProfileUpdate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string", "description": "用户ID" },
+                  "nickname": { "type": "string", "description": "昵称" },
+                  "avatar": { "type": "string", "description": "头像URL" },
+                  "password": { "type": "string", "description": "密码" }
+                }
+              },
+              "example": {
+                "userId": "12345",
+                "nickname": "小明",
+                "avatar": "https://example.com/avatar.jpg"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "msg": { "type": "string", "example": "更新成功" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/collection": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "我的收藏列表查询",
+        "description": "获取用户收藏的食谱、食堂、饮品、课程、知识、社区帖子等各类内容",
+        "operationId": "userCollection",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "用户ID",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "收藏类型（restaurants/recipes/drinks/courses/knowledge/posts）",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "collections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "example": "col001" },
+                          "type": { "type": "string", "example": "食谱" },
+                          "name": { "type": "string", "example": "低卡沙拉" },
+                          "createdAt": { "type": "string", "example": "2024-01-15" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/data_summary": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "健康数据小结",
+        "description": "获取用户健康数据汇总统计，包括总运动天数、总消耗卡路里、平均每日热量、体重变化、成就等",
+        "operationId": "userDataSummary",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "用户ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 200 },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "totalExerciseDays": { "type": "integer", "example": 45 },
+                        "totalCaloriesBurned": { "type": "integer", "example": 15000 },
+                        "averageDailyCalories": { "type": "integer", "example": 1850 },
+                        "weightChange": { "type": "number", "example": -3.5 },
+                        "achievements": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": ["连续打卡7天", "完成月度目标"]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/daily_records": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "每日健康记录列表",
+        "description": "获取用户每日健康数据记录（跑步距离、断食时长、体重、喝水量）",
+        "operationId": "userDailyRecords",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/DailySummaryRecord" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "post": {
+        "tags": ["6. 个人中心"],
+        "summary": "新增每日健康记录",
+        "description": "新增一条每日健康数据记录",
+        "operationId": "userDailyRecordAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DailySummaryRecord" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/yearly_report": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "年度报告查询",
+        "description": "获取用户年度健康成长报告，包括活跃天数、目标完成情况、成就、年度亮点等",
+        "operationId": "userYearlyReport",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "description": "年份，不填默认当前年",
+            "schema": { "type": "integer", "example": 2024 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": { "$ref": "#/components/schemas/YearlyReport" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "put": {
+        "tags": ["6. 个人中心"],
+        "summary": "保存/更新年度目标",
+        "description": "新增或更新年度目标（目标名称、描述、进度）",
+        "operationId": "userYearlyReportSave",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string", "example": "坚持运动" },
+                      "desc": { "type": "string", "example": "每周运动3次" },
+                      "progress": { "type": "integer", "example": 60 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/assessment": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "我的测评报告查询",
+        "description": "获取用户最新健康测评报告，包含BMI、健康评分、个性化建议等",
+        "operationId": "userAssessment",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": { "$ref": "#/components/schemas/AssessmentReport" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/feedback": {
+      "post": {
+        "tags": ["6. 个人中心"],
+        "summary": "提交帮助与反馈",
+        "description": "用户提交建议、问题反馈或AI相关反馈，支持邮件联系",
+        "operationId": "userFeedback",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["type", "content"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "反馈类型（suggestion=建议, bug=问题, ai=AI相关）",
+                    "enum": ["suggestion", "bug", "ai"],
+                    "example": "suggestion"
+                  },
+                  "content": { "type": "string", "description": "反馈内容" },
+                  "targetAI": { "type": "boolean", "description": "是否针对AI功能", "default": false },
+                  "email": { "type": "string", "description": "联系邮箱（可选）" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "提交成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "感谢你的反馈！" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      },
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "历史反馈列表查询",
+        "description": "查询用户历史提交的反馈记录",
+        "operationId": "userFeedbackList",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "type": { "type": "string" },
+                          "content": { "type": "string" },
+                          "createdAt": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/plans": {
+      "get": {
+        "tags": ["6. 个人中心"],
+        "summary": "我的健康方案列表",
+        "description": "获取用户所有健康方案（减脂燃烧、增肌塑形、低碳饮食、瑜伽冥想等），含当前正在执行的方案",
+        "operationId": "userPlans",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "currentPlan": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "integer" },
+                            "name": { "type": "string", "example": "减脂燃烧方案" },
+                            "desc": { "type": "string" },
+                            "icon": { "type": "string", "example": "🔥" },
+                            "target": { "type": "string" },
+                            "duration": { "type": "string", "example": "12周" },
+                            "features": { "type": "array", "items": { "type": "string" } },
+                            "weeklyPlan": { "type": "array", "items": { "type": "string" } },
+                            "expectedResult": { "type": "string" }
+                          }
+                        },
+                        "allPlans": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "integer" },
+                              "name": { "type": "string" },
+                              "icon": { "type": "string" },
+                              "desc": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    },
+    "/user/plans/switch": {
+      "post": {
+        "tags": ["6. 个人中心"],
+        "summary": "切换健康方案",
+        "description": "切换用户当前执行的健康方案",
+        "operationId": "userPlanSwitch",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["planId"],
+                "properties": {
+                  "planId": { "type": "integer", "description": "方案ID", "example": 2 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "切换成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonSuccess" }
+              }
+            }
+          },
+          "401": { "description": "未登录" }
+        }
+      }
+    }
+  }
+}
