@@ -14,7 +14,7 @@
       "description": "本地开发服务器"
     },
     {
-      "url": "https://your-production-server.com",
+      "url": "http://120.53.88.78:8080",
       "description": "生产服务器"
     }
   ],

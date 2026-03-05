@@ -6,9 +6,10 @@
           <text>今日已喝</text>
           <text class="dw-num">{{ todayDrank }}</text><text class="dw-unit">ml</text>
         </view>
-        <view class="dw-row">
+        <view class="dw-row" @click="showGoalEdit = true" style="cursor:pointer;">
           <text>喝水目标</text>
           <text class="dw-num dw-goal">{{ drinkGoal }}</text><text class="dw-unit">ml</text>
+          <text style="font-size:12px;color:#90caf9;margin-left:4px;">✏️</text>
         </view>
       </view>
     </view>
@@ -25,7 +26,7 @@
       </view>
     </view>
     <view class="dw-tip">注：点击杯型将对应容量的水添加到“今日已喝”中</view>
-    <!-- 自定义弹窗 -->
+    <!-- 自定义喝水弹窗 -->
     <view v-if="showCustom" class="dw-popup-mask">
       <view class="dw-popup-content">
         <view class="dw-popup-title">自定义容量</view>
@@ -33,6 +34,17 @@
         <view class="dw-popup-btn-row">
           <button class="dw-popup-btn" @click="showCustom = false">取消</button>
           <button class="dw-popup-btn confirm" @click="addCustom">添加</button>
+        </view>
+      </view>
+    </view>
+    <!-- 修改喝水目标弹窗 -->
+    <view v-if="showGoalEdit" class="dw-popup-mask">
+      <view class="dw-popup-content">
+        <view class="dw-popup-title">修改喝水目标</view>
+        <input v-model="goalEditValue" type="number" class="dw-popup-input" placeholder="请输入目标(ml)" />
+        <view class="dw-popup-btn-row">
+          <button class="dw-popup-btn" @click="showGoalEdit = false">取消</button>
+          <button class="dw-popup-btn confirm" @click="saveGoal">确定</button>
         </view>
       </view>
     </view>
@@ -44,10 +56,15 @@
     ref,
     onMounted
   } from 'vue'
+
+  const BASE_URL = 'http://120.53.88.78:8080'
+
   const todayDrank = ref(0)
-  const drinkGoal = ref(1800)
+  const drinkGoal = ref(1500)
   const showCustom = ref(false)
   const customValue = ref('')
+  const showGoalEdit = ref(false)
+  const goalEditValue = ref('')
 
   const cups = [{
       icon: '☕',
@@ -76,30 +93,70 @@
     },
   ]
 
-  function loadDrink() {
-    try {
-      const d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
-      const today = new Date().toLocaleDateString()
-      todayDrank.value = d[today] || 0
-      if (d.goal) drinkGoal.value = d.goal
-    } catch {}
+  function getToken() {
+    return uni.getStorageSync('token') || ''
   }
+
+  function loadDrink() {
+    const token = getToken()
+    if (!token) {
+      // 未登录时使用本地缓存
+      try {
+        const d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
+        const today = new Date().toLocaleDateString()
+        todayDrank.value = d[today] || 0
+        if (d.goal) drinkGoal.value = d.goal
+      } catch {}
+      return
+    }
+    uni.request({
+      url: BASE_URL + '/api/drink/today',
+      method: 'GET',
+      header: { Authorization: 'Bearer ' + token },
+      success(res) {
+        if (res.data && res.data.code === 0 && res.data.data) {
+          todayDrank.value = res.data.data.todayDrank || 0
+          drinkGoal.value = res.data.data.drinkGoal || 1500
+        }
+      },
+      fail() {
+        // 网络失败降级到本地缓存
+        try {
+          const d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
+          const today = new Date().toLocaleDateString()
+          todayDrank.value = d[today] || 0
+          if (d.goal) drinkGoal.value = d.goal
+        } catch {}
+      }
+    })
+  }
+
   onMounted(loadDrink)
 
-  function saveDrink() {
-    const today = new Date().toLocaleDateString()
-    let d = {}
-    try {
-      d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
-    } catch {}
-    d[today] = todayDrank.value
-    d.goal = drinkGoal.value
-    uni.setStorageSync('drinkWater', JSON.stringify(d))
-  }
-
   function addWater(val) {
-    todayDrank.value += val
-    saveDrink()
+    const token = getToken()
+    if (!token) {
+      todayDrank.value += val
+      saveLocal()
+      return
+    }
+    uni.request({
+      url: BASE_URL + '/api/drink/add',
+      method: 'POST',
+      header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      data: { amount: val },
+      success(res) {
+        if (res.data && res.data.code === 0) {
+          todayDrank.value += val
+          saveLocal()
+        } else {
+          uni.showToast({ title: '记录失败', icon: 'none' })
+        }
+      },
+      fail() {
+        uni.showToast({ title: '网络错误', icon: 'none' })
+      }
+    })
   }
 
   function addCustom() {
@@ -114,6 +171,53 @@
     addWater(v)
     showCustom.value = false
     customValue.value = ''
+  }
+
+  function saveGoal() {
+    const v = parseInt(goalEditValue.value)
+    if (!v || v < 100 || v > 10000) {
+      uni.showToast({ title: '请输入100~10000之间的目标', icon: 'none' })
+      return
+    }
+    const token = getToken()
+    if (!token) {
+      drinkGoal.value = v
+      saveLocal()
+      showGoalEdit.value = false
+      goalEditValue.value = ''
+      return
+    }
+    uni.request({
+      url: BASE_URL + '/api/drink/goal',
+      method: 'PUT',
+      header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      data: { goal: v },
+      success(res) {
+        if (res.data && res.data.code === 0) {
+          drinkGoal.value = v
+          saveLocal()
+          uni.showToast({ title: '目标已更新', icon: 'success' })
+        } else {
+          uni.showToast({ title: '更新失败', icon: 'none' })
+        }
+      },
+      fail() {
+        uni.showToast({ title: '网络错误', icon: 'none' })
+      }
+    })
+    showGoalEdit.value = false
+    goalEditValue.value = ''
+  }
+
+  function saveLocal() {
+    const today = new Date().toLocaleDateString()
+    let d = {}
+    try {
+      d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
+    } catch {}
+    d[today] = todayDrank.value
+    d.goal = drinkGoal.value
+    uni.setStorageSync('drinkWater', JSON.stringify(d))
   }
 </script>
 
