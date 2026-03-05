@@ -35,7 +35,7 @@
       <button class="ex-add-btn" @click="showAdd = true">添加运动</button>
     </view>
     <!-- 添加运动弹窗 -->
-    <view v-if="showAdd" class="ex-popup-mask" @click.self="showAdd = false">
+    <view v-if="showAdd" class="ex-popup-mask">
       <view class="ex-popup-content">
         <view class="ex-popup-title">添加运动</view>
         <!-- 运动类型选择 -->
@@ -55,7 +55,7 @@
         <!-- 自定义运动时显示额外输入 -->
         <template v-if="exerciseTypes[selectedType].custom">
           <input v-model="customName" class="ex-popup-input" placeholder="请输入运动名称" />
-          <input v-model="customCaloriePerMin" type="number" class="ex-popup-input" placeholder="每分钟消耗热量(大卡)" />
+          <text class="ex-custom-hint">将按中等强度（约5大卡/分钟）自动估算消耗热量</text>
         </template>
         <view class="ex-popup-btn-row">
           <button class="ex-popup-btn" @click="showAdd = false">取消</button>
@@ -79,7 +79,6 @@
   const addDuration = ref('')
   const selectedType = ref(0)
   const customName = ref('')
-  const customCaloriePerMin = ref('')
 
   const exerciseTypes = [
     { icon: '👣', name: '步行(3km/h)',   caloriePerMin: 2.1 },
@@ -95,7 +94,7 @@
     { icon: '🎾', name: '网球',           caloriePerMin: 7.0 },
     { icon: '🎱', name: '壁球',           caloriePerMin: 9.0 },
     { icon: '🪝', name: '跳绳',           caloriePerMin: 10.0 },
-    { icon: '✏️', name: '自定义',         caloriePerMin: 0, custom: true },
+    { icon: '✏️', name: '自定义',         caloriePerMin: 5.0, custom: true },
   ]
 
   const totalMinutes = computed(() => {
@@ -138,13 +137,9 @@
         uni.showToast({ title: '请输入运动名称', icon: 'none' })
         return
       }
-      const customCal = parseFloat(customCaloriePerMin.value)
-      if (!customCal || customCal <= 0) {
-        uni.showToast({ title: '请输入每分钟消耗热量', icon: 'none' })
-        return
-      }
       name = customName.value.trim()
-      caloriePerMin = customCal
+      // 自定义运动按中等强度5大卡/分钟自动估算
+      caloriePerMin = 5.0
     }
     const calorie = Math.round(caloriePerMin * duration)
     records.value.push({
@@ -159,7 +154,6 @@
     showAdd.value = false
     addDuration.value = ''
     customName.value = ''
-    customCaloriePerMin.value = ''
   }
 </script>
 
@@ -383,6 +377,14 @@
     margin-bottom: 12px;
     background: #f7f7fa;
     color: #333;
+  }
+
+  .ex-custom-hint {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 12px;
+    text-align: center;
+    display: block;
   }
 
   .ex-popup-btn-row {
