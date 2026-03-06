@@ -299,11 +299,6 @@
       route: '/pages/home/exercise',
     },
     {
-      name: '断食',
-      emoji: '🍽️',
-      route: '/pages/schedule/fasting',
-    },
-    {
       name: '日记',
       emoji: '📔',
       route: '/pages/home/diary',

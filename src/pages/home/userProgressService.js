@@ -10,6 +10,7 @@ const KEYS = {
   WEIGHT_LIST: 'weightList',                 // 体重记录列表
   TARGET_WEIGHT: 'targetWeight',             // 目标体重
   PLAN_RECORDS: 'plan_records',              // 方案记录
+  PLAN_START_DATE: 'plan_start_date',        // 方案开始日期
 }
 
 // ============ 初始化 ============
@@ -50,6 +51,19 @@ function getDaysDiff(startDateStr, endDateStr) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
+/**
+ * 将各种格式的日期字符串统一为 YYYY-MM-DD
+ */
+function normalizeDate(str) {
+  try {
+    const d = new Date(str)
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+  } catch {}
+  return String(str)
+}
+
 // ============ 使用天数统计 ============
 /**
  * 获取使用天数
@@ -67,13 +81,45 @@ export function getUseDays() {
 }
 
 /**
- * 获取累计记录天数（有任何记录的天数）
+ * 获取累计记录天数（体重/运动/喝水/日记任一模块某天有记录即计1天）
  * @returns {number} 有记录的总天数
  */
 export function getRecordDays() {
   try {
-    const records = JSON.parse(uni.getStorageSync(KEYS.DAILY_RECORDS) || '{}')
-    return Object.keys(records).length
+    const recordDates = new Set()
+
+    // 1. 体重记录（weightList: [{date: 'YYYY-MM-DD', weight}]）
+    const weightList = JSON.parse(uni.getStorageSync(KEYS.WEIGHT_LIST) || '[]')
+    weightList.forEach(item => {
+      if (item.date) recordDates.add(normalizeDate(item.date))
+    })
+
+    // 2. 运动记录（exerciseRecords: {[toLocaleDateString()]: [...records], goal: number}）
+    const exerciseRecords = JSON.parse(uni.getStorageSync('exerciseRecords') || '{}')
+    Object.keys(exerciseRecords).forEach(key => {
+      if (key !== 'goal' && Array.isArray(exerciseRecords[key]) && exerciseRecords[key].length > 0) {
+        recordDates.add(normalizeDate(key))
+      }
+    })
+
+    // 3. 喝水记录（drinkWater: {[toLocaleDateString()]: number, goal: number}）
+    const drinkWater = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
+    Object.keys(drinkWater).forEach(key => {
+      if (key !== 'goal' && Number(drinkWater[key]) > 0) {
+        recordDates.add(normalizeDate(key))
+      }
+    })
+
+    // 4. 日记记录（diaryList: [{date: 'YYYY-MM-DD HH:mm', ...}]）
+    const diaryList = JSON.parse(uni.getStorageSync('diaryList') || '[]')
+    diaryList.forEach(item => {
+      if (item.date) {
+        // date 格式为 'YYYY-MM-DD HH:mm'，取日期部分
+        recordDates.add(item.date.substring(0, 10))
+      }
+    })
+
+    return recordDates.size
   } catch (e) {
     console.error('获取记录天数失败', e)
     return 0
@@ -102,24 +148,30 @@ export function recordTodayActivity() {
 }
 
 /**
- * 获取累计坚持方案天数
- * @returns {number} 完成方案的天数
+ * 获取坚持方案天数
+ * 从"我的方案"里首次有方案文字时开始计天数
+ * @returns {number} 坚持方案的天数
  */
 export function getPlanDays() {
   try {
-    // 统计calories数据中不为0的天数
-    const caloriesData = JSON.parse(uni.getStorageSync('calories') || '{}')
-    let planDays = 0
-    
-    for (const date in caloriesData) {
-      const dayData = caloriesData[date]
-      // 如果当天有任何餐次的卡路里记录，算作坚持了方案
-      if (dayData.breakfast > 0 || dayData.lunch > 0 || dayData.dinner > 0 || dayData.other > 0) {
-        planDays++
-      }
+    // 检查是否有方案内容（diet 或 exercise 字段有文字）
+    let plan = uni.getStorageSync('myPlan')
+    if (typeof plan === 'string') {
+      try { plan = JSON.parse(plan) } catch { plan = null }
     }
-    
-    return planDays
+    if (!plan || (!plan.diet && !plan.exercise)) {
+      return 0 // 尚未生成方案，坚持天数为0
+    }
+
+    // 确定方案开始日期：第一次检测到有方案时记录今天
+    let startDate = uni.getStorageSync(KEYS.PLAN_START_DATE)
+    if (!startDate) {
+      startDate = getTodayString()
+      uni.setStorageSync(KEYS.PLAN_START_DATE, startDate)
+    }
+
+    const today = getTodayString()
+    return getDaysDiff(startDate, today) + 1 // +1 包含开始当天
   } catch (e) {
     console.error('获取方案天数失败', e)
     return 0
@@ -163,43 +215,41 @@ export function getTargetWeight() {
 }
 
 /**
- * 计算剩余天数（预估）
- * 基于当前体重、目标体重和平均减重速度
+ * 计算剩余天数（基于体重趋势分析预估达到目标所需天数）
  * @returns {number} 预估剩余天数
  */
 export function getRemainingDays() {
   const currentWeight = getLatestWeight()
   const targetWeight = getTargetWeight()
-  
+
   if (!currentWeight || !targetWeight) {
-    return 30 // 默认返回30天
+    return 30 // 未设置体重或目标，返回默认值
   }
-  
+
   const weightDiff = currentWeight - targetWeight
-  
+
   if (weightDiff <= 0) {
     return 0 // 已达成目标
   }
-  
-  // 计算平均每日减重速度
+
+  // 基于体重趋势图计算平均每日减重速度
   const weightList = getWeightList()
-  let avgDailyLoss = 0.1 // 默认每天减0.1kg
-  
+  let avgDailyLoss = 0.1 // 默认每日减重0.1kg
+
   if (weightList.length >= 2) {
-    const firstWeight = weightList[weightList.length - 1].weight
-    const lastWeight = weightList[0].weight
-    const days = weightList.length - 1
-    
-    if (days > 0 && firstWeight > lastWeight) {
-      avgDailyLoss = (firstWeight - lastWeight) / days
+    // weightList 按时间倒序，最新在前
+    const newest = weightList[0]
+    const oldest = weightList[weightList.length - 1]
+    const daysDiff = getDaysDiff(oldest.date, newest.date)
+    if (daysDiff > 0 && oldest.weight > newest.weight) {
+      avgDailyLoss = (oldest.weight - newest.weight) / daysDiff
     }
   }
-  
-  // 避免除以0
+
   if (avgDailyLoss <= 0) {
     avgDailyLoss = 0.1
   }
-  
+
   return Math.ceil(weightDiff / avgDailyLoss)
 }
 

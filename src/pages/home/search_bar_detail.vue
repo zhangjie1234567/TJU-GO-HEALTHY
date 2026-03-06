@@ -143,8 +143,95 @@
       </view>
     </view>
 
+    <!-- 添加到餐次 -->
+    <view class="meal-set-section">
+      <view class="meal-set-title">📌 添加到今日餐次</view>
+      <view class="meal-set-buttons">
+        <view class="meal-set-btn breakfast" @click="openMealPopup('breakfast')">🌅 设置为早餐</view>
+        <view class="meal-set-btn lunch" @click="openMealPopup('lunch')">☀️ 设置为午餐</view>
+        <view class="meal-set-btn dinner" @click="openMealPopup('dinner')">🌙 设置为晚餐</view>
+        <view class="meal-set-btn other" @click="openMealPopup('other')">🍿 设置为加餐零食</view>
+      </view>
+    </view>
+
     <!-- 底部占位 -->
     <view style="height: 40px;"></view>
+
+    <!-- 设置餐次弹窗（仅通过确定/取消按钮关闭） -->
+    <view v-if="showMealPopup" class="meal-popup-mask">
+      <view class="meal-popup-content">
+        <view class="meal-popup-title">设置为{{ mealTypeNames[currentMealType] }}</view>
+
+        <!-- 器皿选择 -->
+        <view class="meal-section-label">🥣 选择器皿</view>
+        <view class="meal-chips-row">
+          <view
+            v-for="(vessel, idx) in vessels"
+            :key="idx"
+            class="meal-chip"
+            :class="{ 'meal-chip-active': selectedVesselIdx === idx }"
+            @click="selectedVesselIdx = idx"
+          >
+            <text class="chip-name">{{ vessel.name }}</text>
+            <text class="chip-sub">{{ vessel.grams }}g</text>
+          </view>
+          <!-- 自定义"x个"器皿 -->
+          <view
+            class="meal-chip"
+            :class="{ 'meal-chip-active': selectedVesselIdx === -1 }"
+            @click="selectedVesselIdx = -1"
+          >
+            <text class="chip-name">x个</text>
+            <text class="chip-sub">自定义</text>
+          </view>
+        </view>
+        <!-- 自定义个数输入框（仅选中"x个"时显示） -->
+        <view v-if="selectedVesselIdx === -1" class="custom-count-row">
+          <text class="custom-count-label">每个</text>
+          <input
+            class="custom-count-input"
+            type="number"
+            v-model="customVesselGrams"
+            placeholder="每个克数"
+          />
+          <text class="custom-count-label">g，共</text>
+          <input
+            class="custom-count-input custom-count-short"
+            type="number"
+            v-model="customVesselCount"
+            placeholder="个数"
+          />
+          <text class="custom-count-label">个</text>
+        </view>
+
+        <!-- 用量选择 -->
+        <view class="meal-section-label">📏 选择用量</view>
+        <view class="meal-chips-row">
+          <view
+            v-for="(portion, idx) in portions"
+            :key="idx"
+            class="meal-chip meal-chip-wide"
+            :class="{ 'meal-chip-active': selectedPortionIdx === idx }"
+            @click="selectedPortionIdx = idx"
+          >
+            {{ portion.name }}
+          </view>
+        </view>
+
+        <!-- 热量预览 -->
+        <view class="meal-calorie-preview">
+          <text class="preview-label">预计热量：</text>
+          <text class="preview-kcal">{{ calculatedCalories }}</text>
+          <text class="preview-unit">千卡</text>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="meal-popup-btns">
+          <view class="meal-btn-cancel" @click="closeMealPopup">取消</view>
+          <view class="meal-btn-confirm" @click="confirmMealSetting">确定</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -248,6 +335,105 @@
       title: newState ? '已添加到收藏' : '已取消收藏',
       icon: 'none',
       duration: 1500
+    })
+  }
+
+  // ========== 餐次设置弹窗 ==========
+  const showMealPopup = ref(false)
+  const currentMealType = ref('')
+
+  const mealTypeNames = {
+    breakfast: '早餐',
+    lunch: '午餐',
+    dinner: '晚餐',
+    other: '加餐零食'
+  }
+
+  // 器皿列表（名称 + 容量g）
+  const vessels = [
+    { name: '小碗', grams: 100 },
+    { name: '中碗', grams: 200 },
+    { name: '大碗', grams: 300 },
+    { name: '小盘', grams: 150 },
+    { name: '中盘', grams: 300 },
+    { name: '大盘', grams: 500 },
+    { name: '小杯', grams: 100 },
+    { name: '大杯', grams: 250 },
+  ]
+  const selectedVesselIdx = ref(0)
+  // 自定义"x个"器皿的参数
+  const customVesselGrams = ref('') // 每个克数
+  const customVesselCount = ref('') // 个数
+
+  // 用量列表
+  const portions = [
+    { name: '1/4', ratio: 0.25 },
+    { name: '1/3', ratio: 0.333 },
+    { name: '1/2', ratio: 0.5 },
+    { name: '3/4', ratio: 0.75 },
+    { name: '整份', ratio: 1.0 },
+  ]
+  const selectedPortionIdx = ref(4) // 默认整份
+
+  // 根据器皿和用量计算热量
+  const calculatedCalories = computed(() => {
+    let totalGrams = 0
+    if (selectedVesselIdx.value === -1) {
+      // 自定义"x个"模式
+      const perGrams = parseFloat(customVesselGrams.value) || 0
+      const count = parseInt(customVesselCount.value) || 0
+      totalGrams = perGrams * count
+    } else {
+      const vessel = vessels[selectedVesselIdx.value]
+      const portion = portions[selectedPortionIdx.value]
+      totalGrams = vessel.grams * portion.ratio
+    }
+    return Math.round((foodData.value.energy / 100) * totalGrams)
+  })
+
+  function openMealPopup(mealType) {
+    currentMealType.value = mealType
+    selectedVesselIdx.value = 0
+    selectedPortionIdx.value = 4
+    customVesselGrams.value = ''
+    customVesselCount.value = ''
+    showMealPopup.value = true
+  }
+
+  function closeMealPopup() {
+    showMealPopup.value = false
+  }
+
+  function confirmMealSetting() {
+    // 自定义模式校验
+    if (selectedVesselIdx.value === -1) {
+      const perGrams = parseFloat(customVesselGrams.value)
+      const count = parseInt(customVesselCount.value)
+      if (!perGrams || perGrams <= 0 || !count || count <= 0) {
+        uni.showToast({ title: '请输入每个克数和个数', icon: 'none' })
+        return
+      }
+    }
+    const kcal = calculatedCalories.value
+    const mealType = currentMealType.value
+    const today = new Date().toLocaleDateString()
+
+    let caloriesData = {}
+    try {
+      caloriesData = JSON.parse(uni.getStorageSync('calories') || '{}')
+    } catch {}
+
+    if (!caloriesData[today]) {
+      caloriesData[today] = { breakfast: 0, lunch: 0, dinner: 0, other: 0 }
+    }
+    caloriesData[today][mealType] = (caloriesData[today][mealType] || 0) + kcal
+    uni.setStorageSync('calories', JSON.stringify(caloriesData))
+
+    showMealPopup.value = false
+    uni.showToast({
+      title: `已添加到${mealTypeNames[mealType]}，+${kcal}千卡`,
+      icon: 'success',
+      duration: 2000
     })
   }
 </script>
@@ -559,5 +745,242 @@
     color: #333;
     font-weight: 600;
     text-align: center;
+  }
+
+  /* ========== 添加到餐次区 ========== */
+  .meal-set-section {
+    margin: 0 16px 16px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
+  }
+
+  .meal-set-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+  }
+
+  .meal-set-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .meal-set-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .meal-set-btn:active {
+    opacity: 0.75;
+  }
+
+  .meal-set-btn.breakfast {
+    background: linear-gradient(135deg, #FFF3CD, #FFE082);
+    color: #E65100;
+  }
+
+  .meal-set-btn.lunch {
+    background: linear-gradient(135deg, #E8F5E9, #A5D6A7);
+    color: #2E7D32;
+  }
+
+  .meal-set-btn.dinner {
+    background: linear-gradient(135deg, #E3F2FD, #90CAF9);
+    color: #1565C0;
+  }
+
+  .meal-set-btn.other {
+    background: linear-gradient(135deg, #FCE4EC, #F48FB1);
+    color: #880E4F;
+  }
+
+  /* ========== 餐次弹窗 ========== */
+  .meal-popup-mask {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .meal-popup-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 20px 20px;
+    width: 86%;
+    max-width: 340px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  }
+
+  .meal-popup-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .meal-section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  .meal-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .meal-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f5f7fa;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 54px;
+  }
+
+  .meal-chip-wide {
+    flex-direction: row;
+    min-width: 54px;
+    padding: 8px 14px;
+  }
+
+  .meal-chip-active {
+    background: rgba(79, 161, 242, 0.12);
+    border-color: #419bf9;
+  }
+
+  .chip-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .chip-sub {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  /* 自定义个数输入行 */
+  .custom-count-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    background: #f5f7fa;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .custom-count-label {
+    font-size: 13px;
+    color: #555;
+    white-space: nowrap;
+  }
+
+  .custom-count-input {
+    flex: 1;
+    border: 1.5px solid #d0e6fa;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 14px;
+    background: white;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .custom-count-short {
+    max-width: 56px;
+    flex: none;
+  }
+
+  .meal-calorie-preview {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #E3F2FD, #f0f9ff);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 18px;
+  }
+
+  .preview-label {
+    font-size: 14px;
+    color: #555;
+  }
+
+  .preview-kcal {
+    font-size: 28px;
+    font-weight: 700;
+    color: #419bf9;
+  }
+
+  .preview-unit {
+    font-size: 13px;
+    color: #888;
+  }
+
+  .meal-popup-btns {
+    display: flex;
+    gap: 12px;
+  }
+
+  .meal-btn-cancel {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    background: #f5f7fa;
+    color: #666;
+    cursor: pointer;
+  }
+
+  .meal-btn-cancel:active {
+    opacity: 0.75;
+  }
+
+  .meal-btn-confirm {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #419bf9, #5fb3ff);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(79, 161, 242, 0.3);
+  }
+
+  .meal-btn-confirm:active {
+    opacity: 0.85;
   }
 </style>
