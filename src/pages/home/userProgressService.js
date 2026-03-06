@@ -149,33 +149,11 @@ export function recordTodayActivity() {
 
 /**
  * 获取坚持方案天数
- * 从"我的方案"里首次有方案文字时开始计天数
+ * 与"使用天数"逻辑一致，从首次使用日期开始计算
  * @returns {number} 坚持方案的天数
  */
 export function getPlanDays() {
-  try {
-    // 检查是否有方案内容（diet 或 exercise 字段有文字）
-    let plan = uni.getStorageSync('myPlan')
-    if (typeof plan === 'string') {
-      try { plan = JSON.parse(plan) } catch { plan = null }
-    }
-    if (!plan || (!plan.diet && !plan.exercise)) {
-      return 0 // 尚未生成方案，坚持天数为0
-    }
-
-    // 确定方案开始日期：第一次检测到有方案时记录今天
-    let startDate = uni.getStorageSync(KEYS.PLAN_START_DATE)
-    if (!startDate) {
-      startDate = getTodayString()
-      uni.setStorageSync(KEYS.PLAN_START_DATE, startDate)
-    }
-
-    const today = getTodayString()
-    return getDaysDiff(startDate, today) + 1 // +1 包含开始当天
-  } catch (e) {
-    console.error('获取方案天数失败', e)
-    return 0
-  }
+  return getUseDays()
 }
 
 // ============ 体重数据 ============
@@ -315,10 +293,11 @@ export function getAvatarDescription(status) {
  */
 export function getUserHeight() {
   try {
-    // 从问卷数据中获取
-    const questionnaire = JSON.parse(uni.getStorageSync('questionnaireBaseInfo') || '{}')
+    const raw = uni.getStorageSync('questionnaireBaseInfo')
+    if (!raw) return 170
+    const questionnaire = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (questionnaire.height) {
-      return parseFloat(questionnaire.height.replace('cm', ''))
+      return parseFloat(String(questionnaire.height).replace('cm', ''))
     }
     return 170 // 默认身高
   } catch (e) {

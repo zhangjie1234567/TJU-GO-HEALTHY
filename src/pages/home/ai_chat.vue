@@ -35,16 +35,7 @@
         <!-- 用户消息（右侧） -->
         <view v-if="msg.role === 'user'" class="msg-row msg-user">
           <view class="bubble bubble-user">
-            <text v-if="msg.content" class="bubble-text">{{ msg.content }}</text>
-            <view v-if="msg.images && msg.images.length > 0" class="bubble-imgs">
-              <image
-                v-for="(img, i) in msg.images"
-                :key="i"
-                :src="img"
-                class="bubble-img"
-                mode="widthFix"
-              />
-            </view>
+            <text class="bubble-text">{{ msg.content }}</text>
           </view>
           <image :src="userAvatar" class="msg-avatar" mode="aspectFill" />
         </view>
@@ -86,24 +77,8 @@
 
     <!-- 输入区 -->
     <view class="input-area">
-      <!-- 图片预览行 -->
-      <view v-if="selectedImages.length > 0" class="img-preview-row">
-        <view
-          v-for="(img, i) in selectedImages"
-          :key="i"
-          class="img-preview-item"
-        >
-          <image :src="img" class="img-preview-thumb" mode="aspectFill" />
-          <view class="img-del-btn" @click="removeImage(i)">
-            <text class="img-del-icon">✕</text>
-          </view>
-        </view>
-      </view>
       <!-- 输入行 -->
       <view class="input-row">
-        <view class="img-btn" @click="chooseImage">
-          <text class="img-btn-icon">🖼</text>
-        </view>
         <textarea
           class="msg-input"
           v-model="inputText"
@@ -119,7 +94,7 @@
         <text class="char-tip">{{ inputText.length }}/500</text>
         <view
           class="send-btn"
-          :class="{ 'send-active': (inputText.trim() || selectedImages.length > 0) && !isLoading }"
+          :class="{ 'send-active': inputText.trim() && !isLoading }"
           @click="sendMessage"
         >
           <text class="send-txt">{{ isLoading ? '…' : '发送' }}</text>
@@ -127,8 +102,8 @@
       </view>
     </view>
 
-    <!-- 历史会话按钮（右上角） -->
-    <view class="fab-btn fab-top-right" @click="goToHistory">
+    <!-- 历史会话按钮（右上角，仅欢迎页显示） -->
+    <view v-if="messages.length === 0" class="fab-btn fab-top-right" @click="goToHistory">
       <text class="fab-icon">📋</text>
     </view>
     <!-- 新建对话按钮（左上角，仅在有消息时显示） -->
@@ -191,7 +166,6 @@ const currentSessionTitle = ref('')
 const isFromHistory = ref(false)
 
 const userAvatar = ref('/static/default-avatar.png')
-const selectedImages = ref([])
 
 let _localIdCounter = 0
 function nextLocalId() {
@@ -297,13 +271,11 @@ function sendQuickQuestion(q) {
 
 function sendMessage() {
   const text = inputText.value.trim()
-  const imgs = [...selectedImages.value]
-  if (!text && imgs.length === 0) return
+  if (!text) return
   if (isLoading.value) return
 
-  messages.value.push({ _localId: nextLocalId(), role: 'user', content: text, images: imgs })
+  messages.value.push({ _localId: nextLocalId(), role: 'user', content: text })
   inputText.value = ''
-  selectedImages.value = []
   scrollToBottom()
 
   const loadingMsg = { _localId: nextLocalId(), role: 'assistant', content: '', loading: true, thinking: '', _showThinking: false }
@@ -334,7 +306,7 @@ function sendMessage() {
     // 保存消息到 storage
     const storedMsgs = messages.value
       .filter(m => !m.loading)
-      .map(m => ({ role: m.role, content: m.content, thinking: m.thinking || '', images: m.images }))
+      .map(m => ({ role: m.role, content: m.content, thinking: m.thinking || '' }))
     saveHistory(sessionId, storedMsgs)
 
     const now = new Date()
@@ -362,22 +334,6 @@ function sendMessage() {
 
     scrollToBottom()
   }, 1500)
-}
-
-// ── 图片选择 ──────────────────────────────────────────
-function chooseImage() {
-  uni.chooseImage({
-    count: Math.max(1, 4 - selectedImages.value.length),
-    sizeType: ['compressed'],
-    sourceType: ['album', 'camera'],
-    success: (res) => {
-      selectedImages.value = [...selectedImages.value, ...res.tempFilePaths].slice(0, 4)
-    }
-  })
-}
-
-function removeImage(index) {
-  selectedImages.value.splice(index, 1)
 }
 </script>
 <style scoped>
@@ -613,61 +569,6 @@ function removeImage(index) {
   display: flex;
   align-items: flex-end;
   gap: 12rpx;
-}
-.img-btn {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 16rpx;
-  background: #f5f6fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.img-btn-icon {
-  font-size: 36rpx;
-}
-.img-preview-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-bottom: 12rpx;
-}
-.img-preview-item {
-  position: relative;
-  width: 120rpx;
-  height: 120rpx;
-}
-.img-preview-thumb {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 12rpx;
-}
-.img-del-btn {
-  position: absolute;
-  top: -10rpx;
-  right: -10rpx;
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.img-del-icon {
-  font-size: 20rpx;
-  color: #fff;
-}
-.bubble-imgs {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  margin-top: 8rpx;
-}
-.bubble-img {
-  max-width: 240rpx;
-  border-radius: 12rpx;
 }
 .msg-input {
   flex: 1;
