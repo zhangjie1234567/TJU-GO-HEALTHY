@@ -177,18 +177,6 @@
       }
     },
     {
-      "path": "pages/home/search_bar_morefruits",
-      "style": {
-        "navigationBarTitleText": "热门水果"
-      }
-    },
-    {
-      "path": "pages/home/search_bar_morevegetables",
-      "style": {
-        "navigationBarTitleText": "热门蔬菜"
-      }
-    },
-    {
       "path": "pages/home/plan_progress",
       "style": {
         "navigationBarTitleText": "计划进度"

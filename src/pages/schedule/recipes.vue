@@ -67,6 +67,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { apiRequest } from '../../utils/request'
 
 const searchText = ref('')
 const filterType = ref('all')
@@ -75,53 +76,106 @@ const loading = ref(false)
 
 const recipes = ref([])
 
+const mockRecipes = [
+  {
+    id: 1,
+    name: '三文鱼沙拉',
+    category: '鱼类',
+    cal: 280,
+    protein: '25g',
+    time: 12,
+    difficulty: '简单',
+    badge: '推荐',
+    desc: '高蛋白低脂，适合减脂期。',
+    image: 'https://via.placeholder.com/200x150/FF6B6B/FFFFFF?text=三文鱼'
+  },
+  {
+    id: 2,
+    name: '番茄鸡蛋面',
+    category: '面食',
+    cal: 350,
+    protein: '12g',
+    time: 15,
+    difficulty: '简单',
+    badge: '快手菜',
+    desc: '做法简单，适合忙碌时段。',
+    image: 'https://via.placeholder.com/200x150/FFA500/FFFFFF?text=汤面'
+  },
+  {
+    id: 3,
+    name: '健身鸡胸肉',
+    category: '禽肉',
+    cal: 165,
+    protein: '31g',
+    time: 18,
+    difficulty: '中等',
+    badge: '高蛋白',
+    desc: '优质蛋白来源，训练后推荐。',
+    image: 'https://via.placeholder.com/200x150/DAA520/FFFFFF?text=鸡肉'
+  },
+  {
+    id: 4,
+    name: '花椰菜炒饭',
+    category: '米饭',
+    cal: 250,
+    protein: '8g',
+    time: 14,
+    difficulty: '简单',
+    badge: '低卡',
+    desc: '低碳水替代主食方案。',
+    image: 'https://via.placeholder.com/200x150/90EE90/FFFFFF?text=炒饭'
+  }
+]
+
+const parseFirstNumber = (value, defaultValue = 0) => {
+  const text = String(value || '')
+  const match = text.match(/\d+/)
+  return match ? Number(match[0]) : defaultValue
+}
+
+const normalizeDifficulty = (difficulty) => {
+  const map = {
+    easy: '简单',
+    medium: '中等',
+    hard: '困难',
+    beginner: '简单',
+    advanced: '中等'
+  }
+  return map[difficulty] || difficulty || '简单'
+}
+
+const normalizeRecipe = (item = {}) => ({
+  id: item.id,
+  name: item.name || '未命名食谱',
+  category: item.category || '未分类',
+  cal: parseFirstNumber(item.cal, 0),
+  protein: item.protein || '0g',
+  time: Number(item.time) || parseFirstNumber(item.duration, 15),
+  difficulty: normalizeDifficulty(item.difficulty),
+  badge: item.badge || '',
+  desc: item.desc || '暂无描述',
+  image: item.image || 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=食谱'
+})
+
 // 从后端获取食谱列表
 const loadRecipes = async () => {
   loading.value = true
   try {
-    // 使用本地mock数据（不需要后端）
-    const mockData = [
-      {
-        id: 1,
-        name: '三文鱼沙拉',
-        category: '鱼类',
-        cal: '280 千卡',
-        protein: '25g',
-        badge: '推荐',
-        image: 'https://via.placeholder.com/200x150/FF6B6B/FFFFFF?text=三文鱼'
-      },
-      {
-        id: 2,
-        name: '番茄鸡蛋面',
-        category: '面食',
-        cal: '350 千卡',
-        protein: '12g',
-        badge: '快手面',
-        image: 'https://via.placeholder.com/200x150/FFA500/FFFFFF?text=汤面'
-      },
-      {
-        id: 3,
-        name: '健身鸡胸肉',
-        category: '禽肉',
-        cal: '165 千卡',
-        protein: '31g',
-        badge: '低脂',
-        image: 'https://via.placeholder.com/200x150/DAA520/FFFFFF?text=鸡肉'
-      },
-      {
-        id: 4,
-        name: '花椰菜炒饭',
-        category: '米饭',
-        cal: '250 千卡',
-        protein: '8g',
-        badge: '清淡',
-        image: 'https://via.placeholder.com/200x150/90EE90/FFFFFF?text=炒饭'
+    const data = await apiRequest({
+      url: '/api/recipes',
+      method: 'GET',
+      data: {
+        page: 1,
+        limit: 50
       }
-    ]
-    
-    recipes.value = mockData
+    })
+
+    const list = Array.isArray(data) ? data : []
+    recipes.value = list.map(normalizeRecipe)
   } catch (error) {
     console.error('食谱加载异常:', error)
+    recipes.value = mockRecipes.map(normalizeRecipe)
+    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
   } finally {
     loading.value = false
   }
@@ -131,18 +185,20 @@ const filteredRecipes = computed(() => {
   let result = recipes.value
   
   if (searchText.value) {
+    const keyword = searchText.value.toLowerCase()
     result = result.filter(item =>
-      item.name.includes(searchText.value) ||
-      item.desc.includes(searchText.value)
+      String(item.name || '').toLowerCase().includes(keyword) ||
+      String(item.desc || '').toLowerCase().includes(keyword) ||
+      String(item.category || '').toLowerCase().includes(keyword)
     )
   }
   
   if (filterType.value === 'low') {
-    result = result.filter(item => item.cal < 150)
+    result = result.filter(item => Number(item.cal) <= 200)
   } else if (filterType.value === 'quick') {
     result = result.filter(item => item.time <= 15)
   } else if (filterType.value === 'protein') {
-    result = result.filter(item => item.badge === '高蛋白')
+    result = result.filter(item => String(item.protein).toLowerCase().includes('g') && parseFirstNumber(item.protein, 0) >= 20)
   }
   
   return result
@@ -192,11 +248,9 @@ const isFavorited = (id) => {
 }
 
 const goDetail = (item) => {
+  const safeName = encodeURIComponent(item.name || '')
   uni.navigateTo({
-    url: `/pages/schedule/recipe_detail?id=${item.id}&name=${item.name}`,
-    success: () => {
-      uni.$emit('recipe-data', item)
-    }
+    url: `/pages/schedule/recipe_detail?id=${item.id}&name=${safeName}`
   })
 }
 

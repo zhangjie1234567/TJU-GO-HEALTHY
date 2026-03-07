@@ -65,6 +65,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { apiRequest } from '../../utils/request'
 
 const searchText = ref('')
 const filterType = ref('all')
@@ -73,53 +74,93 @@ const loading = ref(false)
 
 const drinks = ref([])
 
+const mockDrinks = [
+  {
+    id: 1,
+    name: '经典绿茶',
+    category: '茶类',
+    cal: '0-2 千卡',
+    caffeine: '25mg',
+    badge: '推荐',
+    desc: '富含儿茶素，口味清爽。',
+    image: 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=绿茶'
+  },
+  {
+    id: 2,
+    name: '咖啡拿铁',
+    category: '咖啡',
+    cal: '100-150 千卡',
+    caffeine: '75mg',
+    badge: '热饮',
+    desc: '奶香浓郁，提神效果明显。',
+    image: 'https://via.placeholder.com/200x150/8B4513/FFFFFF?text=咖啡'
+  },
+  {
+    id: 3,
+    name: '新鲜果汁',
+    category: '果汁',
+    cal: '80-120 千卡',
+    caffeine: '0mg',
+    badge: '',
+    desc: '维生素丰富，适合日常补水。',
+    image: 'https://via.placeholder.com/200x150/FF6347/FFFFFF?text=果汁'
+  },
+  {
+    id: 4,
+    name: '冰淇淋奶茶',
+    category: '奶茶',
+    cal: '150-200 千卡',
+    caffeine: '35mg',
+    badge: '冷饮',
+    desc: '口感顺滑，甜度较高。',
+    image: 'https://via.placeholder.com/200x150/FFB6C1/FFFFFF?text=奶茶'
+  }
+]
+
+const normalizeDrink = (item = {}) => ({
+  id: item.id,
+  name: item.name || '未命名饮品',
+  category: item.category || '未分类',
+  cal: item.cal || '未知',
+  caffeine: item.caffeine || '0mg',
+  badge: item.badge || '',
+  desc: item.desc || '暂无描述',
+  image: item.image || 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=饮品'
+})
+
+const parseCalUpperBound = (cal) => {
+  const text = String(cal || '')
+  const numbers = text.match(/\d+/g)
+  if (!numbers || numbers.length === 0) return Number.MAX_SAFE_INTEGER
+  if (numbers.length >= 2) return Number(numbers[1])
+  return Number(numbers[0])
+}
+
+const parseCaffeine = (value) => {
+  const text = String(value || '')
+  const numbers = text.match(/\d+/)
+  return numbers ? Number(numbers[0]) : 0
+}
+
 // 从后端获取饮品列表
 const loadDrinks = async () => {
   loading.value = true
   try {
-    // 使用本地mock数据（不需要后端）
-    const mockData = [
-      {
-        id: 1,
-        name: '经典绿茶',
-        category: '茶类',
-        cal: '0-2 千卡',
-        caffeine: '25',
-        badge: '推荐',
-        image: 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=绿茶'
-      },
-      {
-        id: 2,
-        name: '咖啡拿铁',
-        category: '咖啡',
-        cal: '100-150 千卡',
-        caffeine: '75',
-        badge: '热饮',
-        image: 'https://via.placeholder.com/200x150/8B4513/FFFFFF?text=咖啡'
-      },
-      {
-        id: 3,
-        name: '新鲜果汁',
-        category: '果汁',
-        cal: '80-120 千卡',
-        caffeine: '0',
-        badge: '',
-        image: 'https://via.placeholder.com/200x150/FF6347/FFFFFF?text=果汁'
-      },
-      {
-        id: 4,
-        name: '冰淇淋奶茶',
-        category: '奶茶',
-        cal: '150-200 千卡',
-        caffeine: '35',
-        badge: '冷饮',
-        image: 'https://via.placeholder.com/200x150/FFB6C1/FFFFFF?text=奶茶'
+    const data = await apiRequest({
+      url: '/api/drinks',
+      method: 'GET',
+      data: {
+        page: 1,
+        limit: 50
       }
-    ]
-    
-    drinks.value = mockData
+    })
+
+    const list = Array.isArray(data) ? data : []
+    drinks.value = list.map(normalizeDrink)
   } catch (error) {
     console.error('饮品加载异常:', error)
+    drinks.value = mockDrinks.map(normalizeDrink)
+    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
   } finally {
     loading.value = false
   }
@@ -140,9 +181,9 @@ const filteredDrinks = computed(() => {
   if (filterType.value === 'recommend') {
     result = result.filter(item => item.badge === '推荐')
   } else if (filterType.value === 'low') {
-    result = result.filter(item => item.cal.includes('0-') || item.cal.includes('2-') || item.cal.includes('30-') || item.cal.includes('60-'))
+    result = result.filter(item => parseCalUpperBound(item.cal) <= 100)
   } else if (filterType.value === 'coffee') {
-    result = result.filter(item => parseInt(item.caffeine) > 50)
+    result = result.filter(item => parseCaffeine(item.caffeine) > 50)
   } else if (filterType.value === 'cold') {
     result = result.filter(item => item.badge === '冷饮')
   }
@@ -189,11 +230,9 @@ const isFavorited = (id) => {
 
 // 跳转详情页
 const goDetail = (item) => {
+  const safeName = encodeURIComponent(item.name || '')
   uni.navigateTo({
-    url: `/pages/schedule/drinks_detail?id=${item.id}&name=${item.name}`,
-    success: () => {
-      uni.$emit('drink-data', item)
-    }
+    url: `/pages/schedule/drinks_detail?id=${item.id}&name=${safeName}`
   })
 }
 
