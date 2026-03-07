@@ -103,6 +103,18 @@
         uni.removeStorageSync('login_remember_name')
       } catch (e) {}
     }
+
+    try {
+      const profile = {
+        name,
+        studentId,
+        avatar: '😊',
+        loginAt: new Date().toISOString()
+      }
+      uni.setStorageSync('current_user_profile', JSON.stringify(profile))
+      uni.setStorageSync('my_user_profile', JSON.stringify(profile))
+    } catch (e) {}
+
     uni.showToast({
       title: '认证成功',
       icon: 'success'

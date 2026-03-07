@@ -59,15 +59,10 @@ import { ref, computed } from 'vue'
 import { getCollections, saveCollections } from './my-store'
 import { getPosts, savePosts } from '../communication/community-store'
 
-const currentCategory = ref('recipes')
+const currentCategory = ref('posts')
 const collections = ref(null)
 
 const categories = [
-	{ key: 'restaurants', label: '🍽️ 食堂' },
-	{ key: 'recipes', label: '👨‍🍳 食谱' },
-	{ key: 'drinks', label: '🧋 饮品' },
-	{ key: 'courses', label: '🎓 课程' },
-	{ key: 'knowledge', label: '📚 知识' },
 	{ key: 'posts', label: '📰 动态' }
 ]
 
@@ -92,15 +87,7 @@ const getCategoryLabel = () => {
 
 const getItemIcon = (item) => {
 	if (item.icon) return item.icon
-	const iconMap = {
-		recipes: '👨‍🍳',
-		drinks: '🧋',
-		courses: '🎓',
-		knowledge: '📚',
-		posts: '📰',
-		restaurants: '🍽️'
-	}
-	return iconMap[currentCategory.value] || '⭐'
+	return '📰'
 }
 
 const formatTime = (time) => {

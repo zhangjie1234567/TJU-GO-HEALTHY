@@ -4,7 +4,6 @@
       <!-- 游戏头部 -->
       <view class="games-header">
         <text class="games-title">3大高端体感游戏等你挑战！</text>
-        <text class="games-desc">利用手机传感器实时检测动作</text>
       </view>
 
       <!-- 深蹲挑战 -->
@@ -49,7 +48,6 @@
       <!-- 提示 -->
       <view class="game-tips">
         <text class="tips-icon">⚡</text>
-        <text class="tips-text">每个游戏都利用手机传感器实时检测动作，获得体能评分！</text>
       </view>
     </view>
   </view>

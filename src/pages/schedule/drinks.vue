@@ -1,468 +1,388 @@
 <template>
   <view class="container">
-    <!-- 搜索框 -->
-    <view class="search-box">
-      <view class="search-bar">
-        <text class="search-icon">🔍</text>
-        <input v-model="searchText" type="text" class="search-input" placeholder="搜索饮品..."/>
-        <text v-if="searchText" class="menu-icon" @click="searchText = ''">✕</text>
-      </view>
+    <view class="hero">
+      <text class="hero-title">专注续航助手</text>
+      <text class="hero-subtitle">不查数据也能给你可执行的学习续航方案</text>
     </view>
 
-    <!-- 筛选标签 -->
-    <view class="filter-bar">
-      <view class="filter-tag" :class="{ active: filterType === 'all' }" @click="filterType = 'all'">全部</view>      <view class="filter-tag" :class="{ active: filterType === 'recommend' }" @click="filterType = 'recommend'">推荐</view>      <view class="filter-tag" :class="{ active: filterType === 'low' }" @click="filterType = 'low'">低卡</view>
-      <view class="filter-tag" :class="{ active: filterType === 'coffee' }" @click="filterType = 'coffee'">含咖啡因</view>
-      <view class="filter-tag" :class="{ active: filterType === 'cold' }" @click="filterType = 'cold'">冷饮</view>
-    </view>
-
-    <!-- 加载中 -->
-    <view v-if="loading" class="empty-state">
-      <text class="empty-icon">⏳</text>
-      <text class="empty-text">加载饮品中...</text>
-    </view>
-
-    <!-- 饮品列表 -->
-    <view v-else class="drinks-grid">
-      <view v-for="(item, index) in filteredDrinks" :key="index" class="drink-card" @click="goDetail(item)">
-        <view class="card-image-wrapper">
-          <image class="card-image" :src="item.image" mode="aspectFill"></image>
-          <view class="card-badge" v-if="item.badge">{{ item.badge }}</view>
-        </view>
-        
-        <view class="card-content">
-          <view class="card-header">
-            <text class="drink-name">{{ item.name }}</text>
-            <text class="fav-icon" @click.stop="toggleFavorite(item.id)" 
-                  :class="{ collected: isFavorited(item.id) }">{{ isFavorited(item.id) ? '★' : '☆' }}</text>
+    <view class="panel">
+      <view class="field">
+        <text class="label">你现在的精神状态</text>
+        <view class="chip-row">
+          <view
+            v-for="item in energyOptions"
+            :key="item.value"
+            class="chip"
+            :class="{ active: energyLevel === item.value }"
+            @click="energyLevel = item.value"
+          >
+            {{ item.label }}
           </view>
-
-          <text class="card-category">{{ item.category }}</text>
-          
-          <view class="card-stats">
-            <view class="stat-item">
-              <text class="stat-label">热量</text>
-              <text class="stat-value">{{ item.cal }}</text>
-            </view>
-            <view class="stat-item">
-              <text class="stat-label">咖啡因</text>
-              <text class="stat-value">{{ item.caffeine }}</text>
-            </view>
-          </view>
-
-          <text class="card-desc">{{ item.desc }}</text>
         </view>
       </view>
 
-      <!-- 空状态 -->
-      <view v-if="filteredDrinks.length === 0" class="empty-state">
-        <text class="empty-icon">🔍</text>
-        <text class="empty-text">未找到匹配的饮品</text>
+      <view class="field">
+        <view class="row-between">
+          <text class="label">预计还要学习</text>
+          <text class="value">{{ studyHours }} 小时</text>
+        </view>
+        <slider
+          :value="studyHours"
+          :min="1"
+          :max="6"
+          :step="1"
+          show-value
+          activeColor="#ff7f50"
+          @change="onHourChange"
+        />
+      </view>
+
+      <view class="field">
+        <view class="row-between">
+          <text class="label">预算</text>
+          <text class="value">{{ budget }} 元</text>
+        </view>
+        <slider
+          :value="budget"
+          :min="5"
+          :max="35"
+          :step="1"
+          show-value
+          activeColor="#ff7f50"
+          @change="onBudgetChange"
+        />
+      </view>
+
+      <view class="switch-row">
+        <text class="label">今晚容易失眠</text>
+        <switch :checked="sleepSensitive" color="#ff7f50" @change="onSleepSensitiveChange" />
+      </view>
+
+      <view class="switch-row">
+        <text class="label">接受咖啡因</text>
+        <switch :checked="allowCaffeine" color="#ff7f50" @change="onCaffeineChange" />
+      </view>
+    </view>
+
+    <view class="result-panel">
+      <view class="result-header">
+        <text class="result-title">智能方案</text>
+        <text class="result-score">续航指数 {{ staminaScore }}/100</text>
+      </view>
+
+      <view class="plan-card" v-for="plan in plans" :key="plan.id">
+        <view class="plan-top">
+          <text class="plan-name">{{ plan.title }}</text>
+          <text class="plan-tag">{{ plan.tag }}</text>
+        </view>
+        <text class="plan-reason">{{ plan.reason }}</text>
+        <text class="plan-step" v-for="(step, i) in plan.steps" :key="`${plan.id}-${i}`">{{ i + 1 }}. {{ step }}</text>
+      </view>
+
+      <view class="timeline">
+        <text class="timeline-title">接下来 {{ studyHours }} 小时行动线</text>
+        <text class="timeline-item" v-for="(item, idx) in timeline" :key="`line-${idx}`">{{ item }}</text>
+      </view>
+
+      <button class="save-btn" @click="saveCurrentPlan">保存今天方案</button>
+    </view>
+
+    <view class="history-panel" v-if="history.length">
+      <text class="history-title">最近保存</text>
+      <view class="history-item" v-for="(item, idx) in history" :key="`history-${idx}`">
+        <text class="history-time">{{ item.time }}</text>
+        <text class="history-content">{{ item.summary }}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { apiRequest } from '../../utils/request'
+import { computed, onMounted, ref } from 'vue'
 
-const searchText = ref('')
-const filterType = ref('all')
-const favorites = ref([])
-const loading = ref(false)
-
-const drinks = ref([])
-
-const mockDrinks = [
-  {
-    id: 1,
-    name: '经典绿茶',
-    category: '茶类',
-    cal: '0-2 千卡',
-    caffeine: '25mg',
-    badge: '推荐',
-    desc: '富含儿茶素，口味清爽。',
-    image: 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=绿茶'
-  },
-  {
-    id: 2,
-    name: '咖啡拿铁',
-    category: '咖啡',
-    cal: '100-150 千卡',
-    caffeine: '75mg',
-    badge: '热饮',
-    desc: '奶香浓郁，提神效果明显。',
-    image: 'https://via.placeholder.com/200x150/8B4513/FFFFFF?text=咖啡'
-  },
-  {
-    id: 3,
-    name: '新鲜果汁',
-    category: '果汁',
-    cal: '80-120 千卡',
-    caffeine: '0mg',
-    badge: '',
-    desc: '维生素丰富，适合日常补水。',
-    image: 'https://via.placeholder.com/200x150/FF6347/FFFFFF?text=果汁'
-  },
-  {
-    id: 4,
-    name: '冰淇淋奶茶',
-    category: '奶茶',
-    cal: '150-200 千卡',
-    caffeine: '35mg',
-    badge: '冷饮',
-    desc: '口感顺滑，甜度较高。',
-    image: 'https://via.placeholder.com/200x150/FFB6C1/FFFFFF?text=奶茶'
-  }
+const energyOptions = [
+  { label: '困', value: 'low' },
+  { label: '一般', value: 'mid' },
+  { label: '在线', value: 'high' }
 ]
 
-const normalizeDrink = (item = {}) => ({
-  id: item.id,
-  name: item.name || '未命名饮品',
-  category: item.category || '未分类',
-  cal: item.cal || '未知',
-  caffeine: item.caffeine || '0mg',
-  badge: item.badge || '',
-  desc: item.desc || '暂无描述',
-  image: item.image || 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=饮品'
+const energyLevel = ref('mid')
+const studyHours = ref(2)
+const budget = ref(15)
+const sleepSensitive = ref(false)
+const allowCaffeine = ref(true)
+const history = ref([])
+
+const staminaScore = computed(() => {
+  let score = 70
+  if (energyLevel.value === 'low') score -= 20
+  if (studyHours.value >= 4) score -= 10
+  if (!allowCaffeine.value && energyLevel.value === 'low') score -= 5
+  if (sleepSensitive.value && allowCaffeine.value) score -= 8
+  if (budget.value >= 18) score += 5
+  return Math.max(35, Math.min(98, score))
 })
 
-const parseCalUpperBound = (cal) => {
-  const text = String(cal || '')
-  const numbers = text.match(/\d+/g)
-  if (!numbers || numbers.length === 0) return Number.MAX_SAFE_INTEGER
-  if (numbers.length >= 2) return Number(numbers[1])
-  return Number(numbers[0])
-}
-
-const parseCaffeine = (value) => {
-  const text = String(value || '')
-  const numbers = text.match(/\d+/)
-  return numbers ? Number(numbers[0]) : 0
-}
-
-// 从后端获取饮品列表
-const loadDrinks = async () => {
-  loading.value = true
-  try {
-    const data = await apiRequest({
-      url: '/api/drinks',
-      method: 'GET',
-      data: {
-        page: 1,
-        limit: 50
-      }
-    })
-
-    const list = Array.isArray(data) ? data : []
-    drinks.value = list.map(normalizeDrink)
-  } catch (error) {
-    console.error('饮品加载异常:', error)
-    drinks.value = mockDrinks.map(normalizeDrink)
-    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
-  } finally {
-    loading.value = false
+const plans = computed(() => {
+  const quickBoost = {
+    id: 'boost',
+    title: '快速提神方案',
+    tag: allowCaffeine.value ? '效率优先' : '无咖替代',
+    reason: allowCaffeine.value
+      ? '你当前需要短时间拉起专注，优先用少量咖啡因配合补水。'
+      : '你不希望使用咖啡因，改用节奏激活和补水拉专注。',
+    steps: allowCaffeine.value
+      ? [
+          '先喝 200ml 温水，避免空腹直接提神。',
+          '选择 1 份小杯提神饮品，15 分钟内慢饮。',
+          '45 分钟后做 2 分钟拉伸，防止后劲疲劳。'
+        ]
+      : [
+          '先喝 300ml 温水并洗脸，快速激活状态。',
+          '做 3 轮 30 秒深呼吸 + 30 秒站立拉伸。',
+          '每 40 分钟补 150ml 水，维持清醒。'
+        ]
   }
-}
 
-const filteredDrinks = computed(() => {
-  let result = drinks.value
-  
-  // 搜索过滤
-  if (searchText.value) {
-    result = result.filter(item =>
-      item.name.toLowerCase().includes(searchText.value.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchText.value.toLowerCase())
-    )
+  const stablePlan = {
+    id: 'stable',
+    title: '稳态续航方案',
+    tag: '长时学习',
+    reason: `${studyHours.value} 小时学习更看重稳定输出，不靠短刺激。`,
+    steps: [
+      '按 45/10 番茄节奏学习，休息时离座活动。',
+      '预算优先给补水和轻食，避免高糖反噬。',
+      '每小时复盘一次进度，防止忙碌但低产出。'
+    ]
   }
-  
-  // 类型过滤
-  if (filterType.value === 'recommend') {
-    result = result.filter(item => item.badge === '推荐')
-  } else if (filterType.value === 'low') {
-    result = result.filter(item => parseCalUpperBound(item.cal) <= 100)
-  } else if (filterType.value === 'coffee') {
-    result = result.filter(item => parseCaffeine(item.caffeine) > 50)
-  } else if (filterType.value === 'cold') {
-    result = result.filter(item => item.badge === '冷饮')
+
+  const sleepPlan = {
+    id: 'sleep',
+    title: sleepSensitive.value ? '护眠优先方案' : '晚间收束方案',
+    tag: sleepSensitive.value ? '睡眠友好' : '平衡效率',
+    reason: sleepSensitive.value
+      ? '你标记了易失眠，晚间要降低刺激避免影响明天状态。'
+      : '今晚不特别敏感，可以保留适度提神但要控制时间。',
+    steps: sleepSensitive.value
+      ? [
+          '20:00 后不再摄入咖啡因。',
+          '改为温热低糖饮品，学习后半段减少兴奋输入。',
+          '结束前 20 分钟只做整理任务，帮助大脑降速。'
+        ]
+      : [
+          '咖啡因最晚在睡前 6 小时停止。',
+          '后半程切换无糖补水，保持平稳。',
+          '学习结束后走动 5 分钟，避免直接刷手机。'
+        ]
   }
-  
-  return result
+
+  if (energyLevel.value === 'low') {
+    return [quickBoost, stablePlan, sleepPlan]
+  }
+  if (energyLevel.value === 'high') {
+    return [stablePlan, sleepPlan, quickBoost]
+  }
+  return [stablePlan, quickBoost, sleepPlan]
 })
 
-// 加载收藏和饮品列表
+const timeline = computed(() => {
+  const output = []
+  for (let i = 0; i < studyHours.value; i += 1) {
+    const minute = i * 60
+    const focus = `${minute}-${minute + 45} 分钟: 主任务冲刺`
+    const rest = `${minute + 45}-${minute + 55} 分钟: 起身活动 + 补水`
+    output.push(focus)
+    output.push(rest)
+  }
+  output.push('最后 10 分钟: 收尾复盘 + 明日待办')
+  return output
+})
+
+const onHourChange = (e) => {
+  studyHours.value = Number(e.detail.value)
+}
+
+const onBudgetChange = (e) => {
+  budget.value = Number(e.detail.value)
+}
+
+const onSleepSensitiveChange = (e) => {
+  sleepSensitive.value = Boolean(e.detail.value)
+}
+
+const onCaffeineChange = (e) => {
+  allowCaffeine.value = Boolean(e.detail.value)
+}
+
+const saveCurrentPlan = () => {
+  const firstPlan = plans.value[0]
+  const summary = `${firstPlan.title} | ${studyHours.value}h | 预算${budget.value}元 | 指数${staminaScore.value}`
+  const current = {
+    time: new Date().toLocaleString(),
+    summary
+  }
+  const next = [current, ...history.value].slice(0, 5)
+  history.value = next
+  uni.setStorageSync('focus_stamina_history', next)
+  uni.showToast({ title: '已保存', icon: 'success' })
+}
+
 onMounted(() => {
-  try {
-    const saved = uni.getStorageSync('drink_favorites')
-    if (saved) {
-      favorites.value = saved
-    }
-  } catch (e) {
-    console.error('加载收藏失败', e)
-  }
-  
-  // 加载饮品列表
-  loadDrinks()
+  const saved = uni.getStorageSync('focus_stamina_history')
+  history.value = Array.isArray(saved) ? saved : []
 })
-
-// 切换收藏
-const toggleFavorite = (id) => {
-  const index = favorites.value.indexOf(id)
-  if (index > -1) {
-    favorites.value.splice(index, 1)
-  } else {
-    favorites.value.push(id)
-  }
-  
-  try {
-    uni.setStorageSync('drink_favorites', favorites.value)
-    uni.showToast({ title: isFavorited(id) ? '已收藏' : '已取消收藏', icon: 'success', duration: 1500 })
-  } catch (e) {
-    console.error('保存收藏失败', e)
-  }
-}
-
-// 检查是否收藏
-const isFavorited = (id) => {
-  return favorites.value.includes(id)
-}
-
-// 跳转详情页
-const goDetail = (item) => {
-  const safeName = encodeURIComponent(item.name || '')
-  uni.navigateTo({
-    url: `/pages/schedule/drinks_detail?id=${item.id}&name=${safeName}`
-  })
-}
-
-const goBack = () => uni.navigateBack()
 </script>
 
 <style lang="scss" scoped>
-$main-blue: #4FA1F2;
-$light-blue: #80D0FF;
-$bg-blue: #E3F2FD;
-
 .container {
-  background: linear-gradient(135deg, $bg-blue 0%, #F0F9FF 100%);
   min-height: 100vh;
-  padding: 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 127, 80, 0.25), transparent 35%),
+    radial-gradient(circle at 85% 20%, rgba(255, 184, 108, 0.22), transparent 40%),
+    linear-gradient(165deg, #fff6ee 0%, #ffe0cc 100%);
 }
 
-.nav-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 24rpx;
-  background: white;
-  box-shadow: 0 2rpx 8rpx rgba(79, 161, 242, 0.1);
-
-  .back-btn {
-    font-size: 32rpx;
-    color: $main-blue;
-    font-weight: 600;
-  }
-
-  .page-title {
-    font-size: 36rpx;
-    font-weight: 700;
-    color: #333;
-  }
+.hero {
+  margin-bottom: 20rpx;
 }
 
-.search-box {
-  margin-bottom: 30rpx;
-
-  .search-bar {
-    background: white;
-    border-radius: 50rpx;
-    height: 80rpx;
-    display: flex;
-    align-items: center;
-    padding: 0 24rpx;
-    gap: 12rpx;
-    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.15);
-
-    .search-icon {
-      font-size: 32rpx;
-    }
-
-    .search-input {
-      flex: 1;
-      font-size: 28rpx;
-      background: transparent;
-      border: none;
-      outline: none;
-    }
-
-    .menu-icon {
-      font-size: 28rpx;
-      color: $main-blue;
-      cursor: pointer;
-    }
-  }
+.hero-title {
+  display: block;
+  font-size: 46rpx;
+  font-weight: 800;
+  color: #6d2f11;
 }
 
-.filter-bar {
+.hero-subtitle {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8e4d2c;
+}
+
+.panel,
+.result-panel,
+.history-panel {
+  background: rgba(255, 255, 255, 0.88);
+  border: 2rpx solid rgba(255, 127, 80, 0.25);
+  border-radius: 24rpx;
+  padding: 20rpx;
+  margin-bottom: 18rpx;
+  backdrop-filter: blur(4px);
+}
+
+.field {
+  margin-bottom: 16rpx;
+}
+
+.label {
+  font-size: 26rpx;
+  color: #5f331f;
+  font-weight: 600;
+}
+
+.chip-row {
   display: flex;
   gap: 12rpx;
-  padding: 0 24rpx 20rpx;
-  overflow-x: auto;
-
-  .filter-tag {
-    padding: 10rpx 20rpx;
-    background: white;
-    border: 2rpx solid #ddd;
-    border-radius: 20rpx;
-    font-size: 26rpx;
-    color: #666;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-
-    &.active {
-      background: $main-blue;
-      color: white;
-      border-color: $main-blue;
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-  }
+  margin-top: 10rpx;
 }
 
-.drinks-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16rpx;
-  padding: 0 16rpx;
-
-  .drink-card {
-    background: white;
-    border-radius: 16rpx;
-    overflow: hidden;
-    box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.08);
-    transition: all 0.2s ease;
-
-    &:active {
-      transform: translateY(-4rpx);
-      box-shadow: 0 8rpx 16rpx rgba(79, 161, 242, 0.12);
-    }
-
-    .card-image-wrapper {
-      position: relative;
-      overflow: hidden;
-
-      .card-image {
-        width: 100%;
-        height: 180rpx;
-        display: block;
-      }
-
-      .card-badge {
-        position: absolute;
-        top: 8rpx;
-        right: 8rpx;
-        background: rgba(255, 107, 107, 0.9);
-        color: white;
-        padding: 4rpx 10rpx;
-        border-radius: 12rpx;
-        font-size: 20rpx;
-        font-weight: 600;
-      }
-    }
-
-    .card-content {
-      padding: 14rpx;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8rpx;
-
-      .drink-name {
-        font-size: 26rpx;
-        font-weight: 600;
-        color: #333;
-        flex: 1;
-      }
-
-      .fav-icon {
-        font-size: 24rpx;
-        color: #ddd;
-        margin-left: 8rpx;
-        transition: all 0.2s ease;
-
-        &.collected {
-          color: #FFB347;
-          transform: scale(1.2);
-        }
-      }
-    }
-
-    .card-category {
-      display: block;
-      font-size: 20rpx;
-      color: $main-blue;
-      margin-bottom: 6rpx;
-      font-weight: 500;
-    }
-
-    .card-stats {
-      display: flex;
-      gap: 8rpx;
-      margin-bottom: 6rpx;
-
-      .stat-item {
-        flex: 1;
-        background: rgba(79, 161, 242, 0.06);
-        padding: 6rpx 8rpx;
-        border-radius: 8rpx;
-        text-align: center;
-
-        .stat-label {
-          display: block;
-          font-size: 18rpx;
-          color: #999;
-        }
-
-        .stat-value {
-          display: block;
-          font-size: 20rpx;
-          font-weight: 600;
-          color: $main-blue;
-        }
-      }
-    }
-
-    .card-desc {
-      display: block;
-      font-size: 20rpx;
-      color: #999;
-      line-height: 1.4;
-    }
-  }
+.chip {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #fff4ea;
+  color: #9a5d39;
+  border: 2rpx solid #ffd1b3;
+  font-size: 24rpx;
 }
 
-.empty-state {
+.chip.active {
+  background: #ff7f50;
+  border-color: #ff7f50;
+  color: #fff;
+}
+
+.row-between,
+.switch-row,
+.result-header,
+.plan-top {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 100rpx 20rpx;
+  justify-content: space-between;
+}
 
-  .empty-icon {
-    font-size: 80rpx;
-    margin-bottom: 20rpx;
-    opacity: 0.3;
-  }
+.value,
+.result-score,
+.plan-tag {
+  font-size: 24rpx;
+  color: #9a5d39;
+}
 
-  .empty-text {
-    font-size: 28rpx;
-    color: #999;
+.switch-row {
+  padding: 10rpx 0;
+}
+
+.result-title,
+.history-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #6d2f11;
+}
+
+.plan-card {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(150deg, #fff7ef, #ffe8d4);
+}
+
+.plan-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #6d2f11;
+}
+
+.plan-reason,
+.plan-step,
+.timeline-item,
+.history-content,
+.history-time,
+.timeline-title {
+  display: block;
+  font-size: 24rpx;
+  color: #7b4a2f;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.timeline {
+  margin-top: 14rpx;
+  padding: 12rpx;
+  border-radius: 12rpx;
+  background: #fff3e8;
+}
+
+.save-btn {
+  margin-top: 16rpx;
+  background: linear-gradient(120deg, #ff7f50, #ff9855);
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.history-item {
+  margin-top: 10rpx;
+  padding: 10rpx 12rpx;
+  border-radius: 12rpx;
+  background: #fff8f2;
+}
+
+@media (max-width: 420px) {
+  .hero-title {
+    font-size: 40rpx;
   }
 }
 </style>

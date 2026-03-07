@@ -24,24 +24,24 @@
 			<text class="section-title">数据统计</text>
 			<view class="stat-item">
 				<view class="stat-item-header">
-					<text class="stat-item-label">🏃 运动距离</text>
-					<text class="stat-item-value">{{ totalDistance }}km</text>
+					<text class="stat-item-label">🏃 跑步时长</text>
+					<text class="stat-item-value">{{ totalRunHours }}h</text>
 				</view>
 				<view class="stat-bar">
-					<view class="stat-bar-fill" :style="{ width: getBarWidth(totalDistance, 100) }"></view>
+					<view class="stat-bar-fill" :style="{ width: getBarWidth(totalRunHours, 60) }"></view>
 				</view>
-				<text class="stat-item-hint">总计 {{ totalDistance }}km</text>
+				<text class="stat-item-hint">累计 {{ totalRunMinutes }} 分钟</text>
 			</view>
 
 			<view class="stat-item">
 				<view class="stat-item-header">
-					<text class="stat-item-label">⏳ 断食时长</text>
-					<text class="stat-item-value">{{ totalFastingHours }}h</text>
+					<text class="stat-item-label">⏱ 专注时长</text>
+					<text class="stat-item-value">{{ totalFocusHours }}h</text>
 				</view>
 				<view class="stat-bar">
-					<view class="stat-bar-fill" :style="{ width: getBarWidth(totalFastingHours, 500) }"></view>
+					<view class="stat-bar-fill" :style="{ width: getBarWidth(totalFocusHours, 500) }"></view>
 				</view>
-				<text class="stat-item-hint">累计 {{ totalFastingHours }}小时</text>
+				<text class="stat-item-hint">累计 {{ totalFocusHours }}小时</text>
 			</view>
 
 			<view class="stat-item">
@@ -78,11 +78,14 @@
 				>
 					<view class="record-date">{{ formatDate(record.date) }}</view>
 					<view class="record-metrics">
-						<view v-if="record.metrics.distance" class="metric-badge">
+						<view v-if="record.metrics.runMinutes" class="metric-badge">
+							🏃 {{ record.metrics.runMinutes }}min
+						</view>
+						<view v-else-if="record.metrics.distance" class="metric-badge">
 							🏃 {{ record.metrics.distance }}km
 						</view>
-						<view v-if="record.metrics.fasting" class="metric-badge">
-							⏳ {{ record.metrics.fasting }}h
+						<view v-if="record.metrics.focus || record.metrics.fasting" class="metric-badge">
+							⏱ {{ record.metrics.focus || record.metrics.fasting }}h
 						</view>
 						<view v-if="record.metrics.weight" class="metric-badge">
 							⚖️ {{ record.metrics.weight }}kg
@@ -128,9 +131,9 @@
 					</view>
 
 					<view class="form-group">
-						<text class="form-label">⏳ 断食时长(h)</text>
+						<text class="form-label">⏱ 专注时长(h)</text>
 						<input
-							v-model.number="newRecord.fasting"
+							v-model.number="newRecord.focus"
 							type="number"
 							class="form-input"
 							placeholder="0"
@@ -180,7 +183,7 @@ const showAddModal = ref(false)
 const newRecord = ref({
 	date: new Date().toISOString().split('T')[0],
 	distance: 0,
-	fasting: 0,
+	focus: 0,
 	weight: 0,
 	water: 0
 })
@@ -228,9 +231,19 @@ const totalDistance = computed(() => {
 	}, 0).toFixed(1)
 })
 
-const totalFastingHours = computed(() => {
+const totalRunMinutes = computed(() => {
 	return dailyData.value.reduce((sum, record) => {
-		return sum + (Number(record.metrics?.fasting) || 0)
+		return sum + (Number(record.metrics?.runMinutes) || 0)
+	}, 0)
+})
+
+const totalRunHours = computed(() => {
+	return (totalRunMinutes.value / 60).toFixed(1)
+})
+
+const totalFocusHours = computed(() => {
+	return dailyData.value.reduce((sum, record) => {
+		return sum + (Number(record.metrics?.focus) || Number(record.metrics?.fasting) || 0)
 	}, 0)
 })
 
@@ -321,7 +334,7 @@ const saveRecord = () => {
 	
 	const metrics = {}
 	if (newRecord.value.distance) metrics.distance = Number(newRecord.value.distance)
-	if (newRecord.value.fasting) metrics.fasting = Number(newRecord.value.fasting)
+	if (newRecord.value.focus) metrics.focus = Number(newRecord.value.focus)
 	if (newRecord.value.weight) metrics.weight = Number(newRecord.value.weight)
 	if (newRecord.value.water) metrics.water = Number(newRecord.value.water)
 
@@ -352,7 +365,7 @@ const saveRecord = () => {
 	newRecord.value = {
 		date: new Date().toISOString().split('T')[0],
 		distance: 0,
-		fasting: 0,
+		focus: 0,
 		weight: 0,
 		water: 0
 	}
