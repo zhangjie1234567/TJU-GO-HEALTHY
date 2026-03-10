@@ -13,10 +13,10 @@
 
       <view class="grid">
         <view class="grid-item" v-for="item in items" :key="item.name" @click="onItemClick(item)">
-          <view class="icon-wrap" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)">
-            <image :src="item.img" class="icon" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
+          <view class="icon-wrap">
+            <image :src="item.img" class="icon" mode="aspectFit" />
           </view>
-          <image :src="item.wordImg" class="label-img" mode="aspectFit" @click.stop="onItemClick(item)" @tap.stop="onItemClick(item)" />
+          <image :src="item.wordImg" class="label-img" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 // 保持搜索框不变；项目内已有图标请根据实际素材替换路径
 const items = reactive([
@@ -36,99 +36,65 @@ const items = reactive([
   { name: 'others', label: '其他服务', img: '/static/school/main/others.png', wordImg: '/static/school/main/others_word.png' }
 ])
 
-const onItemClick = (item) => {
-  if (item.name === 'map') {
+const navigating = ref(false)
+
+// Helper: perform navigation in uni runtime or fallback to H5 hash
+const doNavigate = (url) => {
+  return new Promise((resolve) => {
     try {
-      // @ts-ignore
       if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 使用 uni.navigateTo 跳转到 map 页面（school/map）
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/map/map' })
-        return
+        try {
+          uni.navigateTo({
+            url,
+            success: (res) => resolve({ ok: true, res }),
+            fail: (err) => resolve({ ok: false, err }),
+            complete: () => {}
+          })
+          return
+        } catch (e) {
+          resolve({ ok: false, err: e })
+          return
+        }
       }
     } catch (e) {
       // ignore
     }
-    // 浏览器环境 fallback
-    const href = '/#/pages/school/map/map'
-    window.location.href = href
-    return
-  }
 
-  if (item.name === 'timetable') {
+    // browser fallback
     try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 schedule 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/schedule/schedule' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/schedule/schedule'
-    window.location.href = href
-    return
-  }
+      const href = '/#' + url.replace('/pages', '/pages')
+      window.location.href = href
+      setTimeout(() => resolve({ ok: true }), 600)
+    } catch (e) {
+      resolve({ ok: false, err: e })
+    }
+  })
+}
 
-  if (item.name === 'fitness') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 fitness 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/fitness/fitness' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/fitness/fitness'
-    window.location.href = href
-    return
+const navigateToSafe = async (url) => {
+  try {
+    const result = await doNavigate(url)
+    // ignore known navigation-cancelled errors
+    if (result && result.err && result.err.errMsg && typeof result.err.errMsg === 'string' && result.err.errMsg.includes('Navigation cancelled')) {
+      // ignore
+    }
+  } catch (e) {
+    // ignore
+  } finally {
+    navigating.value = false
   }
+}
 
-  if (item.name === 'facilities') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 facilities 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/facilities/facilities' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/facilities/facilities'
-    window.location.href = href
-    return
-  }
+const onItemClick = async (item) => {
+  if (navigating.value) return
+  navigating.value = true
 
-  if (item.name === 'canteen') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 canteen 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/canteen/canteen' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/canteen/canteen'
-    window.location.href = href
-    return
-  }
-
-  if (item.name === 'others') {
-    try {
-      // @ts-ignore
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        // 跳转到 school 下的 others 页面
-        // @ts-ignore
-        uni.navigateTo({ url: '/pages/school/others/others' })
-        return
-      }
-    } catch (e) {}
-    const href = '/#/pages/school/others/others'
-    window.location.href = href
-    return
-  }
+  if (item.name === 'map') { await navigateToSafe('/pages/school/map/map'); return }
+  if (item.name === 'timetable') { await navigateToSafe('/pages/school/schedule/schedule'); return }
+  if (item.name === 'fitness') { await navigateToSafe('/pages/school/fitness/fitness'); return }
+  if (item.name === 'facilities') { await navigateToSafe('/pages/school/facilities/facilities'); return }
+  if (item.name === 'canteen') { await navigateToSafe('/pages/school/canteen/canteen'); return }
+  if (item.name === 'others') { await navigateToSafe('/pages/school/others/others'); return }
 }
 </script>
 
