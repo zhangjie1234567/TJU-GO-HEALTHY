@@ -130,8 +130,11 @@ const todayDate = ref(new Date().toISOString().slice(0,10))
 
 const totalCost = computed(() => {
   let sum = 0
-  Object.values(todayMeals).forEach(list => list.forEach(item => { sum += Number(item.price) || 0 }))
-  return sum.toFixed(1)
+  // 确保 item.price 是数字
+  Object.values(todayMeals).forEach(list => list.forEach(item => { 
+    sum += parseFloat(item.price) || 0 
+  }))
+  return sum.toFixed(2) // 建议保留两位小数，外卖通常有几毛钱
 })
 
 const formatRecordList = (list) => {
@@ -160,45 +163,31 @@ const mapItemType = (t) => {
 }
 
 const normalizeDailyMeals = (payload) => {
-  // clear current
+  // 先清空当前显示
   ['breakfast','lunch','dinner'].forEach(k => todayMeals[k].splice(0, todayMeals[k].length))
 
   if (!payload) return
 
-  // payload may already have breakfast/lunch/dinner
-  if (payload.breakfast || payload.lunch || payload.dinner) {
+  // 【关键修复】：如果后端返回的数据里有 meals 属性，则取 meals
+  const source = payload.meals ? payload.meals : payload
+
+  if (source.breakfast || source.lunch || source.dinner) {
     ['breakfast','lunch','dinner'].forEach(k => {
-      if (Array.isArray(payload[k])) payload[k].forEach(item => todayMeals[k].push(item))
+      if (Array.isArray(source[k])) {
+        source[k].forEach(item => todayMeals[k].push(item))
+      }
     })
     return
   }
-
-  // payload may be an array of items
-  if (Array.isArray(payload)) {
-    payload.forEach(item => {
+  
+  // 处理数组格式的兜底逻辑
+  const list = Array.isArray(payload) ? payload : (payload.list || [])
+  if (list.length > 0) {
+    list.forEach(item => {
       const t = mapItemType(item.type || item.meal_type || item.mealType)
       const key = t || 'lunch'
       todayMeals[key].push(item)
     })
-    return
-  }
-
-  // payload may have a nested list: { list: [...] }
-  if (Array.isArray(payload.list)) {
-    payload.list.forEach(item => {
-      const t = mapItemType(item.type || item.meal_type || item.mealType)
-      const key = t || 'lunch'
-      todayMeals[key].push(item)
-    })
-    return
-  }
-
-  // unknown shape: if object with keys that look like dates, maybe server returned { date: {breakfast:..., ...} }
-  // try to extract today's key
-  const todayKey = todayDate.value
-  if (payload[todayKey]) {
-    normalizeDailyMeals(payload[todayKey])
-    return
   }
 }
 
@@ -214,39 +203,26 @@ const loadToday = async (dateStr) => {
 }
 
 const normalizeHistory = (payload) => {
-  // clear
   Object.keys(history).forEach(k => delete history[k])
-  if (!payload) return
-  // if payload is object mapping date->record
-  if (!Array.isArray(payload) && typeof payload === 'object' && (payload.breakfast || payload.lunch || payload.dinner || Object.keys(payload).some(k => k.includes('-')))) {
-    // if keys are dates, copy
-    Object.keys(payload).forEach(k => { history[k] = payload[k] })
-    return
-  }
-  // if payload is array of records like [{ date, items: [...] }] or [{date, breakfast:[], lunch:[] }]
-  if (Array.isArray(payload)) {
-    payload.forEach(entry => {
-      if (!entry) return
-      const date = entry.date || entry.day || entry._date
-      if (!date) return
-      if (entry.breakfast || entry.lunch || entry.dinner) {
-        history[date] = { breakfast: entry.breakfast || [], lunch: entry.lunch || [], dinner: entry.dinner || [] }
-        return
+  if (!payload || !Array.isArray(payload)) return
+
+  payload.forEach(entry => {
+    if (!entry) return
+    const date = entry.date || entry.day
+    if (!date) return
+
+    // 【关键修复】：判断 entry.meals 是否存在
+    if (entry.meals) {
+      // 确保 meals 下面的 key 是 breakfast/lunch/dinner
+      history[date] = entry.meals
+    } else if (entry.breakfast || entry.lunch || entry.dinner) {
+      history[date] = { 
+          breakfast: entry.breakfast || [], 
+          lunch: entry.lunch || [], 
+          dinner: entry.dinner || [] 
       }
-      // if entry has items array, group them
-      if (Array.isArray(entry.items) || Array.isArray(entry.list)) {
-        const arr = entry.items || entry.list
-        const grouped = { breakfast: [], lunch: [], dinner: [] }
-        arr.forEach(it => {
-          const t = mapItemType(it.type || it.meal_type || it.mealType)
-          const key = t || 'lunch'
-          grouped[key].push(it)
-        })
-        history[date] = grouped
-      }
-    })
-    return
-  }
+    }
+  })
 }
 
 const loadHistory = async () => {
