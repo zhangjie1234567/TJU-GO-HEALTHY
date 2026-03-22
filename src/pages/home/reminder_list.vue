@@ -67,11 +67,13 @@ function loadReminders() {
   const token = getToken()
   if (!token) {
     reminders.value = []
+    console.warn('[ReminderList][API] token为空，未发起后端请求')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
 
   loading.value = true
+  console.log('[ReminderList][API] request GET /api/plan/reminder')
   uni.request({
     url: BASE_URL + '/api/plan/reminder',
     method: 'GET',
@@ -80,6 +82,10 @@ function loadReminders() {
       'Content-Type': 'application/json'
     },
     success(res) {
+      console.log('[ReminderList][API] response GET /api/plan/reminder', {
+        statusCode: res.statusCode,
+        body: res.data
+      })
       if (res.statusCode === 200 && res.data && res.data.code === 200) {
         const list = Array.isArray(res.data.data) ? res.data.data : []
         reminders.value = list.sort((a, b) => String(a.reminder_time).localeCompare(String(b.reminder_time)))
@@ -93,6 +99,7 @@ function loadReminders() {
     },
     fail(err) {
       reminders.value = []
+      console.error('[ReminderList][API] fail GET /api/plan/reminder', err)
       uni.showToast({
         title: (err && err.errMsg) || '加载提醒失败',
         icon: 'none'

@@ -295,6 +295,12 @@
     const startTime = new Date(reminderTime.replace(' ', 'T'));
     const endTime = new Date(startTime.getTime() + 30 * 60 * 1000);
 
+    console.log('[Reminder][Calendar] start', {
+      reminder_type: item.key,
+      reminder_title: item.reminder_title,
+      reminder_time: reminderTime
+    });
+
     return new Promise((resolve) => {
       // #ifdef MP-WEIXIN
       if (typeof wx !== 'undefined' && typeof wx.addPhoneCalendar === 'function') {
@@ -303,15 +309,23 @@
           startTime,
           endTime,
           description: `健康提醒：${item.label}`,
-          success: () => resolve({ calendar_sync_status: 1, message: '手机日历同步成功' }),
-          fail: () => resolve({ calendar_sync_status: 0, message: '手机日历同步失败，提醒已保存' })
+          success: () => {
+            console.log('[Reminder][Calendar] success', { reminder_type: item.key, reminder_time: reminderTime });
+            resolve({ calendar_sync_status: 1, message: '手机日历同步成功' });
+          },
+          fail: (err) => {
+            console.warn('[Reminder][Calendar] fail', err);
+            resolve({ calendar_sync_status: 0, message: '手机日历同步失败，提醒已保存' });
+          }
         });
         return;
       }
+      console.warn('[Reminder][Calendar] unsupported in current wechat env, fallback to backend only');
       resolve({ calendar_sync_status: 0, message: '当前微信基础库不支持写入手机日历，提醒已保存' });
       // #endif
 
       // #ifndef MP-WEIXIN
+      console.warn('[Reminder][Calendar] non-wechat platform, fallback to backend only');
       resolve({ calendar_sync_status: 0, message: '仅微信小程序支持手机日历同步，提醒已保存' });
       // #endif
     });
@@ -324,6 +338,15 @@
     }
 
     return new Promise((resolve, reject) => {
+      const requestData = {
+        reminder_type: item.key,
+        reminder_title: item.reminder_title,
+        reminder_time: reminderTime + ':00',
+        is_enabled: 1,
+        calendar_sync_status: calendarSyncStatus
+      };
+      console.log('[Reminder][API] request PUT /api/plan/reminder', requestData);
+
       uni.request({
         url: BASE_URL + '/api/plan/reminder',
         method: 'PUT',
@@ -331,14 +354,12 @@
           Authorization: 'Bearer ' + token,
           'Content-Type': 'application/json'
         },
-        data: {
-          reminder_type: item.key,
-          reminder_title: item.reminder_title,
-          reminder_time: reminderTime + ':00',
-          is_enabled: 1,
-          calendar_sync_status: calendarSyncStatus
-        },
+        data: requestData,
         success(res) {
+          console.log('[Reminder][API] response PUT /api/plan/reminder', {
+            statusCode: res.statusCode,
+            body: res.data
+          });
           if (res.statusCode === 200 && res.data && res.data.code === 200) {
             resolve();
             return;
@@ -346,6 +367,7 @@
           reject(new Error((res.data && res.data.message) || '提醒保存失败'));
         },
         fail(err) {
+          console.error('[Reminder][API] fail PUT /api/plan/reminder', err);
           reject(new Error((err && err.errMsg) || '提醒保存失败'));
         }
       });
@@ -364,9 +386,17 @@
     const timeStr = formatReminderTime();
     showTimePicker.value = false;
 
+    console.log('[Reminder] confirmTime', {
+      reminder_type: selectedRemind.value.key,
+      reminder_title: selectedRemind.value.reminder_title,
+      reminder_time: timeStr
+    });
+
     try {
       const calendarResult = await addReminderToPhoneCalendar(selectedRemind.value, timeStr);
+      console.log('[Reminder] calendarResult', calendarResult);
       await saveHealthReminder(selectedRemind.value, timeStr, calendarResult.calendar_sync_status);
+      console.log('[Reminder] backend save success');
       uni.showToast({
         title: `已设置提醒\n${timeStr}`,
         icon: 'none',
@@ -382,6 +412,7 @@
         }, 260);
       }
     } catch (error) {
+      console.error('[Reminder] confirmTime failed', error);
       uni.showToast({
         title: error.message || '提醒设置失败',
         icon: 'none',
