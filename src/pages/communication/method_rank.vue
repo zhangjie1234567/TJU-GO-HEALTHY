@@ -52,7 +52,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
-import { getMethodRanks, saveMethodRanks } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const tabs = [
   { label: '减重方案排行', value: 'plan' },
@@ -65,8 +65,22 @@ const currentTab = ref('plan')
 const rankData = ref({ plan: [], recipe: [], sport: [] })
 const form = ref({ name: '', score: '' })
 
-const loadRankData = () => {
-  rankData.value = getMethodRanks()
+const loadRankData = async () => {
+  try {
+    const res = await apiRequest({ url: '/api/community/rank/method', method: 'GET' })
+    const grouped = { plan: [], recipe: [], sport: [] }
+    if (Array.isArray(res)) {
+      res.forEach(item => {
+        const type = item.type
+        if (grouped[type]) {
+          grouped[type].push({ id: item.id, name: item.name, score: item.score, collect: item.collectCount || 0, collected: false })
+        }
+      })
+    }
+    rankData.value = grouped
+  } catch (e) {
+    console.error('加载方法排行失败:', e)
+  }
 }
 
 onShow(() => {
@@ -79,7 +93,7 @@ const currentRanks = computed(() => {
 })
 const currentLabel = computed(() => tabs.find(item => item.value === currentTab.value)?.label || '排行')
 
-const addRankItem = () => {
+const addRankItem = async () => {
   const name = form.value.name.trim()
   const score = Number(form.value.score)
 
@@ -93,16 +107,19 @@ const addRankItem = () => {
     return
   }
 
-  rankData.value[currentTab.value].push({
-    id: Date.now(),
-    name,
-    score: Number(score.toFixed(1)),
-    collect: 0,
-    collected: false
-  })
-  saveMethodRanks(rankData.value)
-  form.value = { name: '', score: '' }
-  uni.showToast({ title: '评分已提交', icon: 'success' })
+  try {
+    await apiRequest({
+      url: '/api/community/rank/method/add',
+      method: 'POST',
+      data: { type: currentTab.value, name, score: Number(score.toFixed(1)) }
+    })
+    form.value = { name: '', score: '' }
+    await loadRankData()
+    uni.showToast({ title: '评分已提交', icon: 'success' })
+  } catch (e) {
+    console.error('提交评分失败:', e)
+    uni.showToast({ title: '提交失败，请重试', icon: 'none' })
+  }
 }
 
 const toggleCollect = (id) => {
@@ -111,7 +128,6 @@ const toggleCollect = (id) => {
   if (!target) return
   target.collected = !target.collected
   target.collect = Math.max(0, target.collect + (target.collected ? 1 : -1))
-  saveMethodRanks(rankData.value)
   uni.showToast({ title: target.collected ? '已收藏' : '已取消收藏', icon: 'none' })
 }
 </script>

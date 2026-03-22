@@ -33,7 +33,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
-import { getRecruits, saveRecruits, prependRecruit } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const recruits = ref([])
 
@@ -44,38 +44,55 @@ const form = ref({
   time: ''
 })
 
-const loadRecruits = () => {
-  recruits.value = getRecruits()
+const loadRecruits = async () => {
+  try {
+    const res = await apiRequest({ url: '/api/community/recruit?page=1&size=50', method: 'GET' })
+    recruits.value = (res || [])
+  } catch (e) {
+    console.error('加载招募失败:', e)
+  }
 }
 
 onShow(() => {
   loadRecruits()
 })
 
-const addRecruit = () => {
+const addRecruit = async () => {
   if (!form.value.name.trim() || !form.value.goal.trim()) {
     uni.showToast({ title: '请至少填写名称和目标', icon: 'none' })
     return
   }
-
-  prependRecruit({
-    id: Date.now(),
-    name: form.value.name.trim(),
-    tag: form.value.tag.trim() || '互助',
-    goal: form.value.goal.trim(),
-    time: form.value.time.trim() || '时间待定',
-    members: 1
-  })
-
-  form.value = { name: '', tag: '', goal: '', time: '' }
-  loadRecruits()
-  uni.showToast({ title: '招募已发布', icon: 'success' })
+  try {
+    const userId = uni.getStorageSync('current_user_id') || 1
+    await apiRequest({
+      url: '/api/community/recruit',
+      method: 'POST',
+      header: { 'X-User-Id': userId },
+      data: {
+        name: form.value.name.trim(),
+        tag: form.value.tag.trim() || '互助',
+        goal: form.value.goal.trim(),
+        time: form.value.time.trim() || '时间待定'
+      }
+    })
+    form.value = { name: '', tag: '', goal: '', time: '' }
+    await loadRecruits()
+    uni.showToast({ title: '招募已发布', icon: 'success' })
+  } catch (e) {
+    console.error('发布招募失败:', e)
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+  }
 }
 
-const join = (item) => {
-  item.members += 1
-  saveRecruits(recruits.value)
-  uni.showToast({ title: `已申请加入${item.name}`, icon: 'none' })
+const join = async (item) => {
+  try {
+    await apiRequest({ url: `/api/community/recruit/${item.id}/join`, method: 'POST' })
+    uni.showToast({ title: `已申请加入${item.name}`, icon: 'none' })
+    await loadRecruits()
+  } catch (e) {
+    console.error('加入招募失败:', e)
+    uni.showToast({ title: '加入失败，请重试', icon: 'none' })
+  }
 }
 </script>
 

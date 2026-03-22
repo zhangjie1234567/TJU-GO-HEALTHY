@@ -33,7 +33,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
-import { getChatThreads } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const tabs = [
   { label: '通知', value: 'notice' },
@@ -65,15 +65,22 @@ const formatChatTime = (time) => {
   return `${month}-${day}`
 }
 
-const loadChatThreads = () => {
-  chatThreads.value = getChatThreads().map(item => ({
-    id: item.id,
-    name: item.name,
-    text: item.lastText || '开始聊天吧',
-    avatar: item.avatar || '🙂',
-    unread: Number(item.unread || 0),
-    time: formatChatTime(item.updatedAt) || '刚刚'
-  }))
+const loadChatThreads = async () => {
+  try {
+    const userId = uni.getStorageSync('current_user_id') || 1
+    const res = await apiRequest({ url: '/api/community/chat/threads', method: 'GET', header: { 'X-User-Id': userId } })
+    chatThreads.value = (res || []).map(item => ({
+      id: item.id,
+      name: item.targetName,
+      text: item.lastMessage || '开始聊天吧',
+      avatar: item.targetAvatar || '🙂',
+      unread: Number(item.unreadCount || 0),
+      time: formatChatTime(item.updatedAt) || '刚刚'
+    }))
+  } catch (e) {
+    console.error('加载私信列表失败:', e)
+    chatThreads.value = []
+  }
 }
 
 onShow(() => {
@@ -106,7 +113,7 @@ const currentList = computed(() => {
 const handleItemClick = (item) => {
   if (currentTab.value !== 'chat') return
   uni.navigateTo({
-    url: `/pages/communication/chat_detail?name=${encodeURIComponent(item.name)}&avatar=${encodeURIComponent(item.avatar || '🙂')}`
+    url: `/pages/communication/chat_detail?threadId=${item.id}&name=${encodeURIComponent(item.name)}&avatar=${encodeURIComponent(item.avatar || '🙂')}`
   })
 }
 </script>

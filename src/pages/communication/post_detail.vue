@@ -66,7 +66,7 @@
 <script setup>
 import { onLoad } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
-import { getComments, getPostById, saveComments, updatePost, deletePost } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const post = ref({
   id: 0,
@@ -85,7 +85,8 @@ const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
 
 // 判断是否是自己的帖子
 const isOwnPost = computed(() => {
-  return post.value.user === currentUser.value.name
+  const currentUserId = uni.getStorageSync('current_user_id') || 1
+  return post.value.userId === currentUserId
 })
 
 const loadCurrentUser = () => {
@@ -109,59 +110,36 @@ const loadCurrentUser = () => {
   }
 }
 
-onLoad((options) => {
-  // 第一步：先加载当前用户信息
+onLoad(async (options) => {
   loadCurrentUser()
-  
   const postId = Number(options?.id || 0)
-  if (!postId) {
-    commentList.value = []
-    return
-  }
-
-  const target = getPostById(postId)
-  if (!target) {
+  if (!postId) { commentList.value = []; return }
+  try {
+    const data = await apiRequest({ url: `/api/community/post/${postId}`, method: 'GET' })
+    post.value = {
+      ...post.value,
+      id: data.id,
+      userId: data.userId,
+      user: `用户${data.userId || ''}`,
+      avatar: data.avatar || '🙂',
+      title: data.title,
+      desc: data.content,
+      tag: data.tags || '社区',
+      visibility: data.visibility || '所有人可见',
+      likes: data.likes || 0,
+      comments: data.comments || 0
+    }
+    commentList.value = (data.comments_list || []).map(c => ({
+      id: c.id,
+      user: `用户${c.userId}`,
+      content: c.content,
+      time: c.createTime
+    }))
+  } catch (e) {
     uni.showToast({ title: '帖子不存在或已被删除', icon: 'none' })
-    setTimeout(() => {
-      uni.navigateBack({ delta: 1 })
-    }, 500)
-    return
+    setTimeout(() => uni.navigateBack({ delta: 1 }), 500)
   }
-
-  // 检查是否有权限查看该帖子
-  if (!checkPostVisibility(target)) {
-    uni.showToast({ title: '你没有权限查看这篇帖子', icon: 'none' })
-    setTimeout(() => {
-      uni.navigateBack({ delta: 1 })
-    }, 500)
-    return
-  }
-
-  post.value = { ...post.value, ...target }
-  commentList.value = getComments(postId)
 })
-
-// 检查是否能看到帖子
-const checkPostVisibility = (post) => {
-  const visibility = post.visibility || '所有人可见'
-  const isOwnPost = post.user === currentUser.value.name
-  
-  switch (visibility) {
-    case '所有人可见':
-      return true
-    case '部分可见':
-      // 发布者、关注者能看到
-      return isOwnPost || post.following
-    case '部分不可见':
-      // 只有发布者能看到
-      return isOwnPost
-    case '私密':
-      // 只有发布者能看到
-      return isOwnPost
-    default:
-      return true
-  }
-}
 
 // 获取可见范围的显示标签
 const getVisibilityLabel = (visibility) => {
@@ -205,31 +183,20 @@ const showDeleteConfirm = () => {
   })
 }
 
-const deletePostFunc = () => {
+const deletePostFunc = async () => {
   try {
-    if (!post.value.id) {
-      uni.showToast({
-        title: '帖子ID无效，无法删除',
-        icon: 'none'
-      })
-      return
-    }
-
-    deletePost(post.value.id)
-    uni.showToast({
-      title: '帖子已删除',
-      icon: 'success'
+    if (!post.value.id) { uni.showToast({ title: '帖子ID无效', icon: 'none' }); return }
+    const userId = uni.getStorageSync('current_user_id') || 1
+    await apiRequest({
+      url: `/api/community/post/${post.value.id}`,
+      method: 'DELETE',
+      header: { 'X-User-Id': userId }
     })
-    // 删除后返回列表页面
-    setTimeout(() => {
-      uni.navigateBack({ delta: 1 })
-    }, 500)
+    uni.showToast({ title: '帖子已删除', icon: 'success' })
+    setTimeout(() => uni.navigateBack({ delta: 1 }), 500)
   } catch (error) {
     console.error('删除帖子失败:', error)
-    uni.showToast({
-      title: '删除失败，请重试',
-      icon: 'none'
-    })
+    uni.showToast({ title: '删除失败，请重试', icon: 'none' })
   }
 }
 
@@ -251,11 +218,6 @@ const sendComment = () => {
     content: text
   })
   post.value.comments += 1
-  saveComments(post.value.id, commentList.value)
-  updatePost(post.value.id, (item) => ({
-    ...item,
-    comments: post.value.comments
-  }))
   commentText.value = ''
   uni.showToast({ title: '评论成功', icon: 'success' })
 }
@@ -264,12 +226,6 @@ const toggleLike = () => {
   const liked = Boolean(post.value.liked)
   post.value.liked = !liked
   post.value.likes = Math.max(0, Number(post.value.likes || 0) + (post.value.liked ? 1 : -1))
-
-  updatePost(post.value.id, (item) => ({
-    ...item,
-    liked: post.value.liked,
-    likes: post.value.likes
-  }))
 
   uni.showToast({ title: post.value.liked ? '已点赞' : '已取消点赞', icon: 'none' })
 }
