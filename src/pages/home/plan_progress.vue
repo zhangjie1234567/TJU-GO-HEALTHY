@@ -98,7 +98,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '@/config.js';
 import {
@@ -292,7 +292,10 @@ export default {
         progressData.value = data;
 
         const token = getToken();
-        if (!token) return;
+        if (!token) {
+          console.warn('[PlanProgressAPI] token为空，跳过后端请求');
+          return;
+        }
 
         uni.request({
           url: BASE_URL + '/api/weight/list',
@@ -302,9 +305,22 @@ export default {
             'Content-Type': 'application/json'
           },
           success(res) {
+            console.log('[PlanProgressAPI] response:', {
+              url: BASE_URL + '/api/weight/list',
+              method: 'GET',
+              statusCode: res.statusCode,
+              body: res.data
+            });
             if (res.statusCode === 200 && res.data && res.data.code === 200) {
               progressData.value = applyBackendWeightData(progressData.value, res.data.data || {});
             }
+          },
+          fail(err) {
+            console.error('[PlanProgressAPI] network error:', {
+              url: BASE_URL + '/api/weight/list',
+              method: 'GET',
+              err
+            });
           }
         });
       } catch (error) {
@@ -324,10 +340,6 @@ export default {
     };
 
     // 生命周期
-    onMounted(() => {
-      loadData();
-    });
-
     onShow(() => {
       loadData();
     });

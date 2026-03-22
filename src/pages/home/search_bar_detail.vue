@@ -238,7 +238,7 @@
 <script setup>
   import { ref, computed } from 'vue'
   import { onLoad } from '@dcloudio/uni-app'
-  import { getFoodDetail, toggleCollection, isCollected } from './foodDataService.js'
+  import { getFoodDetail, toggleCollection, addFoodToMeal } from './foodDataService.js'
 
   // ========== 数据状态 ==========
   const foodData = ref({
@@ -285,7 +285,7 @@
       
       if (detail) {
         foodData.value = detail
-        isCollectedState.value = isCollected(detail.id)
+        isCollectedState.value = !!detail.collected
       } else {
         uni.showToast({ title: '食物不存在', icon: 'none' })
         setTimeout(() => {
@@ -327,15 +327,19 @@
   }
 
   // ========== 收藏功能 ==========
-  const handleToggleCollect = () => {
-    const newState = toggleCollection(foodData.value.id)
-    isCollectedState.value = newState
-    
-    uni.showToast({
-      title: newState ? '已添加到收藏' : '已取消收藏',
-      icon: 'none',
-      duration: 1500
-    })
+  const handleToggleCollect = async () => {
+    try {
+      const newState = await toggleCollection(foodData.value.id)
+      isCollectedState.value = newState
+      uni.showToast({
+        title: newState ? '已添加到收藏' : '已取消收藏',
+        icon: 'none',
+        duration: 1500
+      })
+    } catch (error) {
+      console.error('切换收藏失败', error)
+      uni.showToast({ title: error.message || '收藏操作失败', icon: 'none' })
+    }
   }
 
   // ========== 餐次设置弹窗 ==========
@@ -391,6 +395,17 @@
     return Math.round((foodData.value.energy / 100) * totalGrams)
   })
 
+  function getSelectedGrams() {
+    if (selectedVesselIdx.value === -1) {
+      const perGrams = parseFloat(customVesselGrams.value) || 0
+      const count = parseInt(customVesselCount.value) || 0
+      return perGrams * count
+    }
+    const vessel = vessels[selectedVesselIdx.value]
+    const portion = portions[selectedPortionIdx.value]
+    return vessel.grams * portion.ratio
+  }
+
   function openMealPopup(mealType) {
     currentMealType.value = mealType
     selectedVesselIdx.value = 0
@@ -404,7 +419,7 @@
     showMealPopup.value = false
   }
 
-  function confirmMealSetting() {
+  async function confirmMealSetting() {
     // 自定义模式校验
     if (selectedVesselIdx.value === -1) {
       const perGrams = parseFloat(customVesselGrams.value)
@@ -415,8 +430,22 @@
       }
     }
     const kcal = calculatedCalories.value
+    const grams = getSelectedGrams()
     const mealType = currentMealType.value
     const today = new Date().toLocaleDateString()
+
+    try {
+      await addFoodToMeal({
+        foodId: Number(foodData.value.id),
+        mealType,
+        amountGrams: Number(grams.toFixed(2)),
+        calories: Number(kcal.toFixed(2))
+      })
+    } catch (error) {
+      console.error('添加食物到某餐失败', error)
+      uni.showToast({ title: error.message || '添加失败', icon: 'none' })
+      return
+    }
 
     let caloriesData = {}
     try {

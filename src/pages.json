@@ -201,6 +201,12 @@
       }
     },
     {
+      "path": "pages/home/reminder_list",
+      "style": {
+        "navigationBarTitleText": "提醒列表"
+      }
+    },
+    {
       "path": "pages/home/record_weight",
       "style": {
         "navigationBarTitleText": "记录体重"

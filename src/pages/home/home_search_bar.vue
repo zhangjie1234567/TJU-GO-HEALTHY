@@ -174,13 +174,11 @@
     searchFoods, 
     getSearchSuggestions, 
     getCategories, 
-    getPopularFoods,
     saveSearchHistory,
     getSearchHistory,
     clearSearchHistory,
     removeSearchHistory,
-    toggleCollection,
-    isCollected
+    toggleCollection
   } from './foodDataService.js'
 
   // ========== 状态管理 ==========
@@ -255,14 +253,9 @@
       saveSearchHistory(searchKeyword.value)
       searchHistory.value = getSearchHistory()
       
-      // 执行搜索
+      // 执行搜索（后端已返回 collected 字段）
       const results = await searchFoods(searchKeyword.value, selectedCategory.value)
-      
-      // 添加收藏状态
-      searchResults.value = results.map(item => ({
-        ...item,
-        collected: isCollected(item.id)
-      }))
+      searchResults.value = results
     } catch (error) {
       console.error('搜索失败', error)
       uni.showToast({ title: '搜索失败', icon: 'none' })
@@ -330,39 +323,31 @@
   // ========== 数据加载 ==========
   const loadPopularFoods = async () => {
     try {
-      // 加载各分类热门食物
-      const fruits = await getPopularFoods('水果', 4)
-      const vegetables = await getPopularFoods('蔬菜', 4)
-      const grains = await getPopularFoods('谷物', 4)
-      
-      // 添加收藏状态
-      fruitList.value = fruits.map(item => ({
-        ...item,
-        collected: isCollected(item.id)
-      }))
-      vegetableList.value = vegetables.map(item => ({
-        ...item,
-        collected: isCollected(item.id)
-      }))
-      grainList.value = grains.map(item => ({
-        ...item,
-        collected: isCollected(item.id)
-      }))
+      // 一次请求拉取后端食物列表，前端按分类切片，避免同一动作触发多次接口请求。
+      const allFoods = await searchFoods('', '')
+
+      fruitList.value = allFoods.filter((item) => item.category === '水果').slice(0, 4)
+      vegetableList.value = allFoods.filter((item) => item.category === '蔬菜').slice(0, 4)
+      grainList.value = allFoods.filter((item) => item.category === '谷物').slice(0, 4)
     } catch (error) {
       console.error('加载热门食物失败', error)
     }
   }
   
   // ========== 收藏功能 ==========
-  const handleToggleCollect = (item) => {
-    const newState = toggleCollection(item.id)
-    item.collected = newState
-    
-    uni.showToast({
-      title: newState ? '已收藏' : '已取消收藏',
-      icon: 'none',
-      duration: 1500
-    })
+  const handleToggleCollect = async (item) => {
+    try {
+      const newState = await toggleCollection(item.id)
+      item.collected = newState
+      uni.showToast({
+        title: newState ? '已收藏' : '已取消收藏',
+        icon: 'none',
+        duration: 1500
+      })
+    } catch (error) {
+      console.error('切换收藏失败', error)
+      uni.showToast({ title: error.message || '收藏操作失败', icon: 'none' })
+    }
   }
   
   // ========== 页面跳转 ==========

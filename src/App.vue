@@ -11,9 +11,23 @@ export default {
       // 如果已完成问卷且记住了登录信息，直接跳转到首页
       if (questionnaireCompleted === 'true' && rememberedStudentId) {
         console.log('✅ 用户已完成问卷且已记住登录，跳转到首页')
-        uni.switchTab({
-          url: '/pages/home/home'
-        })
+        setTimeout(() => {
+          const switchTask = uni.switchTab({
+            url: '/pages/home/home',
+            fail: (err) => {
+              console.warn('switchTab失败，改用reLaunch兜底:', err)
+              uni.reLaunch({
+                url: '/pages/home/home',
+                fail: (reErr) => {
+                  console.error('reLaunch也失败:', reErr)
+                }
+              })
+            }
+          })
+          if (switchTask && typeof switchTask.catch === 'function') {
+            switchTask.catch(() => {})
+          }
+        }, 120)
       } else {
         console.log('⏩ 用户首次使用或未记住登录，保持在登录页')
       }

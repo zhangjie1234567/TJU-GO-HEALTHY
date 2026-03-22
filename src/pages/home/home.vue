@@ -97,6 +97,7 @@
             <view class="popup-item" v-for="item in remindItems" :key="item.key" @click="selectRemind(item)">
               <text>{{ item.label }}</text>
             </view>
+            <view class="popup-link" @click="goToReminderList">查看已设置提醒</view>
             <view class="popup-cancel" @click="closeRemindPopup">取消</view>
           </view>
         </view>
@@ -205,6 +206,10 @@
   function goToAIChat() {
     navigateToPage('/pages/home/ai_chat?from=home');
   }
+  function goToReminderList() {
+    showRemindPopup.value = false;
+    navigateToPage('/pages/home/reminder_list?from=home');
+  }
   // 健康提醒弹窗相关
   import {
     ref as vueRef
@@ -213,19 +218,23 @@
   const showTimePicker = vueRef(false);
   const remindItems = [{
       key: 'weight',
-      label: '设置体重提醒'
+      label: '设置体重提醒',
+      reminder_title: '体重记录提醒'
     },
     {
       key: 'drink',
-      label: '设置饮水提醒'
+      label: '设置饮水提醒',
+      reminder_title: '饮水打卡提醒'
     },
     {
       key: 'exercise',
-      label: '设置运动提醒'
+      label: '设置运动提醒',
+      reminder_title: '运动锻炼提醒'
     },
     {
       key: 'fasting',
-      label: '设置断食提醒'
+      label: '设置断食提醒',
+      reminder_title: '断食计划提醒'
     }
   ];
   const selectedRemind = vueRef(null);
@@ -268,22 +277,117 @@
     pickerValue.value = e.detail.value;
   }
 
-  function confirmTime() {
+  function formatReminderTime() {
     // 获取选择的时间
     const y = years[pickerValue.value[0]];
     const m = months[pickerValue.value[1]];
     const d = days[pickerValue.value[2]];
     const h = hours[pickerValue.value[3]];
     const min = minutes[pickerValue.value[4]];
-    const timeStr =
-      `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
-    // 这里可以调用日历API或保存提醒逻辑
-    uni.showToast({
-      title: `已为“${selectedRemind.value.label}”设置提醒\n${timeStr}`,
-      icon: 'none',
-      duration: 2500
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+  }
+
+  function getToken() {
+    return uni.getStorageSync('token') || '';
+  }
+
+  async function addReminderToPhoneCalendar(item, reminderTime) {
+    const startTime = new Date(reminderTime.replace(' ', 'T'));
+    const endTime = new Date(startTime.getTime() + 30 * 60 * 1000);
+
+    return new Promise((resolve) => {
+      // #ifdef MP-WEIXIN
+      if (typeof wx !== 'undefined' && typeof wx.addPhoneCalendar === 'function') {
+        wx.addPhoneCalendar({
+          title: item.reminder_title,
+          startTime,
+          endTime,
+          description: `健康提醒：${item.label}`,
+          success: () => resolve({ calendar_sync_status: 1, message: '手机日历同步成功' }),
+          fail: () => resolve({ calendar_sync_status: 0, message: '手机日历同步失败，提醒已保存' })
+        });
+        return;
+      }
+      resolve({ calendar_sync_status: 0, message: '当前微信基础库不支持写入手机日历，提醒已保存' });
+      // #endif
+
+      // #ifndef MP-WEIXIN
+      resolve({ calendar_sync_status: 0, message: '仅微信小程序支持手机日历同步，提醒已保存' });
+      // #endif
     });
+  }
+
+  async function saveHealthReminder(item, reminderTime, calendarSyncStatus) {
+    const token = getToken();
+    if (!token) {
+      throw new Error('请先登录后再设置提醒');
+    }
+
+    return new Promise((resolve, reject) => {
+      uni.request({
+        url: BASE_URL + '/api/plan/reminder',
+        method: 'PUT',
+        header: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          reminder_type: item.key,
+          reminder_title: item.reminder_title,
+          reminder_time: reminderTime + ':00',
+          is_enabled: 1,
+          calendar_sync_status: calendarSyncStatus
+        },
+        success(res) {
+          if (res.statusCode === 200 && res.data && res.data.code === 200) {
+            resolve();
+            return;
+          }
+          reject(new Error((res.data && res.data.message) || '提醒保存失败'));
+        },
+        fail(err) {
+          reject(new Error((err && err.errMsg) || '提醒保存失败'));
+        }
+      });
+    });
+  }
+
+  async function confirmTime() {
+    if (!selectedRemind.value) {
+      uni.showToast({
+        title: '请先选择提醒类型',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const timeStr = formatReminderTime();
     showTimePicker.value = false;
+
+    try {
+      const calendarResult = await addReminderToPhoneCalendar(selectedRemind.value, timeStr);
+      await saveHealthReminder(selectedRemind.value, timeStr, calendarResult.calendar_sync_status);
+      uni.showToast({
+        title: `已设置提醒\n${timeStr}`,
+        icon: 'none',
+        duration: 2200
+      });
+      if (calendarResult.calendar_sync_status !== 1) {
+        setTimeout(() => {
+          uni.showToast({
+            title: calendarResult.message,
+            icon: 'none',
+            duration: 2200
+          });
+        }, 260);
+      }
+    } catch (error) {
+      uni.showToast({
+        title: error.message || '提醒设置失败',
+        icon: 'none',
+        duration: 2200
+      });
+    }
   }
   // 跳转到我的方案页面
   function goToMyPlan() {
@@ -466,6 +570,14 @@
   .popup-cancel {
     margin-top: 16px;
     color: #888;
+    text-align: center;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .popup-link {
+    margin-top: 12px;
+    color: #53B1EF;
     text-align: center;
     font-size: 15px;
     cursor: pointer;
