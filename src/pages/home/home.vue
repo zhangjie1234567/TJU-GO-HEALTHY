@@ -150,7 +150,14 @@
     onLoad,
     onShow
   } from '@dcloudio/uni-app';
-  import { getUserProgressData } from './userProgressService.js';
+  import { BASE_URL } from '@/config.js';
+  import {
+    getUserProgressData,
+    calculateBMI,
+    getBMIStatus,
+    getAvatarEmoji,
+    getAvatarDescription
+  } from './userProgressService.js';
 
   // 用户进度数据
   const userProgress = ref({
@@ -344,12 +351,51 @@
   // 加载用户进度数据
   function loadUserProgress() {
     try {
-      const data = getUserProgressData();
+      const baseData = getUserProgressData();
       userProgress.value = {
-        avatarEmoji: data.avatarEmoji,
-        avatarDesc: data.avatarDesc,
-        bmi: data.bmi
+        avatarEmoji: baseData.avatarEmoji,
+        avatarDesc: baseData.avatarDesc,
+        bmi: baseData.bmi
       };
+
+      const token = uni.getStorageSync('token') || '';
+      if (!token) return;
+
+      uni.request({
+        url: BASE_URL + '/api/weight/list',
+        method: 'GET',
+        header: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        success(res) {
+          if (res.statusCode !== 200 || !res.data || res.data.code !== 200) return;
+
+          const records = Array.isArray(res.data?.data?.records) ? res.data.data.records : [];
+          const weightList = records
+            .map(item => ({
+              date: String(item.date || ''),
+              weight: Number(item.weight)
+            }))
+            .filter(item => item.date && !Number.isNaN(item.weight))
+            .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+          if (weightList.length === 0) return;
+
+          const currentWeight = weightList[0].weight;
+          const height = Number(baseData.height || 0);
+          if (height <= 0) return;
+
+          const bmi = Number(calculateBMI(currentWeight, height).toFixed(1));
+          const bmiStatus = getBMIStatus(bmi);
+
+          userProgress.value = {
+            avatarEmoji: getAvatarEmoji(bmiStatus),
+            avatarDesc: getAvatarDescription(bmiStatus),
+            bmi: bmi.toFixed(1)
+          };
+        }
+      });
     } catch (error) {
       console.error('加载用户进度数据失败:', error);
     }

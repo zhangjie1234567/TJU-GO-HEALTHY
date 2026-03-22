@@ -17,9 +17,6 @@
           </view>
           <text v-if="item.title" class="diary-title">{{ item.title }}</text>
           <text class="diary-text">{{ item.content }}</text>
-          <view v-if="item.images && item.images.length > 0" class="diary-images">
-            <image v-for="(img, imgIdx) in item.images" :key="imgIdx" :src="img" class="diary-image" mode="aspectFill" @click="previewImage(item.images, imgIdx)"></image>
-          </view>
         </view>
         <view class="diary-actions">
           <button size="mini" @click="editDiary(idx)">编辑</button>
@@ -62,21 +59,6 @@
           <textarea v-model="inputText" class="diary-input" placeholder="记录今天的点点滴滴..." maxlength="2000"></textarea>
         </view>
 
-        <!-- 图片上传 -->
-        <view class="form-item">
-          <text class="form-label">添加图片（最多3张）</text>
-          <view class="image-upload-area">
-            <view v-for="(img, idx) in inputImages" :key="idx" class="image-item">
-              <image :src="img" class="uploaded-image" mode="aspectFill"></image>
-              <view class="image-delete" @click="removeImage(idx)">×</view>
-            </view>
-            <view v-if="inputImages.length < 3" class="add-image-btn" @click="chooseImage">
-              <text class="add-icon">+</text>
-              <text class="add-text">添加图片</text>
-            </view>
-          </view>
-        </view>
-
         <view class="popup-btn-row">
           <view class="popup-btn" @click="closePopup">取消</view>
           <view class="popup-btn confirm" @click="saveDiary">保存</view>
@@ -91,14 +73,25 @@
     ref,
     onMounted
   } from 'vue'
+  import { BASE_URL } from '@/config.js'
 
   const diaryList = ref([])
   const showAddPopup = ref(false)
   const inputTitle = ref('')
   const inputText = ref('')
   const inputMood = ref(3)
-  const inputImages = ref([])
   const editIdx = ref(null)
+  const editDiaryId = ref(null)  // 编辑时记录日记ID
+  const loading = ref(false)
+
+  // API基础URL，从config.js中获取
+  const API_BASE_URL = BASE_URL
+  const API_BASE = API_BASE_URL + '/api/diary'
+
+  // 获取token
+  function getToken() {
+    return uni.getStorageSync('token') || ''
+  }
 
   // 心情选项
   const moodOptions = [
@@ -115,14 +108,60 @@
     return option ? option.emoji : '😐'
   }
 
-  // 加载日记
+  // 加载日记列表
   function loadDiary() {
-    try {
-      diaryList.value = JSON.parse(uni.getStorageSync('diaryList') || '[]')
-    } catch {
-      diaryList.value = []
-    }
+    loading.value = true
+    uni.request({
+      url: `${API_BASE}/list`,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type': 'application/json'
+      },
+      success: (res) => {
+        console.log('日记列表响应:', res)
+        if (res.statusCode === 200 && res.data.code === 200) {
+          // 后端返回的格式为 { code: 200, message: '成功', data: [...] }
+          const diaries = res.data.data || []
+          // 转换后端数据格式为前端显示格式
+          diaryList.value = diaries.map(item => ({
+            id: item.id,
+            date: item.diaryDate || formatDateTime(item.createTime),  // 使用diaryDate
+            title: item.title || '',
+            content: item.content,
+            mood: item.mood || 3,
+            _createTime: item.createTime,
+            _updateTime: item.updateTime
+          }))
+        } else {
+          uni.showToast({
+            title: res.data.message || '加载日记失败',
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      },
+      fail: (err) => {
+        console.error('日记列表请求失败:', err)
+        uni.showToast({
+          title: '日记加载失败: ' + (err.errMsg || '网络错误'),
+          icon: 'none',
+          duration: 2000
+        })
+      },
+      complete: () => {
+        loading.value = false
+      }
+    })
   }
+
+  // 格式化日期时间
+  function formatDateTime(dateStr) {
+    if (!dateStr) return ''
+    // 后端返回 "2026-03-16 10:30:00" 格式
+    return dateStr
+  }
+
   onMounted(loadDiary)
 
   // 打开新建弹窗
@@ -142,33 +181,8 @@
     inputTitle.value = ''
     inputText.value = ''
     inputMood.value = 3
-    inputImages.value = []
     editIdx.value = null
-  }
-
-  // 选择图片
-  function chooseImage() {
-    uni.chooseImage({
-      count: 3 - inputImages.value.length,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: res => {
-        inputImages.value = [...inputImages.value, ...res.tempFilePaths]
-      }
-    })
-  }
-
-  // 删除图片
-  function removeImage(idx) {
-    inputImages.value.splice(idx, 1)
-  }
-
-  // 预览图片
-  function previewImage(images, current) {
-    uni.previewImage({
-      urls: images,
-      current: current
-    })
+    editDiaryId.value = null
   }
 
   // 保存日记
@@ -183,36 +197,112 @@
       return
     }
     
-    const now = new Date()
-    const dateStr =
-      `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
-    
-    const diaryData = {
-      id: editIdx.value === null ? Date.now() : diaryList.value[editIdx.value].id,
-      date: dateStr,
+    const requestData = {
       title: inputTitle.value.trim(),
       content: text,
-      mood: inputMood.value,
-      images: [...inputImages.value]
+      mood: inputMood.value
     }
 
-    if (editIdx.value === null) {
-      // 新建
-      diaryList.value.unshift(diaryData)
+    if (editDiaryId.value === null) {
+      // 新增日记
+      uni.request({
+        url: `${API_BASE}/add`,
+        method: 'POST',
+        header: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        data: requestData,
+        success: (res) => {
+          console.log('日记保存响应:', res)
+          if (res.statusCode === 200 && res.data.code === 200) {
+            const diary = res.data.data
+            // 在列表顶部添加新日记
+            diaryList.value.unshift({
+              id: diary.id,
+              date: diary.diaryDate || formatDateTime(diary.createTime),
+              title: diary.title || '',
+              content: diary.content,
+              mood: diary.mood || 3,
+              _createTime: diary.createTime,
+              _updateTime: diary.updateTime
+            })
+            
+            uni.showToast({
+              title: '日记已保存',
+              icon: 'success',
+              duration: 1500
+            })
+            closePopup()
+          } else {
+            uni.showToast({
+              title: res.data.message || '保存失败',
+              icon: 'none',
+              duration: 2000
+            })
+          }
+        },
+        fail: (err) => {
+          console.error('日记保存请求失败:', err)
+          uni.showToast({
+            title: '保存失败: ' + (err.errMsg || '网络错误'),
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      })
     } else {
-      // 编辑
-      diaryList.value[editIdx.value] = diaryData
+      // 编辑日记
+      uni.request({
+        url: `${API_BASE}/${editDiaryId.value}/edit`,
+        method: 'PUT',
+        header: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        data: requestData,
+        success: (res) => {
+          console.log('日记更新响应:', res)
+          if (res.statusCode === 200 && res.data.code === 200) {
+            const diary = res.data.data
+            // 更新列表中的日记
+            const index = diaryList.value.findIndex(d => d.id === editDiaryId.value)
+            if (index !== -1) {
+              diaryList.value[index] = {
+                id: diary.id,
+                date: diary.diaryDate || formatDateTime(diary.updateTime),
+                title: diary.title || '',
+                content: diary.content,
+                mood: diary.mood || 3,
+                _createTime: diary.createTime,
+                _updateTime: diary.updateTime
+              }
+            }
+            
+            uni.showToast({
+              title: '日记已更新',
+              icon: 'success',
+              duration: 1500
+            })
+            closePopup()
+          } else {
+            uni.showToast({
+              title: res.data.message || '更新失败',
+              icon: 'none',
+              duration: 2000
+            })
+          }
+        },
+        fail: (err) => {
+          console.error('日记更新请求失败:', err)
+          uni.showToast({
+            title: '保存失败: ' + (err.errMsg || '网络错误'),
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      })
     }
-    
-    uni.setStorageSync('diaryList', JSON.stringify(diaryList.value))
-    
-    uni.showToast({
-      title: editIdx.value === null ? '日记已保存' : '日记已更新',
-      icon: 'success',
-      duration: 1500
-    })
-    
-    closePopup()
   }
 
   // 编辑日记
@@ -221,24 +311,52 @@
     inputTitle.value = diary.title || ''
     inputText.value = diary.content || diary.text || ''
     inputMood.value = diary.mood || 3
-    inputImages.value = diary.images ? [...diary.images] : []
     editIdx.value = idx
+    editDiaryId.value = diary.id
     showAddPopup.value = true
   }
 
   // 删除日记
   function deleteDiary(idx) {
+    const diaryId = diaryList.value[idx].id
+    
     uni.showModal({
       title: '确认删除',
       content: '确定要删除这条日记吗？',
       success: res => {
         if (res.confirm) {
-          diaryList.value.splice(idx, 1)
-          uni.setStorageSync('diaryList', JSON.stringify(diaryList.value))
-          uni.showToast({
-            title: '删除成功',
-            icon: 'success',
-            duration: 1500
+          uni.request({
+            url: `${API_BASE}/${diaryId}/delete`,
+            method: 'DELETE',
+            header: {
+              'Authorization': `Bearer ${getToken()}`,
+              'Content-Type': 'application/json'
+            },
+            success: (response) => {
+              console.log('日记删除响应:', response)
+              if (response.statusCode === 200 && response.data.code === 200) {
+                diaryList.value.splice(idx, 1)
+                uni.showToast({
+                  title: '删除成功',
+                  icon: 'success',
+                  duration: 1500
+                })
+              } else {
+                uni.showToast({
+                  title: response.data.message || '删除失败',
+                  icon: 'none',
+                  duration: 2000
+                })
+              }
+            },
+            fail: (err) => {
+              console.error('日记删除请求失败:', err)
+              uni.showToast({
+                title: '网络错误',
+                icon: 'none',
+                duration: 2000
+              })
+            }
           })
         }
       }
@@ -327,27 +445,6 @@
     font-weight: 600;
     color: #333;
     margin-bottom: 4px;
-  }
-
-  .diary-text {
-    font-size: 15px;
-    color: #666;
-    line-height: 1.6;
-    word-break: break-all;
-  }
-
-  .diary-images {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  .diary-image {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    object-fit: cover;
   }
 
   .diary-actions {
@@ -458,66 +555,6 @@
     color: #333;
     line-height: 1.6;
     box-sizing: border-box;
-  }
-
-  .image-upload-area {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .image-item {
-    position: relative;
-    width: 80px;
-    height: 80px;
-  }
-
-  .uploaded-image {
-    width: 100%;
-    height: 100%;
-    border-radius: 8px;
-    object-fit: cover;
-  }
-
-  .image-delete {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #ff4444;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    line-height: 1;
-  }
-
-  .add-image-btn {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    border: 2px dashed #ccc;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #fafafa;
-  }
-
-  .add-icon {
-    font-size: 28px;
-    color: #999;
-    line-height: 1;
-  }
-
-  .add-text {
-    font-size: 12px;
-    color: #999;
-    margin-top: 4px;
   }
 
   .popup-btn-row {

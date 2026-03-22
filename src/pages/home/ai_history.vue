@@ -46,44 +46,46 @@
 <script setup>
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-
-// ── Storage key 常量（与 ai_chat.vue 保持一致） ──────────────────────────────────────────
-const KEY_SESSIONS = 'ai_sessions'
-const KEY_HISTORY_PREFIX = 'ai_history_'
-
-// ── 状态 ──────────────────────────────────────────
+  import { BASE_URL } from '@/config.js'
 const sessions = ref([])
 
-// ── Storage 工具 ──────────────────────────────────────────
-function getSessions() {
-  try {
-    const data = uni.getStorageSync(KEY_SESSIONS)
-    return Array.isArray(data) ? data : []
-  } catch (_) { return [] }
+function getToken() {
+  return uni.getStorageSync('token') || ''
 }
 
-function saveSessions(list) {
-  try { uni.setStorageSync(KEY_SESSIONS, list) } catch (_) {}
-}
-
-function removeHistory(sessionId) {
-  try { uni.removeStorageSync(KEY_HISTORY_PREFIX + sessionId) } catch (_) {}
-}
-
-// ── 每次页面显示时刷新列表（从 ai_chat 返回后数据可能更新） ──────────────────────────────────────────
+// ── 每次页面显示时从后端拉取最新会话列表 ─────────────────────────────
 onShow(() => {
-  sessions.value = getSessions()
+  const token = getToken()
+  if (!token) {
+    sessions.value = []
+    return
+  }
+  uni.request({
+    url: BASE_URL + '/api/ai/sessions',
+    method: 'GET',
+    header: { Authorization: 'Bearer ' + token },
+    success(res) {
+      if (res.data && res.data.code === 200 && Array.isArray(res.data.data)) {
+        sessions.value = res.data.data
+      } else {
+        sessions.value = []
+      }
+    },
+    fail() {
+      sessions.value = []
+    }
+  })
 })
 
 // ── 操作 ──────────────────────────────────────────
 function openSession(s) {
   uni.navigateTo({
-    url: '/pages/home/ai_chat?sessionId=' + encodeURIComponent(s.sessionId)
+    url: '/pages/home/ai_chat?sessionId=' + encodeURIComponent(s.sessionId) +
+         '&title=' + encodeURIComponent(s.title || '历史对话')
   })
 }
 
 function startNewChat() {
-  // 跳转到 ai_chat 欢迎页（不带 sessionId 参数）
   uni.navigateTo({ url: '/pages/home/ai_chat' })
 }
 
@@ -95,11 +97,24 @@ function confirmDelete(sessionId) {
     confirmColor: '#ff4d4f',
     success: ({ confirm }) => {
       if (!confirm) return
-      const list = getSessions().filter(s => s.sessionId !== sessionId)
-      saveSessions(list)
-      removeHistory(sessionId)
-      sessions.value = list
-      uni.showToast({ title: '已删除', icon: 'success' })
+      const token = getToken()
+      if (!token) return
+      uni.request({
+        url: BASE_URL + '/api/ai/sessions/' + encodeURIComponent(sessionId),
+        method: 'DELETE',
+        header: { Authorization: 'Bearer ' + token },
+        success(res) {
+          if (res.data && res.data.code === 200) {
+            sessions.value = sessions.value.filter(s => s.sessionId !== sessionId)
+            uni.showToast({ title: '已删除', icon: 'success' })
+          } else {
+            uni.showToast({ title: '删除失败', icon: 'none' })
+          }
+        },
+        fail() {
+          uni.showToast({ title: '网络异常', icon: 'none' })
+        }
+      })
     }
   })
 }

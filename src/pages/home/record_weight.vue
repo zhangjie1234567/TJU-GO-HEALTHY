@@ -75,6 +75,16 @@
   const targetWeight = ref('')
   const showTargetPopup = ref(false)
   const targetWeightInput = ref('')
+  const loading = ref(false)
+
+  // API基础URL
+  const API_BASE_URL = 'http://localhost:8080'
+  const API_BASE = API_BASE_URL + '/api/weight'
+
+  // 获取token
+  function getToken() {
+    return uni.getStorageSync('token') || ''
+  }
 
   const targetWeightDisplay = computed(() => {
     // 显示为数字或“--”
@@ -83,6 +93,53 @@
   })
 
   function loadWeight() {
+    // 先尝试从后端API获取体重数据，失败则使用本地存储
+    loading.value = true
+    const token = getToken()
+    if (!token) {
+      console.warn('体重接口可能未登录：token 为空，后端请求可能返回未授权')
+    }
+    uni.request({
+      url: `${API_BASE}/list`,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      success: (res) => {
+        console.log('体重列表响应：', res)
+        if (res.statusCode === 200 && res.data.code === 200) {
+          const data = res.data.data
+          // WeightListVO 返回 { targetWeight, records: [{id, weight, date}, ...] }
+          if (data && data.records) {
+            // 转换后端数据格式为前端显示格式
+            weightList.value = data.records.map(item => ({
+              date: item.date,  // 日期格式已是 yyyy-MM-dd
+              weight: Number(item.weight)
+            }))
+          }
+          // 设置目标体重
+          if (data && data.targetWeight) {
+            targetWeight.value = String(data.targetWeight)
+            targetWeightInput.value = String(data.targetWeight)
+          }
+          loading.value = false
+        } else {
+          console.warn('体重列表接口返回非成功状态：', res.data)
+          // API返回错误，降级到本地存储
+          loadWeightFromLocal()
+        }
+      },
+      fail: (err) => {
+        // API调用失败，降级到本地存储
+        console.warn('API加载失败，使用本地数据:', err)
+        loadWeightFromLocal()
+      }
+    })
+  }
+
+  // 从本地存储读取体重数据（降级方案）
+  function loadWeightFromLocal() {
     try {
       weightList.value = JSON.parse(uni.getStorageSync('weightList') || '[]')
     } catch {
@@ -104,6 +161,19 @@
     if (!t || t === 'false') t = ''
     targetWeight.value = t
     targetWeightInput.value = t
+    
+    // 读取今日体重数据（从问卷预填）
+    try {
+      const todayData = JSON.parse(uni.getStorageSync('todayWeight') || '{}')
+      if (todayData && todayData.weight) {
+        weightInput.value = String(todayData.weight)
+        console.log('✅ 已读取今日体重预填值:', todayData.weight)
+      }
+    } catch (e) {
+      console.warn('读取今日体重失败:', e)
+    }
+    
+    loading.value = false
   }
   onMounted(loadWeight)
 
@@ -116,6 +186,45 @@
       })
       return
     }
+
+    // 先尝试调用后端API
+    uni.request({
+      url: `${API_BASE}/add`,
+      method: 'POST',
+      header: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        weight: val
+      },
+      success: (res) => {
+        console.log('新增体重响应：', res)
+        if (res.statusCode === 200 && res.data.code === 200) {
+          // 后端保存成功，刷新列表
+          loadWeight()
+          uni.showToast({
+            title: '保存成功',
+            icon: 'success'
+          })
+          weightInput.value = ''
+        } else {
+          console.warn('新增体重接口返回非成功状态：', res.data)
+          // API返回错误，降级到本地存储
+          saveWeightToLocal(val)
+        }
+      },
+      fail: (err) => {
+        console.error('新增体重请求失败：', err)
+        // API调用失败，降级到本地存储
+        console.warn('API保存失败，保存到本地')
+        saveWeightToLocal(val)
+      }
+    })
+  }
+
+  // 保存体重到本地存储（降级方案）
+  function saveWeightToLocal(val) {
     const now = new Date()
     const dateStr =
       `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
@@ -131,7 +240,7 @@
     }
     uni.setStorageSync('weightList', JSON.stringify(weightList.value))
     uni.showToast({
-      title: '保存成功',
+      title: '保存成功（本地存储）',
       icon: 'success'
     })
     weightInput.value = ''
@@ -146,9 +255,53 @@
       })
       return
     }
+
+    // 先尝试调用后端API
+    uni.request({
+      url: `${API_BASE}/target`,
+      method: 'PUT',
+      header: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        weight: val
+      },
+      success: (res) => {
+        console.log('修改目标体重响应：', res)
+        if (res.statusCode === 200 && res.data.code === 200) {
+          targetWeight.value = val.toString()
+          showTargetPopup.value = false
+          uni.showToast({
+            title: '目标体重已更新',
+            icon: 'success',
+            duration: 1500
+          })
+        } else {
+          console.warn('修改目标体重接口返回非成功状态：', res.data)
+          // API返回错误，降级到本地存储
+          updateTargetWeightLocal(val)
+        }
+      },
+      fail: (err) => {
+        console.error('修改目标体重请求失败：', err)
+        // API调用失败，降级到本地存储
+        console.warn('API更新失败，保存到本地')
+        updateTargetWeightLocal(val)
+      }
+    })
+  }
+
+  // 更新目标体重到本地存储（降级方案）
+  function updateTargetWeightLocal(val) {
     targetWeight.value = val.toString()
     uni.setStorageSync('targetWeight', targetWeight.value)
     showTargetPopup.value = false
+    uni.showToast({
+      title: '目标体重已更新（本地存储）',
+      icon: 'success',
+      duration: 1500
+    })
   }
 
   const yesterdayWeightStr = computed(() => {
@@ -492,6 +645,7 @@
     gap: 12px;
     margin-top: 8px;
     flex: 1;
+    position: relative;
   }
 
   .rw-trend-item {

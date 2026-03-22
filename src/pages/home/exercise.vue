@@ -6,9 +6,10 @@
           <text>今日已消耗</text>
           <text class="ex-num">{{ todayCalorie }}</text><text class="ex-unit">大卡</text>
         </view>
-        <view class="ex-row">
+        <view class="ex-row" @click="openGoalEdit" style="cursor:pointer;">
           <text>运动目标</text>
           <text class="ex-num ex-goal">{{ exerciseGoal }}</text><text class="ex-unit">大卡</text>
+          <text style="font-size:12px;color:#90caf9;margin-left:4px;">✏️</text>
         </view>
       </view>
     </view>
@@ -63,15 +64,29 @@
         </view>
       </view>
     </view>
+
+    <!-- 修改运动目标弹窗 -->
+    <view v-if="showGoalEdit" class="ex-popup-mask">
+      <view class="ex-popup-content">
+        <view class="ex-popup-title">修改运动目标</view>
+        <input v-model="goalEditValue" type="number" class="ex-popup-input" placeholder="请输入目标(大卡)" />
+        <view class="ex-popup-btn-row">
+          <button class="ex-popup-btn" @click="showGoalEdit = false">取消</button>
+          <button class="ex-popup-btn confirm" @click="saveGoal">确定</button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
   import {
     ref,
-    computed,
-    onMounted
+    computed
   } from 'vue'
+  import { onShow } from '@dcloudio/uni-app'
+  import { BASE_URL } from '@/config.js'
+
   const todayCalorie = ref(0)
   const exerciseGoal = ref(500)
   const records = ref([])
@@ -79,6 +94,17 @@
   const addDuration = ref('')
   const selectedType = ref(0)
   const customName = ref('')
+  const showGoalEdit = ref(false)
+  const goalEditValue = ref('')
+  const loading = ref(false)
+
+  // API基础URL
+  const API_BASE = BASE_URL + '/api/exercise'
+
+  // 获取token
+  function getToken() {
+    return uni.getStorageSync('token') || ''
+  }
 
   const exerciseTypes = [
     { icon: '👣', name: '步行(3km/h)',   caloriePerMin: 2.1 },
@@ -101,7 +127,53 @@
     return records.value.reduce((sum, r) => sum + Number(r.duration), 0)
   })
 
+  // 从后端API加载今日运动记录
   function loadExercise() {
+    loading.value = true
+    const token = getToken()
+    if (!token) {
+      // 未登录时从本地存储降级
+      loadExerciseFromLocal()
+      return
+    }
+    uni.request({
+      url: `${API_BASE}/today`,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      success: (res) => {
+        console.log('今日运动响应：', res)
+        if (res.statusCode === 200 && res.data.code === 200 && res.data.data) {
+          const data = res.data.data
+          // 后端返回格式: { todayCalorie, exerciseGoal, records: [{id, name, icon, duration, calorie}, ...] }
+          records.value = (data.records || []).map(item => ({
+            id: item.id,
+            name: item.name,
+            icon: item.icon,
+            duration: item.duration,
+            calorie: item.calorie
+          }))
+          todayCalorie.value = data.todayCalorie || 0
+          exerciseGoal.value = data.exerciseGoal || 500
+        } else {
+          console.warn('今日运动接口返回非成功状态：', res.data)
+          loadExerciseFromLocal()
+        }
+      },
+      fail: (err) => {
+        console.warn('运动记录加载失败，使用本地数据:', err)
+        loadExerciseFromLocal()
+      },
+      complete: () => {
+        loading.value = false
+      }
+    })
+  }
+
+  // 从本地存储加载（降级方案）
+  function loadExerciseFromLocal() {
     try {
       const d = JSON.parse(uni.getStorageSync('exerciseRecords') || '{}')
       const today = new Date().toLocaleDateString()
@@ -109,10 +181,18 @@
       todayCalorie.value = records.value.reduce((sum, r) => sum + Number(r.calorie), 0)
       if (d.goal) exerciseGoal.value = d.goal
     } catch {}
+    loading.value = false
   }
-  onMounted(loadExercise)
 
-  function saveExercise() {
+  onShow(loadExercise)
+
+  function openGoalEdit() {
+    goalEditValue.value = String(exerciseGoal.value || '')
+    showGoalEdit.value = true
+  }
+
+  // 保存运动记录到本地（仅用于离线缓存）
+  function saveExerciseToLocal() {
     const today = new Date().toLocaleDateString()
     let d = {}
     try {
@@ -142,18 +222,114 @@
       caloriePerMin = 5.0
     }
     const calorie = Math.round(caloriePerMin * duration)
-    records.value.push({
-      id: Date.now(),
-      icon: type.icon,
-      name,
-      duration,
-      calorie
+
+    const token = getToken()
+    if (!token) {
+      // 未登录时仅保存到本地
+      records.value.push({
+        id: Date.now(),
+        icon: type.icon,
+        name,
+        duration,
+        calorie
+      })
+      todayCalorie.value += calorie
+      saveExerciseToLocal()
+      showAdd.value = false
+      addDuration.value = ''
+      customName.value = ''
+      uni.showToast({ title: '运动已保存到本地', icon: 'success' })
+      return
+    }
+
+    // 调用后端API保存运动记录
+    uni.request({
+      url: `${API_BASE}/add`,
+      method: 'POST',
+      header: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        name,
+        icon: type.icon,
+        duration,
+        calorie
+      },
+      success: (res) => {
+        console.log('新增运动响应：', res)
+        if (res.statusCode === 200 && res.data.code === 200) {
+          // 后端保存成功，重新加载列表
+          loadExercise()
+          uni.showToast({ title: '运动已记录', icon: 'success' })
+        } else {
+          uni.showToast({ title: res.data.message || '保存失败', icon: 'none' })
+        }
+      },
+      fail: (err) => {
+        console.error('运动记录保存失败:', err)
+        // 失败降级到本地
+        records.value.push({
+          id: Date.now(),
+          icon: type.icon,
+          name,
+          duration,
+          calorie
+        })
+        todayCalorie.value += calorie
+        saveExerciseToLocal()
+        uni.showToast({ title: '已保存到本地', icon: 'warning' })
+      }
     })
-    todayCalorie.value += calorie
-    saveExercise()
+
     showAdd.value = false
     addDuration.value = ''
     customName.value = ''
+  }
+
+  function saveGoal() {
+    const v = parseInt(goalEditValue.value)
+    if (!v || v < 1 || v > 10000) {
+      uni.showToast({ title: '请输入1~10000之间的目标', icon: 'none' })
+      return
+    }
+
+    const token = getToken()
+    if (!token) {
+      exerciseGoal.value = v
+      saveExerciseToLocal()
+      showGoalEdit.value = false
+      goalEditValue.value = ''
+      uni.showToast({ title: '已保存到本地', icon: 'success' })
+      return
+    }
+
+    uni.request({
+      url: `${API_BASE}/goal`,
+      method: 'PUT',
+      header: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      data: { goal: v },
+      success: (res) => {
+        console.log('修改运动目标响应：', res)
+        if (res.statusCode === 200 && res.data && res.data.code === 200) {
+          loadExercise()
+          saveExerciseToLocal()
+          uni.showToast({ title: '目标已更新', icon: 'success' })
+        } else {
+          uni.showToast({ title: (res.data && res.data.message) || '更新失败', icon: 'none' })
+        }
+      },
+      fail: (err) => {
+        console.error('修改运动目标请求失败:', err)
+        uni.showToast({ title: '网络错误', icon: 'none' })
+      }
+    })
+
+    showGoalEdit.value = false
+    goalEditValue.value = ''
   }
 </script>
 

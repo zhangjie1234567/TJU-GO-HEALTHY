@@ -157,6 +157,7 @@
     ref,
     computed
   } from 'vue'
+   import { BASE_URL } from '@/config.js'
   //圈1：基础信息和日常习惯的常量
   // 1. 标签切换状态
   const currentTab = ref('base') // 默认显示基础信息
@@ -558,95 +559,146 @@
 
     return true
   }
-  // 10. 日常习惯提交函数（核心修改：校验通过后跳转到首页）
+  // 10. 日常习惯提交函数（核心修改：调用后端API提交问卷）
   const handleHabitSubmit = () => {
     // 1. 先校验日常习惯
     if (!validateHabitForm()) return
 
-    // 2. 整合所有问卷数据（可传给后端）
-    const allQuestionnaireData = {
-      baseInfo: {
-        gender: genderRange.value[selectedGenderIndex.value],
-        height: `${height.value}cm`,
-        weight: `${weight.value}kg`,
-        bmi: bmi.value,
-        bodyType: bodyType.value,
-        age: age.value,
-        target: selectedTarget.value,
-        parts: selectedParts.value,
-        targetWeight: `${targetWeight.value}kg`
+    // 2. 整合问卷数据，转换为后端要求的格式
+    const submitData = {
+      // 基础信息
+      gender: genderRange.value[selectedGenderIndex.value],
+      height: parseFloat(height.value),
+      weight: parseFloat(weight.value),
+      age: parseInt(age.value),
+      target: selectedTarget.value,
+      improveParts: selectedParts.value,
+      targetWeight: parseFloat(targetWeight.value),
+      // 日常习惯
+      exerciseFrequency: form.value.exerciseFreq,
+      exerciseTypes: form.value.exerciseFreq === '0' ? [] : form.value.exerciseTypes,
+      exerciseDuration: form.value.exerciseFreq === '0' ? null : form.value.exerciseDuration,
+      // 食物过敏（转换为Map格式）
+      foodAllergies: Object.keys(form.value.foodAllergyDetails).length === 0 
+        ? { 'none': '' } 
+        : form.value.foodAllergyDetails
+    }
+
+    // 3. 调用后端API提交问卷
+    uni.showLoading({ title: '提交中…' })
+    uni.request({
+      url: BASE_URL + '/api/questionnaire/submit',
+      method: 'POST',
+      header: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${uni.getStorageSync('token')}`
       },
-      habitInfo: {
-        exerciseFreq: form.value.exerciseFreq,
-        exerciseTypes: form.value.exerciseTypes,
-        exerciseDuration: form.value.exerciseDuration,
-        //删除问题四
-        // 新增问题4数据
-        foodAllergies: form.value.foodAllergies,
-        foodAllergyDetails: form.value.foodAllergyDetails
-      }
-    }
-    // 3. 保存问卷数据到本地存储（供AI对话使用）
-    try {
-      uni.setStorageSync('questionnaireData', allQuestionnaireData)
-      // ✅ 新增：保存基础信息以便其他页面使用
-      uni.setStorageSync('questionnaireBaseInfo', allQuestionnaireData.baseInfo)
-      // ✅ 标记问卷已完成
-      uni.setStorageSync('questionnaireCompleted', 'true')
-      console.log('完整问卷数据已保存:', allQuestionnaireData)
-    } catch (e) {
-      console.error('保存问卷数据失败:', e)
-    }
+      data: submitData,
+      success(res) {
+        uni.hideLoading()
+        console.log('问卷提交响应：', res.data)
+        
+        if (res.data && res.data.code === 200 && res.data.data) {
+          // 4. 保存响应数据到本地
+          try {
+            // 关键数据：完整问卷数据
+            uni.setStorageSync('questionnaireData', submitData)
+            uni.setStorageSync('questionnaireCompleted', 'true')
+            
+            // ==================== 新增：恢复首页功能 ====================
+            // 4.1 保存体重数据给首页"体重"模块（当日记录）
+            const today = new Date()
+            const year = today.getFullYear()
+            const month = String(today.getMonth() + 1).padStart(2, '0')
+            const date = String(today.getDate()).padStart(2, '0')
+            const dateStr = `${year}-${month}-${date}`
+            
+            // 计算 BMI: weight(kg) / (height(cm)/100)^2
+            const bmi = (submitData.weight / Math.pow(submitData.height / 100, 2)).toFixed(2)
+            
+            // 4.1.1 更新 weightList（关键：需要更新列表才能让记录天数正确统计）
+            let weightList = []
+            try {
+              const saved = uni.getStorageSync('weightList')
+              if (saved) {
+                weightList = JSON.parse(saved)
+              }
+            } catch (e) {
+              weightList = []
+            }
+            
+            // 查找当日记录，有则更新，无则新增
+            const existIndex = weightList.findIndex(item => item.date === dateStr)
+            if (existIndex >= 0) {
+              weightList[existIndex].weight = submitData.weight
+            } else {
+              // 新增记录（按时间倒序，最新在前）
+              weightList.unshift({ date: dateStr, weight: submitData.weight })
+            }
+            uni.setStorageSync('weightList', JSON.stringify(weightList))
+            
+            // 4.1.2 保存今日体重记录对象（用于体重页面快速读取）
+            uni.setStorageSync('todayWeight', {
+              weight: submitData.weight,
+              bmi: parseFloat(bmi),
+              date: dateStr
+            })
+            
+            // 4.2 保存 BMI 数据给"计划进度"页面
+            uni.setStorageSync('userBMI', parseFloat(bmi))
+            
+            // 4.3 保存基础信息（身高、体重）给计划进度页面用于BMI计算
+            uni.setStorageSync('questionnaireBaseInfo', JSON.stringify({
+              height: submitData.height,
+              weight: submitData.weight
+            }))
+            
+            // 4.3.1 保存目标体重（同步到记录体重和计划进度）
+            uni.setStorageSync('targetWeight', submitData.targetWeight.toString())
+            
+            // 4.4 初始化计划天数为 1（第一次提交）
+            uni.setStorageSync('planDays', 1)
+            
+            // 4.5 初始化记录天数为 1（有了体重记录）
+            uni.setStorageSync('recordDays', 1)
+            
+            // 4.6 初始化首次使用日期
+            if (!uni.getStorageSync('app_first_use_date')) {
+              uni.setStorageSync('app_first_use_date', dateStr)
+            }
+            
+            console.log('✅ 问卷已成功提交到后端')
+            console.log('✅ 体重数据已同步到首页模块:', { weight: submitData.weight, bmi, date: dateStr })
+            console.log('✅ weightList 已更新：', weightList.length, '条记录')
+            console.log('✅ 计划天数 & 记录天数已初始化为: 1')
+            // ===========================================================
+          } catch (e) {
+            console.error('保存问卷数据失败:', e)
+          }
 
-    // ✅ 新增：同步体重数据到record_weight
-    try {
-      const now = new Date()
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
-      
-      // 初始化体重记录列表（当前体重作为第一条记录）
-      const currentWeight = parseFloat(weight.value)
-      const weightList = [{
-        date: dateStr,
-        weight: currentWeight
-      }]
-      uni.setStorageSync('weightList', JSON.stringify(weightList))
-      
-      // 保存目标体重
-      const targetWeightValue = parseFloat(targetWeight.value)
-      uni.setStorageSync('targetWeight', targetWeightValue.toString())
-      
-      // 初始化首次使用日期（用于计算使用天数）
-      if (!uni.getStorageSync('app_first_use_date')) {
-        uni.setStorageSync('app_first_use_date', dateStr)
-      }
-      
-      // 初始化每日记录（记录天数为1）
-      const dailyRecords = {}
-      dailyRecords[dateStr] = {
-        date: dateStr,
-        hasRecord: true,
-        timestamp: Date.now()
-      }
-      uni.setStorageSync('daily_records', JSON.stringify(dailyRecords))
-      
-      console.log('✅ 体重数据已同步:', { currentWeight, targetWeightValue, dateStr })
-    } catch (e) {
-      console.error('同步体重数据失败:', e)
-    }
+          // 5. 提示成功
+          uni.showToast({
+            title: '问卷提交成功',
+            icon: 'success',
+            duration: 1500
+          })
 
-    // 4. 提示提交成功
-    uni.showToast({
-      title: '问卷提交成功',
-      icon: 'success',
-      duration: 1500
+          // 6. 跳转到首页
+          setTimeout(() => {
+            uni.switchTab({
+              url: '/pages/home/home'
+            })
+          }, 1500)
+        } else {
+          const msg = (res.data && res.data.message) || '问卷提交失败，请重试'
+          uni.showToast({ title: msg, icon: 'none' })
+        }
+      },
+      fail() {
+        uni.hideLoading()
+        uni.showToast({ title: '网络异常，请检查连接后重试', icon: 'none' })
+      }
     })
-
-    // 5. 跳转到首页（核心逻辑：替换为你的首页路径）
-    setTimeout(() => {
-      uni.switchTab({
-        url: '/pages/home/home' // 请确认你的首页路径是否正确
-      })
-    }, 1500)
   }
 </script>
 

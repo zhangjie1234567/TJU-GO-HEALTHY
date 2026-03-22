@@ -99,7 +99,16 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { getUserProgressData, getEncouragementText } from './userProgressService.js';
+import { onShow } from '@dcloudio/uni-app';
+import { BASE_URL } from '@/config.js';
+import {
+  getUserProgressData,
+  getEncouragementText,
+  calculateBMI,
+  getBMIStatus,
+  getAvatarEmoji,
+  getAvatarDescription
+} from './userProgressService.js';
 
 export default {
   name: 'PlanProgress',
@@ -186,12 +195,118 @@ export default {
       };
     }
 
+    function getToken() {
+      return uni.getStorageSync('token') || '';
+    }
+
+    function calcRemainingDaysByWeight(weightList, targetWeight) {
+      const currentWeight = weightList.length > 0 ? Number(weightList[0].weight) : 0;
+      if (!currentWeight || !targetWeight) return 30;
+
+      const diffToTarget = currentWeight - targetWeight;
+      const gap = Math.abs(diffToTarget);
+      if (gap <= 0.1) return 0;
+
+      const isWeightLossGoal = diffToTarget > 0;
+      let avgDailyTowardTarget = 0.1;
+      if (weightList.length >= 2) {
+        const newest = weightList[0];
+        const oldest = weightList[weightList.length - 1];
+        const start = new Date(oldest.date);
+        const end = new Date(newest.date);
+        const daysDiff = Math.max(1, Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)));
+        if (daysDiff > 0) {
+          const trend = isWeightLossGoal
+            ? (Number(oldest.weight) - Number(newest.weight)) / daysDiff
+            : (Number(newest.weight) - Number(oldest.weight)) / daysDiff;
+          if (trend > 0) {
+            avgDailyTowardTarget = trend;
+          }
+        }
+      }
+
+      if (avgDailyTowardTarget <= 0) avgDailyTowardTarget = 0.1;
+      return Math.ceil(gap / avgDailyTowardTarget);
+    }
+
+    function applyBackendWeightData(baseData, backendData) {
+      const records = Array.isArray(backendData?.records) ? backendData.records : [];
+      if (records.length === 0) return baseData;
+
+      const weightList = records
+        .map(item => ({
+          date: String(item.date || ''),
+          weight: Number(item.weight)
+        }))
+        .filter(item => item.date && !Number.isNaN(item.weight))
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+      if (weightList.length === 0) return baseData;
+
+      const uniqueWeightDays = new Set(weightList.map(item => item.date)).size;
+      const finalRecordDays = Math.max(uniqueWeightDays, Number(baseData.recordDays || 0));
+      const currentWeight = Number(weightList[0].weight);
+      const targetWeight = Number(backendData.targetWeight || baseData.targetWeight || 0);
+      const remainingDays = calcRemainingDaysByWeight(weightList, targetWeight);
+      const initialWeight = Number(weightList[weightList.length - 1].weight);
+      const totalDistance = Math.abs(initialWeight - targetWeight);
+      const remainingDistance = Math.abs(currentWeight - targetWeight);
+      const progressPercent = totalDistance <= 0.1
+        ? (remainingDistance <= 0.1 ? 100 : 0)
+        : Math.min(100, Math.max(0, ((totalDistance - remainingDistance) / totalDistance) * 100));
+
+      const height = Number(baseData.height || 0);
+      let bmi = Number(baseData.bmi || 0);
+      let bmiStatus = baseData.bmiStatus || 'normal';
+      let avatarEmoji = baseData.avatarEmoji || '📈';
+      let avatarDesc = baseData.avatarDesc || '继续加油';
+
+      if (height > 0 && currentWeight > 0) {
+        bmi = Number(calculateBMI(currentWeight, height).toFixed(1));
+        bmiStatus = getBMIStatus(bmi);
+        avatarEmoji = getAvatarEmoji(bmiStatus);
+        avatarDesc = getAvatarDescription(bmiStatus);
+      }
+
+      return {
+        ...baseData,
+        weightList,
+        currentWeight,
+        targetWeight,
+        recordDays: finalRecordDays,
+        useDays: Math.max(Number(baseData.useDays || 0), finalRecordDays),
+        planDays: Math.max(Number(baseData.planDays || 0), finalRecordDays),
+        remainingDays,
+        progressPercent,
+        bmi: bmi.toFixed(1),
+        bmiStatus,
+        avatarEmoji,
+        avatarDesc
+      };
+    }
+
     // 加载数据
     const loadData = () => {
       try {
         const data = getUserProgressData();
         progressData.value = data;
-        console.log('加载用户进度数据:', data);
+
+        const token = getToken();
+        if (!token) return;
+
+        uni.request({
+          url: BASE_URL + '/api/weight/list',
+          method: 'GET',
+          header: {
+            Authorization: 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          success(res) {
+            if (res.statusCode === 200 && res.data && res.data.code === 200) {
+              progressData.value = applyBackendWeightData(progressData.value, res.data.data || {});
+            }
+          }
+        });
       } catch (error) {
         console.error('加载进度数据失败:', error);
         uni.showToast({
@@ -210,6 +325,10 @@ export default {
 
     // 生命周期
     onMounted(() => {
+      loadData();
+    });
+
+    onShow(() => {
       loadData();
     });
 
@@ -449,6 +568,7 @@ export default {
   align-items: flex-end;
   gap: 12px;
   flex: 1;
+  position: relative;
 }
 
 .trend-item {

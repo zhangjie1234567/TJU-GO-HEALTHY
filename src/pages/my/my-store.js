@@ -5,8 +5,8 @@
 // ==================== 用户基本信息 ====================
 export function getCurrentUser() {
 	try {
-		const userStr = uni.getStorageSync('current_user_profile')
-		return userStr ? JSON.parse(typeof userStr === 'string' ? userStr : JSON.stringify(userStr)) : null
+		const user = uni.getStorageSync('current_user_profile') || uni.getStorageSync('my_user_profile') || uni.getStorageSync('userInfo')
+		return user ? JSON.parse(typeof user === 'string' ? user : JSON.stringify(user)) : null
 	} catch (e) {
 		return null
 	}
@@ -14,7 +14,10 @@ export function getCurrentUser() {
 
 export function updateUserProfile(profile) {
 	try {
-		uni.setStorageSync('my_user_profile', JSON.stringify(profile))
+		const payload = JSON.stringify(profile)
+		uni.setStorageSync('my_user_profile', payload)
+		uni.setStorageSync('current_user_profile', payload)
+		uni.setStorageSync('userInfo', payload)
 		return true
 	} catch (e) {
 		return false

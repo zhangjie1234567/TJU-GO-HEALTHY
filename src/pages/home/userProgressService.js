@@ -204,31 +204,38 @@ export function getRemainingDays() {
     return 30 // 未设置体重或目标，返回默认值
   }
 
-  const weightDiff = currentWeight - targetWeight
+  const diffToTarget = currentWeight - targetWeight
+  const gap = Math.abs(diffToTarget)
 
-  if (weightDiff <= 0) {
+  if (gap <= 0.1) {
     return 0 // 已达成目标
   }
 
-  // 基于体重趋势图计算平均每日减重速度
+  // 基于体重趋势图计算每日朝目标方向变化速度（兼容减重/增重）
   const weightList = getWeightList()
-  let avgDailyLoss = 0.1 // 默认每日减重0.1kg
+  const isWeightLossGoal = diffToTarget > 0
+  let avgDailyTowardTarget = 0.1 // 默认每日朝目标变化0.1kg
 
   if (weightList.length >= 2) {
     // weightList 按时间倒序，最新在前
     const newest = weightList[0]
     const oldest = weightList[weightList.length - 1]
     const daysDiff = getDaysDiff(oldest.date, newest.date)
-    if (daysDiff > 0 && oldest.weight > newest.weight) {
-      avgDailyLoss = (oldest.weight - newest.weight) / daysDiff
+    if (daysDiff > 0) {
+      const trend = isWeightLossGoal
+        ? (Number(oldest.weight) - Number(newest.weight)) / daysDiff
+        : (Number(newest.weight) - Number(oldest.weight)) / daysDiff
+      if (trend > 0) {
+        avgDailyTowardTarget = trend
+      }
     }
   }
 
-  if (avgDailyLoss <= 0) {
-    avgDailyLoss = 0.1
+  if (avgDailyTowardTarget <= 0) {
+    avgDailyTowardTarget = 0.1
   }
 
-  return Math.ceil(weightDiff / avgDailyLoss)
+  return Math.ceil(gap / avgDailyTowardTarget)
 }
 
 // ============ BMI计算 ============
@@ -311,27 +318,76 @@ export function getUserHeight() {
  * @returns {Object} 包含所有进度信息的对象
  */
 export function getUserProgressData() {
-  const useDays = getUseDays()
-  const recordDays = getRecordDays()
-  const planDays = getPlanDays()
+  const rawUseDays = getUseDays()
+  let recordDays = getRecordDays()
+  const rawPlanDays = getPlanDays()
   const remainingDays = getRemainingDays()
   const weightList = getWeightList()
   const currentWeight = getLatestWeight()
   const targetWeight = getTargetWeight()
   const height = getUserHeight()
   
+  // ==================== 新增：优先使用保存的数据 ====================
+  // 如果已保存 recordDays（问卷提交时初始化为1），则使用保存的值
+  try {
+    const savedRecordDays = uni.getStorageSync('recordDays')
+    if (savedRecordDays) {
+      recordDays = Math.max(recordDays, parseInt(savedRecordDays) || 0)
+    }
+  } catch (e) {
+    console.warn('读取保存的 recordDays 失败:', e)
+  }
+  // =================================================================
+
+  // 显示层做兜底：使用天数不应小于已发生记录的天数
+  const useDays = Math.max(rawUseDays, recordDays)
+  // 业务规则：记录了几天，代表至少坚持了几天
+  const planDays = Math.max(rawPlanDays, recordDays)
+  
   let bmi = 0
   let bmiStatus = 'normal'
   let avatarEmoji = '📈'
   let avatarDesc = '继续加油'
   
+  // 优先使用最新体重+身高实时计算 BMI，避免首页沿用问卷时期缓存值
   if (currentWeight && height) {
     bmi = calculateBMI(currentWeight, height)
+  } else {
+    try {
+      const savedBMI = uni.getStorageSync('userBMI')
+      if (savedBMI) {
+        bmi = parseFloat(savedBMI) || 0
+      }
+    } catch (e) {}
+  }
+  
+  if (bmi > 0) {
     bmiStatus = getBMIStatus(bmi)
     avatarEmoji = getAvatarEmoji(bmiStatus)
     avatarDesc = getAvatarDescription(bmiStatus)
   }
+  // ==================================================================
   
+  const progressPercent = (() => {
+    if (!targetWeight || !currentWeight) return 0
+    const latest = Number(currentWeight)
+    const target = Number(targetWeight)
+    const historyStart = Array.isArray(weightList) && weightList.length > 0
+      ? Number(weightList[weightList.length - 1].weight)
+      : latest
+
+    if (Number.isNaN(latest) || Number.isNaN(target) || Number.isNaN(historyStart)) return 0
+
+    const totalDistance = Math.abs(historyStart - target)
+    const remainingDistance = Math.abs(latest - target)
+
+    if (totalDistance <= 0.1) {
+      return remainingDistance <= 0.1 ? 100 : 0
+    }
+
+    return Math.min(100, Math.max(0, ((totalDistance - remainingDistance) / totalDistance) * 100))
+  })()
+
   return {
     // 天数统计
     useDays,
@@ -354,9 +410,7 @@ export function getUserProgressData() {
     avatarDesc,
     
     // 目标进度
-    progressPercent: targetWeight && currentWeight 
-      ? Math.min(100, Math.max(0, 100 - ((currentWeight - targetWeight) / currentWeight * 100)))
-      : 0
+    progressPercent
   }
 }
 

@@ -43,6 +43,7 @@
     reactive,
     onMounted
   } from 'vue'
+  import { BASE_URL } from '@/config.js'
 
   const form = reactive({
     name: '',
@@ -50,6 +51,7 @@
     rememberMe: false
   })
   const showStudentIdError = ref(false)
+  const isSubmitting = ref(false)
 
   // 学号仅允许数字，最多10位
   function onStudentIdInput(e) {
@@ -67,52 +69,76 @@
   }
 
   function onSubmit() {
+    if (isSubmitting.value) return
     const name = (form.name || '').trim()
     const studentId = (form.studentId || '').trim()
     showStudentIdError.value = false
     if (!name) {
-      uni.showToast({
-        title: '请输入真实姓名',
-        icon: 'none'
-      })
+      uni.showToast({ title: '请输入真实姓名', icon: 'none' })
       return
     }
     if (!studentId) {
-      uni.showToast({
-        title: '请输入学号',
-        icon: 'none'
-      })
+      uni.showToast({ title: '请输入学号', icon: 'none' })
       return
     }
     if (!validateStudentId(studentId)) {
       showStudentIdError.value = true
-      uni.showToast({
-        title: '学号格式不正确，请输入10位数字',
-        icon: 'none'
-      })
+      uni.showToast({ title: '学号格式不正确，请输入10位数字', icon: 'none' })
       return
     }
-    if (form.rememberMe) {
-      try {
-        uni.setStorageSync('login_remember_studentId', studentId)
-        uni.setStorageSync('login_remember_name', name)
-      } catch (e) {}
-    } else {
-      try {
-        uni.removeStorageSync('login_remember_studentId')
-        uni.removeStorageSync('login_remember_name')
-      } catch (e) {}
-    }
-    uni.showToast({
-      title: '认证成功',
-      icon: 'success'
+
+    isSubmitting.value = true
+    uni.showLoading({ title: '认证中…' })
+
+    uni.request({
+      url: BASE_URL + '/api/auth/login',
+      method: 'POST',
+      header: { 'Content-Type': 'application/json' },
+      data: { studentId, name, rememberMe: form.rememberMe },
+      success(res) {
+        uni.hideLoading()
+        isSubmitting.value = false
+        console.log('登录响应：', res.data)
+        if (res.data && res.data.code === 200 && res.data.data) {
+          const vo = res.data.data
+          const userProfile = {
+            id: vo.id,
+            studentId: vo.studentId,
+            name: vo.name,
+            nickname: vo.nickname || vo.name,
+            avatar: vo.avatar || ''
+          }
+          // 存储 token，供后续所有需要鉴权的接口使用
+          uni.setStorageSync('token', vo.token)
+          // 存储用户基本信息（兼容历史键名）
+          uni.setStorageSync('userInfo', userProfile)
+          uni.setStorageSync('current_user_profile', userProfile)
+          uni.setStorageSync('my_user_profile', userProfile)
+          // 记住我
+          if (form.rememberMe) {
+            uni.setStorageSync('login_remember_studentId', studentId)
+            uni.setStorageSync('login_remember_name', name)
+          } else {
+            uni.removeStorageSync('login_remember_studentId')
+            uni.removeStorageSync('login_remember_name')
+          }
+          uni.showToast({ title: '认证成功', icon: 'success' })
+          setTimeout(() => {
+            uni.navigateTo({ url: '/pages/questionnaire/questionnaire' })
+          }, 1200)
+        } else {
+          const msg = (res.data && res.data.message) || '认证失败，请检查姓名和学号'
+          uni.showToast({ title: msg, icon: 'none' })
+        }
+      },
+      fail() {
+        uni.hideLoading()
+        isSubmitting.value = false
+        uni.showToast({ title: '网络异常，请检查连接后重试', icon: 'none' })
+      }
     })
-    setTimeout(() => {
-      uni.navigateTo({
-        url: '/pages/questionnaire/questionnaire'
-      })
-    }, 1500)
   }
+
   onMounted(() => {
     try {
       const savedId = uni.getStorageSync('login_remember_studentId')

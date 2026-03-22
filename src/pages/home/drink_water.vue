@@ -6,7 +6,7 @@
           <text>今日已喝</text>
           <text class="dw-num">{{ todayDrank }}</text><text class="dw-unit">ml</text>
         </view>
-        <view class="dw-row" @click="showGoalEdit = true" style="cursor:pointer;">
+        <view class="dw-row" @click="openGoalEdit" style="cursor:pointer;">
           <text>喝水目标</text>
           <text class="dw-num dw-goal">{{ drinkGoal }}</text><text class="dw-unit">ml</text>
           <text style="font-size:12px;color:#90caf9;margin-left:4px;">✏️</text>
@@ -53,11 +53,10 @@
 
 <script setup>
   import {
-    ref,
-    onMounted
+    ref
   } from 'vue'
-
-  const BASE_URL = 'http://120.53.88.78:8080'
+  import { onShow, onHide } from '@dcloudio/uni-app'
+    import { BASE_URL } from '@/config.js'
 
   const todayDrank = ref(0)
   const drinkGoal = ref(1500)
@@ -65,6 +64,34 @@
   const customValue = ref('')
   const showGoalEdit = ref(false)
   const goalEditValue = ref('')
+  let dayWatcherTimer = null
+  let currentDayKey = ''
+
+  function getTodayKey() {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  }
+
+  function startDayWatcher() {
+    stopDayWatcher()
+    currentDayKey = getTodayKey()
+    dayWatcherTimer = setInterval(() => {
+      const nextKey = getTodayKey()
+      if (nextKey !== currentDayKey) {
+        currentDayKey = nextKey
+        // 跨天后立即刷新，确保“今日已喝”从0开始
+        todayDrank.value = 0
+        loadDrink()
+      }
+    }, 60 * 1000)
+  }
+
+  function stopDayWatcher() {
+    if (dayWatcherTimer) {
+      clearInterval(dayWatcherTimer)
+      dayWatcherTimer = null
+    }
+  }
 
   const cups = [{
       icon: '☕',
@@ -100,10 +127,11 @@
   function loadDrink() {
     const token = getToken()
     if (!token) {
+      console.warn('喝水接口未调用后端：token 为空，当前使用本地缓存模式')
       // 未登录时使用本地缓存
       try {
         const d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
-        const today = new Date().toLocaleDateString()
+        const today = getTodayKey()
         todayDrank.value = d[today] || 0
         if (d.goal) drinkGoal.value = d.goal
       } catch {}
@@ -114,16 +142,20 @@
       method: 'GET',
       header: { Authorization: 'Bearer ' + token },
       success(res) {
-        if (res.data && res.data.code === 0 && res.data.data) {
+        console.log('今日喝水响应：', res)
+        if (res.data && res.data.code === 200 && res.data.data) {
           todayDrank.value = res.data.data.todayDrank || 0
           drinkGoal.value = res.data.data.drinkGoal || 1500
+        } else {
+          console.warn('今日喝水接口返回非成功状态：', res.data)
         }
       },
-      fail() {
+      fail(err) {
+        console.error('今日喝水请求失败：', err)
         // 网络失败降级到本地缓存
         try {
           const d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')
-          const today = new Date().toLocaleDateString()
+          const today = getTodayKey()
           todayDrank.value = d[today] || 0
           if (d.goal) drinkGoal.value = d.goal
         } catch {}
@@ -131,11 +163,24 @@
     })
   }
 
-  onMounted(loadDrink)
+  onShow(() => {
+    loadDrink()
+    startDayWatcher()
+  })
+
+  onHide(() => {
+    stopDayWatcher()
+  })
+
+  function openGoalEdit() {
+    goalEditValue.value = String(drinkGoal.value || '')
+    showGoalEdit.value = true
+  }
 
   function addWater(val) {
     const token = getToken()
     if (!token) {
+      console.warn('新增喝水未调用后端：token 为空，当前仅本地记录')
       todayDrank.value += val
       saveLocal()
       return
@@ -146,14 +191,17 @@
       header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       data: { amount: val },
       success(res) {
-        if (res.data && res.data.code === 0) {
-          todayDrank.value += val
+        console.log('新增喝水响应：', res)
+        if (res.data && res.data.code === 200) {
+          // 以服务端汇总结果为准
+          loadDrink()
           saveLocal()
         } else {
-          uni.showToast({ title: '记录失败', icon: 'none' })
+          uni.showToast({ title: (res.data && res.data.message) || '记录失败', icon: 'none' })
         }
       },
-      fail() {
+      fail(err) {
+        console.error('新增喝水请求失败：', err)
         uni.showToast({ title: '网络错误', icon: 'none' })
       }
     })
@@ -181,6 +229,7 @@
     }
     const token = getToken()
     if (!token) {
+      console.warn('修改喝水目标未调用后端：token 为空，当前仅本地记录')
       drinkGoal.value = v
       saveLocal()
       showGoalEdit.value = false
@@ -193,15 +242,18 @@
       header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       data: { goal: v },
       success(res) {
-        if (res.data && res.data.code === 0) {
-          drinkGoal.value = v
+        console.log('修改喝水目标响应：', res)
+        if (res.data && res.data.code === 200) {
+          // 以服务端保存结果为准
+          loadDrink()
           saveLocal()
           uni.showToast({ title: '目标已更新', icon: 'success' })
         } else {
-          uni.showToast({ title: '更新失败', icon: 'none' })
+          uni.showToast({ title: (res.data && res.data.message) || '更新失败', icon: 'none' })
         }
       },
-      fail() {
+      fail(err) {
+        console.error('修改喝水目标请求失败：', err)
         uni.showToast({ title: '网络错误', icon: 'none' })
       }
     })
@@ -210,7 +262,7 @@
   }
 
   function saveLocal() {
-    const today = new Date().toLocaleDateString()
+    const today = getTodayKey()
     let d = {}
     try {
       d = JSON.parse(uni.getStorageSync('drinkWater') || '{}')

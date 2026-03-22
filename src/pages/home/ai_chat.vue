@@ -120,38 +120,18 @@ import { onLoad } from '@dcloudio/uni-app'
 
 // ── 常量 ──────────────────────────────────────────
 const quickQuestions = [
+  '根据我的问卷信息帮我生成详细完整的每周饮食方案和运动计划',
   '帮我制定一周减脂饮食计划',
   '适合我的有氧运动有哪些？',
   '怎样改善睡眠质量？',
   '如何科学补充蛋白质？'
 ]
 
-// ── Storage key 常量 ──────────────────────────────────────────
-const KEY_SESSIONS = 'ai_sessions'
-const KEY_HISTORY_PREFIX = 'ai_history_'
+// ── 后端 API 配置 ──────────────────────────────────────────
+  import { BASE_URL } from '@/config.js'
 
-// ── Mock 初始数据（首次运行时写入 storage） ──────────────────────────────────────────
-const MOCK_SESSIONS = [
-  { sessionId: 'session-1', title: '帮我制定一周减脂饮食计划', lastTime: '03-06 14:30' },
-  { sessionId: 'session-2', title: '适合我的运动有哪些？', lastTime: '03-05 10:15' }
-]
-const MOCK_HISTORY = {
-  'session-1': [
-    { role: 'user', content: '帮我制定一周减脂饮食计划', thinking: '' },
-    {
-      role: 'assistant',
-      content: '根据您的健康档案，为您制定如下一周减脂饮食计划：\n\n周一至周日统一原则\n- 早餐：燕麦粥+水煮蛋+苹果\n- 午餐：糙米饭（100g）+清蒸鱼/鸡胸肉（150g）+蔬菜沙拉\n- 晚餐：全麦面包+蔬菜汤+少量坚果\n- 加餐：酸奶或水果\n\n注意事项\n- 每日饮水2000ml以上\n- 避免油炸和高糖食物\n- 晚餐控制在19:00前完成',
-      thinking: '首先分析用户的健康目标是减脂，需要制定低热量、高蛋白、营养均衡的饮食方案...'
-    }
-  ],
-  'session-2': [
-    { role: 'user', content: '适合我的运动有哪些？', thinking: '' },
-    {
-      role: 'assistant',
-      content: '根据您的运动频率和健康目标，推荐以下运动：\n\n有氧运动（每周3-4次）\n- 快走/慢跑：30-40分钟\n- 游泳：30分钟\n- 骑行：40-50分钟\n\n力量训练（每周2-3次）\n- 深蹲、平板支撑、俯卧撑\n- 每个动作3组，每组12-15次\n\n注意事项\n- 运动前充分热身5-10分钟\n- 运动后拉伸放松\n- 循序渐进，避免过度训练',
-      thinking: '考虑用户的运动频率，建议有氧和力量训练结合...'
-    }
-  ]
+function getToken() {
+  return uni.getStorageSync('token') || ''
 }
 
 // ── 状态 ──────────────────────────────────────────
@@ -172,51 +152,19 @@ function nextLocalId() {
   return 'local-' + (++_localIdCounter)
 }
 
-// ── Storage 工具 ──────────────────────────────────────────
-function getSessions() {
-  try {
-    const data = uni.getStorageSync(KEY_SESSIONS)
-    return Array.isArray(data) ? data : null
-  } catch (_) { return null }
-}
-
-function saveSessions(list) {
-  try { uni.setStorageSync(KEY_SESSIONS, list) } catch (_) {}
-}
-
-function getHistory(sessionId) {
-  try {
-    return uni.getStorageSync(KEY_HISTORY_PREFIX + sessionId) || []
-  } catch (_) { return [] }
-}
-
-function saveHistory(sessionId, msgs) {
-  try {
-    uni.setStorageSync(KEY_HISTORY_PREFIX + sessionId, msgs)
-  } catch (_) {}
-}
-
 // ── 初始化 ──────────────────────────────────────────
 onMounted(() => {
   try {
     const info = uni.getStorageSync('userInfo')
     if (info && info.avatar) userAvatar.value = info.avatar
   } catch (_) {}
-
-  // 首次运行时写入 mock 初始数据
-  if (!getSessions()) {
-    saveSessions(MOCK_SESSIONS)
-    Object.keys(MOCK_HISTORY).forEach(sid => {
-      saveHistory(sid, MOCK_HISTORY[sid])
-    })
-  }
 })
 
-// 接收路由参数（从 ai_history 页面跳转时携带 sessionId）
+// 接收路由参数（从历史页面跳转时携带 sessionId 和 title）
 onLoad((options) => {
   if (options && options.sessionId) {
     isFromHistory.value = true
-    loadSession(options.sessionId)
+    loadSession(options.sessionId, decodeURIComponent(options.title || ''))
   }
 })
 
@@ -234,21 +182,32 @@ function toggleThinking(idx) {
 }
 
 // ── 会话管理 ──────────────────────────────────────────
-function loadSession(sessionId) {
-  const sessionList = getSessions() || []
-  const session = sessionList.find(s => s.sessionId === sessionId)
+function loadSession(sessionId, title) {
   currentSessionId.value = sessionId
-  currentSessionTitle.value = session ? (session.title || '历史对话') : '历史对话'
-  uni.setNavigationBarTitle({ title: currentSessionTitle.value })
-  const history = getHistory(sessionId)
-  messages.value = history.map(m => ({
-    _localId: nextLocalId(),
-    role: m.role,
-    content: m.content,
-    thinking: m.thinking || '',
-    _showThinking: false
-  }))
-  scrollToBottom()
+  const displayTitle = title || '历史对话'
+  currentSessionTitle.value = displayTitle
+  uni.setNavigationBarTitle({ title: displayTitle })
+
+  const token = getToken()
+  if (!token) return
+
+  uni.request({
+    url: BASE_URL + '/api/ai/sessions/' + encodeURIComponent(sessionId) + '/history',
+    method: 'GET',
+    header: { Authorization: 'Bearer ' + token },
+    success(res) {
+      if (res.data && res.data.code === 200 && Array.isArray(res.data.data)) {
+        messages.value = res.data.data.map(m => ({
+          _localId: nextLocalId(),
+          role: m.role,
+          content: m.content || '',
+          thinking: m.thinking || '',
+          _showThinking: false
+        }))
+        scrollToBottom()
+      }
+    }
+  })
 }
 
 function goToHistory() {
@@ -271,69 +230,88 @@ function sendQuickQuestion(q) {
 
 function sendMessage() {
   const text = inputText.value.trim()
-  if (!text) return
-  if (isLoading.value) return
+  if (!text || isLoading.value) return
+
+  const token = getToken()
+  if (!token) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
 
   messages.value.push({ _localId: nextLocalId(), role: 'user', content: text })
   inputText.value = ''
   scrollToBottom()
 
-  const loadingMsg = { _localId: nextLocalId(), role: 'assistant', content: '', loading: true, thinking: '', _showThinking: false }
+  const loadingMsg = {
+    _localId: nextLocalId(),
+    role: 'assistant',
+    content: '',
+    loading: true,
+    thinking: '',
+    _showThinking: false
+  }
   messages.value.push(loadingMsg)
   const loadingIdx = messages.value.length - 1
   scrollToBottom()
 
   isLoading.value = true
 
-  setTimeout(() => {
-    isLoading.value = false
-
-    const isNewSession = !currentSessionId.value
-    const sessionId = isNewSession ? 'session-' + Date.now() : currentSessionId.value
-
-    const mockContent = '这是一条模拟的 AI 回复。当前前端处于演示模式，尚未连接真实的 AI API。\n\n您的问题是："' + text + '"\n\n实际使用时，这里会显示来自 DeepSeek AI 的真实回复内容。'
-    const mockThinking = '这是模拟的思考过程...'
-
-    messages.value[loadingIdx] = {
-      _localId: loadingMsg._localId,
-      role: 'assistant',
-      content: mockContent,
-      thinking: mockThinking,
-      _showThinking: false,
-      loading: false
-    }
-
-    // 保存消息到 storage
-    const storedMsgs = messages.value
-      .filter(m => !m.loading)
-      .map(m => ({ role: m.role, content: m.content, thinking: m.thinking || '' }))
-    saveHistory(sessionId, storedMsgs)
-
-    const now = new Date()
-    const timeStr = (now.getMonth() + 1).toString().padStart(2, '0') + '-' +
-                    now.getDate().toString().padStart(2, '0') + ' ' +
-                    now.getHours().toString().padStart(2, '0') + ':' +
-                    now.getMinutes().toString().padStart(2, '0')
-
-    if (isNewSession) {
-      currentSessionId.value = sessionId
-      currentSessionTitle.value = text.length > 15 ? text.slice(0, 15) + '…' : text
-      uni.setNavigationBarTitle({ title: currentSessionTitle.value })
-      const sessionList = getSessions() || []
-      sessionList.unshift({ sessionId, title: currentSessionTitle.value, lastTime: timeStr })
-      saveSessions(sessionList)
-    } else {
-      const sessionList = getSessions() || []
-      const idx = sessionList.findIndex(s => s.sessionId === sessionId)
-      if (idx !== -1) {
-        sessionList[idx].lastTime = timeStr
-        sessionList.unshift(sessionList.splice(idx, 1)[0])
-        saveSessions(sessionList)
+  uni.request({
+    url: BASE_URL + '/api/ai/chat',
+    method: 'POST',
+    header: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    data: {
+      sessionId: currentSessionId.value || '',
+      message: text
+    },
+    timeout: 120000,
+    success(res) {
+      isLoading.value = false
+      if (res.data && res.data.code === 200 && res.data.data) {
+        const data = res.data.data
+        if (!currentSessionId.value) {
+          currentSessionId.value = data.sessionId
+          const title = text.length > 15 ? text.slice(0, 15) + '…' : text
+          currentSessionTitle.value = title
+          uni.setNavigationBarTitle({ title })
+        }
+        messages.value[loadingIdx] = {
+          _localId: loadingMsg._localId,
+          role: 'assistant',
+          content: data.content || '',
+          thinking: data.thinking || '',
+          _showThinking: false,
+          loading: false
+        }
+      } else {
+        messages.value[loadingIdx] = {
+          _localId: loadingMsg._localId,
+          role: 'assistant',
+          content: (res.data && res.data.msg) || '回复失败，请稍后重试',
+          thinking: '',
+          _showThinking: false,
+          loading: false
+        }
       }
+      scrollToBottom()
+    },
+    fail(err) {
+      isLoading.value = false
+      const isTimeout = err && (err.errMsg || '').includes('timeout')
+      messages.value[loadingIdx] = {
+        _localId: loadingMsg._localId,
+        role: 'assistant',
+        content: isTimeout ? 'AI响应超时，请稍后再试' : '网络异常，请检查网络后重试',
+        thinking: '',
+        _showThinking: false,
+        loading: false
+      }
+      scrollToBottom()
     }
-
-    scrollToBottom()
-  }, 1500)
+  })
 }
 </script>
 <style scoped>
