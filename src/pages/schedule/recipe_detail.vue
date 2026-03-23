@@ -110,10 +110,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { apiRequest } from '../../utils/request'
 
 const favorites = ref([])
+const loading = ref(false)
+let recipeId = null
 
-const recipe = ref({
+const defaultRecipe = {
   id: 1,
   name: '西葫芦炒牛肉',
   desc: '这是一道低脂高蛋白的经典菜肴，食材简单，烹饪快速，营养丰富。西葫芦低卡且富含纤维，牛肉提供优质蛋白质，是健身和减脂人士的理想选择。',
@@ -160,7 +164,68 @@ const recipe = ref({
     { original: '生抽', alternative: '酱油、豉油' },
     { original: '蚝油', alternative: '酱油、XO酱' }
   ]
-})
+}
+
+const recipe = ref({ ...defaultRecipe })
+
+const normalizeDifficulty = (difficulty) => {
+  const map = {
+    easy: 'easy',
+    medium: 'medium',
+    hard: 'hard',
+    简单: 'easy',
+    中等: 'medium',
+    困难: 'hard'
+  }
+  return map[difficulty] || 'easy'
+}
+
+const parseNumber = (value, fallback = 0) => {
+  const text = String(value || '')
+  const match = text.match(/\d+/)
+  return match ? Number(match[0]) : fallback
+}
+
+const normalizeRecipeDetail = (payload = {}) => {
+  return {
+    id: payload.id || defaultRecipe.id,
+    name: payload.name || defaultRecipe.name,
+    desc: payload.desc || defaultRecipe.desc,
+    difficulty: normalizeDifficulty(payload.difficulty),
+    time: Number(payload.time) || parseNumber(payload.duration, defaultRecipe.time),
+    cal: Number(payload.cal) || parseNumber(payload.cal, defaultRecipe.cal),
+    badge: payload.badge || '',
+    image: payload.image || defaultRecipe.image,
+    ingredients: Array.isArray(payload.ingredients) ? payload.ingredients : defaultRecipe.ingredients,
+    steps: Array.isArray(payload.steps) ? payload.steps : defaultRecipe.steps,
+    nutrition: Array.isArray(payload.nutrition) ? payload.nutrition : defaultRecipe.nutrition,
+    tips: Array.isArray(payload.tips) ? payload.tips : defaultRecipe.tips,
+    substitutes: Array.isArray(payload.substitutes) ? payload.substitutes : defaultRecipe.substitutes
+  }
+}
+
+const loadRecipeDetail = async () => {
+  if (!recipeId) {
+    recipe.value = { ...defaultRecipe }
+    return
+  }
+
+  loading.value = true
+  try {
+    const data = await apiRequest({
+      url: `/api/recipes/${recipeId}`,
+      method: 'GET'
+    })
+    const root = data?.recipe || data
+    recipe.value = normalizeRecipeDetail(root)
+  } catch (error) {
+    console.error('食谱详情加载异常:', error)
+    recipe.value = { ...defaultRecipe }
+    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
+  } finally {
+    loading.value = false
+  }
+}
 
 // 加载收藏
 onMounted(() => {
@@ -172,6 +237,11 @@ onMounted(() => {
   } catch (e) {
     console.error('加载收藏失败', e)
   }
+})
+
+onLoad((options) => {
+  recipeId = options?.id ? Number(options.id) : null
+  loadRecipeDetail()
 })
 
 // 切换收藏

@@ -88,7 +88,7 @@
 				<view class="habit-item">
 					<text class="habit-icon">⏳</text>
 					<view class="habit-info">
-						<text class="habit-name">断食接受度</text>
+						<text class="habit-name">专注计划接受度</text>
 						<text class="habit-value">{{ assessmentReport.fastingAcceptance }}</text>
 					</view>
 				</view>

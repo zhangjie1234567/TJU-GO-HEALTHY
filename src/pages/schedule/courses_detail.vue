@@ -103,10 +103,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { apiRequest } from '../../utils/request'
 
 const favorites = ref([])
+const loading = ref(false)
+let courseId = null
 
-const course = ref({
+const defaultCourse = {
   id: 1,
   title: '7天瑜伽入门课',
   desc: '零基础瑜伽课程，适合初学者。通过系统的教学，让你快速掌握瑜伽基础动作，改善身体柔韧性和平衡能力。',
@@ -144,7 +148,65 @@ const course = ref({
     { title: '坐姿和前向弯曲', lessons: 2 },
     { title: '冥想和放松', lessons: 1 }
   ]
-})
+}
+
+const course = ref({ ...defaultCourse })
+
+const normalizeLevel = (level) => {
+  const map = {
+    beginner: 'beginner',
+    intermediate: 'intermediate',
+    advanced: 'advanced',
+    入门级: 'beginner',
+    进阶级: 'intermediate',
+    高级: 'advanced'
+  }
+  return map[level] || 'beginner'
+}
+
+const normalizeCourseDetail = (payload = {}) => {
+  return {
+    id: payload.id || defaultCourse.id,
+    title: payload.title || payload.name || defaultCourse.title,
+    desc: payload.desc || defaultCourse.desc,
+    level: normalizeLevel(payload.level),
+    duration: payload.duration || defaultCourse.duration,
+    instructor: payload.instructor || defaultCourse.instructor,
+    rating: payload.rating || defaultCourse.rating,
+    students: payload.students || defaultCourse.students,
+    badge: payload.badge || '',
+    price: payload.price || defaultCourse.price,
+    image: payload.image || defaultCourse.image,
+    introduction: payload.introduction || defaultCourse.introduction,
+    learningContent: Array.isArray(payload.learningContent) ? payload.learningContent : defaultCourse.learningContent,
+    targetAudience: Array.isArray(payload.targetAudience) ? payload.targetAudience : defaultCourse.targetAudience,
+    features: Array.isArray(payload.features) ? payload.features : defaultCourse.features,
+    outline: Array.isArray(payload.outline) ? payload.outline : defaultCourse.outline
+  }
+}
+
+const loadCourseDetail = async () => {
+  if (!courseId) {
+    course.value = { ...defaultCourse }
+    return
+  }
+
+  loading.value = true
+  try {
+    const data = await apiRequest({
+      url: `/api/courses/${courseId}`,
+      method: 'GET'
+    })
+    const root = data?.course || data
+    course.value = normalizeCourseDetail(root)
+  } catch (error) {
+    console.error('课程详情加载异常:', error)
+    course.value = { ...defaultCourse }
+    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
+  } finally {
+    loading.value = false
+  }
+}
 
 // 难度标签映射
 const getLevelLabel = (level) => {
@@ -166,6 +228,11 @@ onMounted(() => {
   } catch (e) {
     console.error('加载收藏失败', e)
   }
+})
+
+onLoad((options) => {
+  courseId = options?.id ? Number(options.id) : null
+  loadCourseDetail()
 })
 
 // 切换收藏

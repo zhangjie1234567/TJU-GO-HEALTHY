@@ -386,10 +386,10 @@ const calculateAchievements = () => {
 		achievements.push({ emoji: '💪', name: '运动达人' })
 	}
 	
-	// 检查是否有断食数据
-	const hasFasting = dailyData.value.some(d => d.metrics && d.metrics.fasting > 0)
-	if (hasFasting) {
-		achievements.push({ emoji: '⏳', name: '断食小能手' })
+	// 检查是否有专注数据
+	const hasFocus = dailyData.value.some(d => d.metrics && ((d.metrics.focus || 0) > 0 || (d.metrics.fasting || 0) > 0))
+	if (hasFocus) {
+		achievements.push({ emoji: '⏱️', name: '专注小能手' })
 	}
 	
 	// 检查是否有体重数据
@@ -409,7 +409,7 @@ const calculateAchievements = () => {
 	}
 	
 	// 检查是否有补水数据
-	const hasWater = dailyData.value.some(d => d.metrics && d.metrics.waterIntake > 0)
+	const hasWater = dailyData.value.some(d => d.metrics && ((d.metrics.waterIntake || 0) > 0 || (d.metrics.water || 0) > 0))
 	if (hasWater) {
 		achievements.push({ emoji: '💧', name: '补水小卫士' })
 	}
@@ -420,14 +420,14 @@ const calculateAchievements = () => {
 const generateGoals = () => {
 	// 基于真实数据计算目标进度
 	const distanceData = dailyData.value.filter(d => d.metrics && d.metrics.distance > 0)
-	const fastingData = dailyData.value.filter(d => d.metrics && d.metrics.fasting > 0)
+	const focusData = dailyData.value.filter(d => d.metrics && ((d.metrics.focus || 0) > 0 || (d.metrics.fasting || 0) > 0))
 	const weightData = dailyData.value.filter(d => d.metrics && d.metrics.weight > 0)
 	
 	// 计算运动目标进度（基于记录的天数）
 	const exerciseProgress = Math.min(100, Math.floor((distanceData.length / 30) * 100))
 	
-	// 计算断食目标进度
-	const fastingProgress = Math.min(100, Math.floor((fastingData.length / 30) * 100))
+	// 计算专注目标进度
+	const focusProgress = Math.min(100, Math.floor((focusData.length / 30) * 100))
 	
 	// 计算体重管理进度
 	const weightProgress = weightData.length > 0 ? Math.min(100, Math.floor((weightData.length / 30) * 100)) : 0
@@ -439,9 +439,9 @@ const generateGoals = () => {
 			progress: exerciseProgress
 		},
 		{
-			name: '科学断食',
-			desc: '维持16:8断食周期',
-			progress: fastingProgress
+			name: '专注计划',
+			desc: '保持专注与休息节奏',
+			progress: focusProgress
 		},
 		{
 			name: '体重管理',

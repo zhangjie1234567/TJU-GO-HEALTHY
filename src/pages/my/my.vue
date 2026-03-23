@@ -94,18 +94,13 @@ const currentUser = ref({
 })
 const currentPlan = ref(null)
 const collections = ref({
-	restaurants: [],
-	recipes: [],
-	drinks: [],
-	courses: [],
-	knowledge: [],
 	posts: []
 })
 const dailyData = ref([])
 
 const totalCollections = computed(() => {
 	if (!collections.value) return 0
-	return Object.values(collections.value).reduce((sum, arr) => sum + arr.length, 0)
+	return (collections.value.posts || []).length
 })
 
 const totalDataPoints = computed(() => dailyData.value.length)

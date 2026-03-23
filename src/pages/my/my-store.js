@@ -5,8 +5,8 @@
 // ==================== 用户基本信息 ====================
 export function getCurrentUser() {
 	try {
-		const user = uni.getStorageSync('current_user_profile') || uni.getStorageSync('my_user_profile') || uni.getStorageSync('userInfo')
-		return user ? JSON.parse(typeof user === 'string' ? user : JSON.stringify(user)) : null
+		const userStr = uni.getStorageSync('current_user_profile') || uni.getStorageSync('my_user_profile')
+		return userStr ? JSON.parse(typeof userStr === 'string' ? userStr : JSON.stringify(userStr)) : null
 	} catch (e) {
 		return null
 	}
@@ -14,10 +14,8 @@ export function getCurrentUser() {
 
 export function updateUserProfile(profile) {
 	try {
-		const payload = JSON.stringify(profile)
-		uni.setStorageSync('my_user_profile', payload)
-		uni.setStorageSync('current_user_profile', payload)
-		uni.setStorageSync('userInfo', payload)
+		uni.setStorageSync('current_user_profile', JSON.stringify(profile))
+		uni.setStorageSync('my_user_profile', JSON.stringify(profile))
 		return true
 	} catch (e) {
 		return false
@@ -220,7 +218,7 @@ export function getHelpContent() {
 			id: 1,
 			title: '日程表使用指南',
 			icon: '📅',
-			desc: '学习如何规划每日课程和饮食计划'
+			desc: '学习每日打卡、跑步计时和专注计划'
 		},
 		{
 			id: 2,
@@ -238,7 +236,7 @@ export function getHelpContent() {
 			id: 4,
 			title: '排行榜说明',
 			icon: '🏅',
-			desc: '了解排行榜的计算规则'
+			desc: '了解社区榜单与互动热度规则'
 		},
 		{
 			id: 5,

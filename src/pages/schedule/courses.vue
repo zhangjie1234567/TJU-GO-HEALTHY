@@ -83,6 +83,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { apiRequest } from '../../utils/request'
 
 const searchText = ref('')
 const filterType = ref('all')
@@ -91,85 +92,115 @@ const loading = ref(false)
 
 const courses = ref([])
 
+const mockCourses = [
+  {
+    id: 1,
+    title: '7天瑜伽入门',
+    platform: '瑜伽平台',
+    instructor: '瑜伽教练',
+    duration: '7天',
+    difficulty: '简单',
+    level: 'beginner',
+    badge: '热门',
+    price: '199元',
+    rating: '4.8',
+    students: '2.3万',
+    desc: '零基础瑜伽课程，适合初学者',
+    image: 'https://via.placeholder.com/200x150/9370DB/FFFFFF?text=瑜伽'
+  },
+  {
+    id: 2,
+    title: '30分钟HIIT训练',
+    platform: '健身平台',
+    instructor: '健身教练',
+    duration: '30分钟',
+    difficulty: '中等',
+    level: 'advanced',
+    badge: '高效',
+    price: '99元',
+    rating: '4.9',
+    students: '5.2万',
+    desc: '高效燃脂训练计划',
+    image: 'https://via.placeholder.com/200x150/FF4500/FFFFFF?text=HIIT'
+  },
+  {
+    id: 3,
+    title: '居家腹肌养成',
+    platform: '健身平台',
+    instructor: '力量教练',
+    duration: '15天',
+    difficulty: '简单',
+    level: 'beginner',
+    badge: '新课',
+    price: '免费',
+    rating: '4.7',
+    students: '3.1万',
+    desc: '在家也能练腹肌',
+    image: 'https://via.placeholder.com/200x150/20B2AA/FFFFFF?text=腹肌'
+  },
+  {
+    id: 4,
+    title: '瘦腿5分钟破圈',
+    platform: '塑形平台',
+    instructor: '塑形师',
+    duration: '5分钟',
+    difficulty: '简单',
+    level: 'beginner',
+    badge: '推荐',
+    price: '59元',
+    rating: '4.6',
+    students: '4.8万',
+    desc: '快速瘦腿方法',
+    image: 'https://via.placeholder.com/200x150/FF69B4/FFFFFF?text=瘦腿'
+  }
+]
+
+const normalizeLevel = (level) => {
+  const map = {
+    beginner: 'beginner',
+    advanced: 'advanced',
+    intermediate: 'advanced',
+    入门级: 'beginner',
+    进阶级: 'advanced'
+  }
+  return map[level] || 'beginner'
+}
+
+const normalizeCourse = (item = {}) => ({
+  id: item.id,
+  title: item.title || item.name || '未命名课程',
+  platform: item.platform || '未知平台',
+  instructor: item.instructor || '未知讲师',
+  duration: item.duration || '未标注',
+  difficulty: item.difficulty || '简单',
+  level: normalizeLevel(item.level),
+  badge: item.badge || '',
+  price: item.price || '未知',
+  rating: item.rating || '-',
+  students: item.students || '-',
+  desc: item.desc || '暂无描述',
+  image: item.image || 'https://via.placeholder.com/200x150/4FA1F2/FFFFFF?text=课程'
+})
+
 // 从后端获取课程列表
 const loadCourses = async () => {
   loading.value = true
   try {
-    // 使用本地mock数据（不需要后端）
-    const mockData = [
-      {
-        id: 1,
-        title: '7天瑜伽入门',
-        name: '7天瑜伽入门',
-        platform: '瑜伽平台',
-        instructor: '瑜伽教练',
-        category: '瑜伽',
-        duration: '7天',
-        difficulty: '简单',
-        level: 'beginner',
-        badge: '热门',
-        price: '199元',
-        rating: '4.8',
-        students: '2.3万',
-        desc: '零基础瑜伽课程，适合初学者',
-        image: 'https://via.placeholder.com/200x150/9370DB/FFFFFF?text=瑜伽'
-      },
-      {
-        id: 2,
-        title: '30分钟HIIT训练',
-        name: '30分钟HIIT训练',
-        platform: '健身平台',
-        instructor: '健身教练',
-        category: '有氧',
-        duration: '30分钟',
-        difficulty: '中等',
-        level: 'advanced',
-        badge: '高效',
-        price: '99元',
-        rating: '4.9',
-        students: '5.2万',
-        desc: '高效燃脂训练计划',
-        image: 'https://via.placeholder.com/200x150/FF4500/FFFFFF?text=HIIT'
-      },
-      {
-        id: 3,
-        title: '居家腹肌养成',
-        name: '居家腹肌养成',
-        platform: '健身平台',
-        instructor: '力量教练',
-        category: '力量',
-        duration: '15天',
-        difficulty: '简单',
-        level: 'beginner',
-        badge: '新课',
-        price: '免费',
-        rating: '4.7',
-        students: '3.1万',
-        desc: '在家也能练腹肌',
-        image: 'https://via.placeholder.com/200x150/20B2AA/FFFFFF?text=腹肌'
-      },
-      {
-        id: 4,
-        title: '瘦腿5分钟破圈',
-        name: '瘦腿5分钟破圈',
-        platform: '塑形平台',
-        instructor: '塑形师',
-        category: '塑形',
-        duration: '5分钟',
-        difficulty: '简单',
-        level: 'beginner',
-        badge: '推荐',
-        price: '59元',
-        rating: '4.6',
-        students: '4.8万',
-        desc: '快速瘦腿方法',
-        image: 'https://via.placeholder.com/200x150/FF69B4/FFFFFF?text=瘦腿'
+    const data = await apiRequest({
+      url: '/api/courses',
+      method: 'GET',
+      data: {
+        page: 1,
+        limit: 50
       }
-    ]
-    
-    courses.value = mockData
+    })
+
+    const list = Array.isArray(data) ? data : []
+    courses.value = list.map(normalizeCourse)
   } catch (error) {
     console.error('课程加载异常:', error)
+    courses.value = mockCourses.map(normalizeCourse)
+    uni.showToast({ title: '接口未就绪，已显示示例数据', icon: 'none', duration: 2000 })
   } finally {
     loading.value = false
   }
@@ -180,10 +211,11 @@ const filteredCourses = computed(() => {
   
   // 搜索过滤
   if (searchText.value) {
+    const keyword = searchText.value.toLowerCase()
     result = result.filter(item =>
-      item.title.includes(searchText.value) ||
-      item.platform.includes(searchText.value) ||
-      item.instructor.includes(searchText.value)
+      String(item.title || '').toLowerCase().includes(keyword) ||
+      String(item.platform || '').toLowerCase().includes(keyword) ||
+      String(item.instructor || '').toLowerCase().includes(keyword)
     )
   }
   
@@ -237,8 +269,9 @@ const isFavorited = (id) => {
 }
 
 const goToDetail = (item) => {
+  const safeTitle = encodeURIComponent(item.title || '')
   uni.navigateTo({
-    url: `/pages/schedule/courses_detail?id=${item.id}&title=${item.title}`,
+    url: `/pages/schedule/courses_detail?id=${item.id}&title=${safeTitle}`,
     success: () => {
       uni.$emit('course-data', item)
     },
