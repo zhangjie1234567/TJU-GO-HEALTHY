@@ -15,8 +15,8 @@
             </view>
             <view class="form-group">
               <text class="form-label">学号</text>
-              <input v-model="form.studentId" class="form-input" type="number" placeholder="请输入10位学号"
-                placeholder-class="input-placeholder" maxlength="10" @input="onStudentIdInput" />
+              <input v-model="form.studentId" class="form-input" type="text" placeholder="请输入学号（3-20位字母或数字）"
+                placeholder-class="input-placeholder" maxlength="20" @input="onStudentIdInput" />
               <text v-if="showStudentIdError" class="form-error">学号格式不正确</text>
             </view>
             <view class="remember-row">
@@ -43,6 +43,7 @@
     reactive,
     onMounted
   } from 'vue'
+  import { login as loginApi, register as registerApi } from '../my/my-store'
 
   const form = reactive({
     name: '',
@@ -51,11 +52,11 @@
   })
   const showStudentIdError = ref(false)
 
-  // 学号仅允许数字，最多10位
+  // 学号输入预处理：去掉空白，限制长度
   function onStudentIdInput(e) {
-    const val = (e.detail?.value ?? '').replace(/\D/g, '').slice(0, 10)
+    const val = String(e.detail?.value ?? '').trim().slice(0, 20)
     form.studentId = val
-    showStudentIdError.value = val.length > 0 && val.length !== 10
+    showStudentIdError.value = val.length > 0 && !validateStudentId(val)
   }
 
   function onRememberChange(e) {
@@ -63,10 +64,10 @@
   }
 
   function validateStudentId(id) {
-    return /^\d{10}$/.test((id || '').trim())
+    return /^[A-Za-z0-9]{3,20}$/.test((id || '').trim())
   }
 
-  function onSubmit() {
+  async function onSubmit() {
     const name = (form.name || '').trim()
     const studentId = (form.studentId || '').trim()
     showStudentIdError.value = false
@@ -87,7 +88,7 @@
     if (!validateStudentId(studentId)) {
       showStudentIdError.value = true
       uni.showToast({
-        title: '学号格式不正确，请输入10位数字',
+        title: '学号格式不正确，请输入3-20位字母或数字',
         icon: 'none'
       })
       return
@@ -105,15 +106,21 @@
     }
 
     try {
-      const profile = {
-        name,
-        studentId,
-        avatar: '😊',
-        loginAt: new Date().toISOString()
+      const loginResult = await loginApi(studentId, name)
+      if (!loginResult?.token) throw new Error('登录失败，请稍后重试')
+    } catch (e) {
+      try {
+        await registerApi({ studentId, name, avatar: '😊' })
+        const loginResult = await loginApi(studentId, name)
+        if (!loginResult?.token) throw new Error('登录失败，请稍后重试')
+      } catch (registerOrLoginError) {
+        uni.showToast({
+          title: registerOrLoginError?.message || e?.message || '登录失败',
+          icon: 'none'
+        })
+        return
       }
-      uni.setStorageSync('current_user_profile', JSON.stringify(profile))
-      uni.setStorageSync('my_user_profile', JSON.stringify(profile))
-    } catch (e) {}
+    }
 
     uni.showToast({
       title: '认证成功',
@@ -129,7 +136,7 @@
     try {
       const savedId = uni.getStorageSync('login_remember_studentId')
       const savedName = uni.getStorageSync('login_remember_name')
-      if (savedId) form.studentId = String(savedId).slice(0, 10)
+      if (savedId) form.studentId = String(savedId).slice(0, 20)
       if (savedName) form.name = savedName
       if (savedId || savedName) form.rememberMe = true
     } catch (e) {}

@@ -185,7 +185,12 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
-import { getCurrentUser, updateUserProfile } from './my-store'
+import {
+	getCurrentUser,
+	updateUserProfile,
+	changeUserPassword,
+	clearUserSession
+} from './my-store'
 
 const form = ref({
 	name: '',
@@ -211,14 +216,18 @@ const passwordForm = ref({
 	confirm: ''
 })
 
-const loadData = () => {
-	const user = getCurrentUser()
+const loadData = async () => {
+	const user = await getCurrentUser()
 	if (user) {
 		form.value = {
 			...form.value,
 			name: user.name,
 			studentId: user.studentId,
-			avatar: user.avatar || '😊'
+			avatar: user.avatar || '😊',
+			height: Number(user.height) || 170,
+			weight: Number(user.weight) || 70,
+			targetWeight: Number(user.targetWeight) || 60,
+			age: Number(user.age) || 20
 		}
 	}
 }
@@ -229,14 +238,15 @@ const editField = (field) => {
 	showEditModal.value = true
 }
 
-const saveEdit = () => {
+const saveEdit = async () => {
 	if (editValue.value) {
 		if (editingField.value === 'name') {
 			form.value.name = editValue.value
 		} else {
 			form.value[editingField.value] = Number(editValue.value)
 		}
-		updateUserProfile(form.value)
+		const ok = await updateUserProfile(form.value)
+		if (!ok) return
 		showEditModal.value = false
 		uni.showToast({
 			title: '保存成功',
@@ -249,8 +259,9 @@ const selectAvatar = () => {
 	showAvatarPicker.value = true
 }
 
-const saveAvatarAndClose = () => {
-	updateUserProfile(form.value)
+const saveAvatarAndClose = async () => {
+	const ok = await updateUserProfile(form.value)
+	if (!ok) return
 	showAvatarPicker.value = false
 	uni.showToast({
 		title: '头像已更新',
@@ -263,7 +274,7 @@ const editPassword = () => {
 	showPasswordModal.value = true
 }
 
-const savePassword = () => {
+const savePassword = async () => {
 	if (!passwordForm.value.old || !passwordForm.value.new || !passwordForm.value.confirm) {
 		uni.showToast({
 			title: '请填写所有字段',
@@ -288,8 +299,9 @@ const savePassword = () => {
 		return
 	}
 
-	// 这里应该调用后端API验证旧密码和修改密码
-	uni.setStorageSync('user_password', passwordForm.value.new)
+	const ok = await changeUserPassword(passwordForm.value.old, passwordForm.value.new)
+	if (!ok) return
+
 	showPasswordModal.value = false
 	uni.showToast({
 		title: '密码修改成功',
@@ -303,7 +315,7 @@ const switchAccount = () => {
 		content: '确定要切换账号吗？',
 		success(res) {
 			if (res.confirm) {
-				uni.clearStorageSync()
+				clearUserSession()
 				uni.navigateTo({
 					url: '/pages/login/login'
 				})
@@ -318,7 +330,7 @@ const logout = () => {
 		content: '确定要退出登录吗？',
 		success(res) {
 			if (res.confirm) {
-				uni.removeStorageSync('current_user_profile')
+				clearUserSession()
 				uni.showToast({
 					title: '已退出登录',
 					icon: 'none'

@@ -56,13 +56,18 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
-import { getCollections, saveCollections } from './my-store'
+import { getCollections, removeCollection as removeCollectionApi } from './my-store'
 import { getPosts, savePosts } from '../communication/community-store'
 
 const currentCategory = ref('posts')
 const collections = ref(null)
 
 const categories = [
+	{ key: 'restaurants', label: '🍽 餐厅' },
+	{ key: 'recipes', label: '🍳 食谱' },
+	{ key: 'drinks', label: '🥤 饮品' },
+	{ key: 'courses', label: '📚 课程' },
+	{ key: 'knowledge', label: '🧠 知识' },
 	{ key: 'posts', label: '📰 动态' }
 ]
 
@@ -71,8 +76,8 @@ const currentCollections = computed(() => {
 	return collections.value[currentCategory.value] || []
 })
 
-const loadData = () => {
-	collections.value = getCollections()
+const loadData = async () => {
+	collections.value = await getCollections()
 }
 
 const getCollectionCount = (key) => {
@@ -124,12 +129,17 @@ const removeCollection = (index) => {
 	uni.showModal({
 		title: '删除收藏',
 		content: '确定要删除此项收藏吗？',
-		success(res) {
+		async success(res) {
 			if (res.confirm) {
-				currentCollections.value.splice(index, 1)
-				collections.value[currentCategory.value] = currentCollections.value
-				saveCollections(collections.value)
-				
+				const deleted = await removeCollectionApi(currentCategory.value, item.itemId || item.id, item.collectionId)
+				if (!deleted) return
+
+				// 直接操作 collections.value（原始 ref），而不是 computed 值
+				const list = collections.value[currentCategory.value]
+				if (Array.isArray(list)) {
+					list.splice(index, 1)
+				}
+
 				// 如果是删除的是动态收藏，同时更新社区中该帖子的 collected 状态
 				if (currentCategory.value === 'posts' && item.id) {
 					const posts = getPosts()

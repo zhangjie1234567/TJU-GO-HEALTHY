@@ -173,9 +173,9 @@
 </template>
 
 <script setup>
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
-import { getDailyData, recordDailyMetric, saveDailyData } from './my-store'
+import { getDailyData, saveDailyData } from './my-store'
 
 const dailyData = ref([])
 const showAddModal = ref(false)
@@ -279,8 +279,8 @@ const weightChangeText = computed(() => {
 	}
 })
 
-const loadData = () => {
-	dailyData.value = getDailyData()
+const loadData = async () => {
+	dailyData.value = await getDailyData()
 }
 
 const getBarWidth = (value, max) => {
@@ -319,7 +319,7 @@ const formatDate = (dateStr) => {
 	})
 }
 
-const saveRecord = () => {
+const saveRecord = async () => {
 	const date = newRecord.value.date
 
 	if (!date) {
@@ -330,8 +330,6 @@ const saveRecord = () => {
 		return
 	}
 
-	const existingIndex = dailyData.value.findIndex(d => d.date === date)
-	
 	const metrics = {}
 	if (newRecord.value.distance) metrics.distance = Number(newRecord.value.distance)
 	if (newRecord.value.focus) metrics.focus = Number(newRecord.value.focus)
@@ -346,21 +344,14 @@ const saveRecord = () => {
 		return
 	}
 
-	if (existingIndex !== -1) {
-		// 更新现有记录
-		dailyData.value[existingIndex].metrics = {
-			...dailyData.value[existingIndex].metrics,
-			...metrics
-		}
-	} else {
-		// 创建新记录
-		dailyData.value.push({
-			date,
-			metrics
-		})
+	const targetRecord = {
+		date,
+		metrics
 	}
+	dailyData.value.push(targetRecord)
 
-	saveDailyData(dailyData.value)
+	const success = await saveDailyData(dailyData.value, targetRecord)
+	if (!success) return
 	showAddModal.value = false
 	newRecord.value = {
 		date: new Date().toISOString().split('T')[0],
@@ -374,10 +365,16 @@ const saveRecord = () => {
 		title: '数据已保存',
 		icon: 'none'
 	})
+	await loadData()
 }
 
 onShow(() => {
 	loadData()
+})
+
+onPullDownRefresh(async () => {
+	await loadData()
+	uni.stopPullDownRefresh()
 })
 </script>
 
