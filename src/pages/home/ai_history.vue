@@ -49,6 +49,10 @@ import { onShow } from '@dcloudio/uni-app'
   import { BASE_URL } from '@/config.js'
 const sessions = ref([])
 
+function getResponseMessage(body) {
+  return (body && (body.message || body.msg)) || ''
+}
+
 function getToken() {
   return uni.getStorageSync('token') || ''
 }
@@ -69,10 +73,12 @@ onShow(() => {
         sessions.value = res.data.data
       } else {
         sessions.value = []
+        uni.showToast({ title: getResponseMessage(res.data) || '会话列表加载失败', icon: 'none' })
       }
     },
     fail() {
       sessions.value = []
+      uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
     }
   })
 })
@@ -108,7 +114,7 @@ function confirmDelete(sessionId) {
             sessions.value = sessions.value.filter(s => s.sessionId !== sessionId)
             uni.showToast({ title: '已删除', icon: 'success' })
           } else {
-            uni.showToast({ title: '删除失败', icon: 'none' })
+            uni.showToast({ title: getResponseMessage(res.data) || '删除失败', icon: 'none' })
           }
         },
         fail() {

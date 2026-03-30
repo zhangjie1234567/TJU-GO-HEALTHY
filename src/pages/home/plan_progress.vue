@@ -79,13 +79,14 @@
               <text class="axis-label">{{ tick }}</text>
             </view>
           </view>
-          <!-- 趋势点 -->
-          <view class="trend-bar">
-            <view v-for="item in trendList" :key="item.date" class="trend-item">
-              <view class="trend-dot" :style="trendDotStyle(item.weight)"></view>
-              <text class="trend-date">{{ item.date }}</text>
+          <scroll-view class="trend-scroll" scroll-x>
+            <view class="trend-bar">
+              <view v-for="item in chartTrendList" :key="item.date" class="trend-item">
+                <view class="trend-dot" :style="trendDotStyle(item.weight)"></view>
+                <text class="trend-date">{{ formatTrendDate(item.date) }}</text>
+              </view>
             </view>
-          </view>
+          </scroll-view>
         </view>
       </view>
     </view>
@@ -168,6 +169,8 @@ export default {
       return progressData.value.weightList ? progressData.value.weightList.slice().reverse() : [];
     });
 
+    const chartTrendList = computed(() => trendList.value);
+
     // Y轴刻度计算
     const yAxisTicks = computed(() => {
       if (!progressData.value.weightList || progressData.value.weightList.length === 0) return [];
@@ -193,6 +196,14 @@ export default {
         marginBottom: `${percent * 60 + 10}px`,
         background: percent > 0.5 ? '#53B1EF' : '#FDD0D0'
       };
+    }
+
+    function formatTrendDate(dateStr) {
+      const parts = String(dateStr || '').split('-');
+      if (parts.length === 3) {
+        return `${parts[1]}-${parts[2]}`;
+      }
+      return dateStr;
     }
 
     function getToken() {
@@ -352,8 +363,10 @@ export default {
       encouragementText,
       progressTip,
       trendList,
+      chartTrendList,
       yAxisTicks,
       trendDotStyle,
+      formatTrendDate,
       goToRecordWeight
     };
   }
@@ -364,6 +377,7 @@ export default {
 /* 全局容器 */
 .plan-progress-container {
   width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
   background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
   display: flex;
@@ -371,6 +385,7 @@ export default {
   align-items: center;
   padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -397,6 +412,7 @@ export default {
   display: flex;
   justify-content: center;
   position: relative;
+  overflow: hidden;
 }
 
 .avatar-container {
@@ -421,7 +437,7 @@ export default {
 .bmi-badge {
   position: absolute;
   top: 8px;
-  right: -40px;
+  right: 12px;
   background: linear-gradient(135deg, #419bf9 0%, #5fb3ff 100%);
   border-radius: 20px;
   padding: 6px 12px;
@@ -507,6 +523,7 @@ export default {
 /* 图表区域 */
 .chart-section {
   padding: 20px 16px;
+  overflow: hidden;
 }
 
 .chart-header {
@@ -546,11 +563,20 @@ export default {
   width: 100%;
   padding: 12px 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .trend-container {
   display: flex;
   gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.trend-scroll {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
 }
 
 .trend-axis {
@@ -575,12 +601,16 @@ export default {
 }
 
 .trend-bar {
-  height: 110px;
+  height: 132px;
   display: flex;
   align-items: flex-end;
-  gap: 12px;
-  flex: 1;
+  justify-content: flex-start;
+  gap: 8px;
+  width: max-content;
+  min-width: 100%;
   position: relative;
+  padding: 0 4px 4px 0;
+  box-sizing: border-box;
 }
 
 .trend-item {
@@ -589,7 +619,8 @@ export default {
   align-items: center;
   justify-content: flex-end;
   height: 100%;
-  min-width: 40px;
+  flex: 0 0 56px;
+  min-width: 56px;
   box-sizing: border-box;
 }
 
@@ -601,7 +632,7 @@ export default {
 }
 
 .trend-date {
-  font-size: 12px;
+  font-size: 11px;
   color: #7a8ba0;
   margin-top: 6px;
   white-space: nowrap;

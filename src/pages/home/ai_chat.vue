@@ -37,7 +37,7 @@
           <view class="bubble bubble-user">
             <text class="bubble-text">{{ msg.content }}</text>
           </view>
-          <image :src="userAvatar" class="msg-avatar" mode="aspectFill" />
+          <image :src="userAvatar" class="msg-avatar" mode="aspectFill" @error="onUserAvatarError" />
         </view>
 
         <!-- AI消息（左侧） -->
@@ -47,14 +47,15 @@
           </view>
           <view class="ai-msg-body">
             <!-- 思考过程折叠卡片 -->
-            <view v-if="msg.thinking" class="thinking-card">
+            <view v-if="msg.thinking || msg._thinkingLoading" class="thinking-card">
               <view class="thinking-hd" @click="toggleThinking(idx)">
                 <text class="thinking-icon">💭</text>
-                <text class="thinking-label">思考过程</text>
+                <text class="thinking-label">{{ msg.loading ? '思考中' : '思考过程' }}</text>
+                <text v-if="msg.loading" class="thinking-preview">{{ msg.thinking }}</text>
                 <text class="thinking-arrow">{{ msg._showThinking ? '▲' : '▼' }}</text>
               </view>
               <view v-if="msg._showThinking" class="thinking-bd">
-                <text class="thinking-text" :user-select="true">{{ msg.thinking }}</text>
+                <text class="thinking-text" :user-select="true">{{ formatThinkingContent(msg.thinking) }}</text>
               </view>
             </view>
             <!-- AI回复气泡 -->
@@ -64,7 +65,7 @@
                 <view class="dot dot2"></view>
                 <view class="dot dot3"></view>
               </view>
-              <text v-else class="bubble-text" :user-select="true">{{ msg.content }}</text>
+              <text v-else class="bubble-text" :user-select="true">{{ formatAssistantContent(msg.content) }}</text>
             </view>
           </view>
         </view>
@@ -115,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 // ── 常量 ──────────────────────────────────────────
@@ -145,11 +146,48 @@ const currentSessionTitle = ref('')
 // 标记是否是从历史页面跳转进来的（用于 ➕ 按钮行为）
 const isFromHistory = ref(false)
 
-const userAvatar = ref('/static/default-avatar.png')
+const userAvatar = ref('/static/logo.png')
 
 let _localIdCounter = 0
 function nextLocalId() {
   return 'local-' + (++_localIdCounter)
+}
+
+function getResponseMessage(body) {
+  return (body && (body.message || body.msg)) || ''
+}
+
+function formatAssistantContent(text) {
+  if (!text) return ''
+  let s = String(text)
+  // 兼容后端/模型返回的转义换行与异常换行标记
+  s = s.replace(/\\r\\n|\\n|\\r/g, '\n')
+  s = s.replace(/nn(?=\s*\d+[\.、])/g, '\n\n')
+  s = s.replace(/nn(?=\s*[\u4e00-\u9fa5])/g, '\n\n')
+  // 移除模型可能混入的思考标签
+  s = s.replace(/<think>[\s\S]*?<\/think>/gi, '')
+  s = s.replace(/<\/?think>/gi, '')
+  // 去掉 Markdown 标题前缀（#、##、###...）
+  s = s.replace(/^\s{0,3}#{1,6}\s*/gm, '')
+  // 去掉 Markdown 分隔线
+  s = s.replace(/^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/gm, '')
+  // 去掉 Markdown 粗体标记
+  s = s.replace(/\*\*/g, '')
+  // 合并过多空行
+  s = s.replace(/\n{3,}/g, '\n\n')
+  return s.trim()
+}
+
+function formatThinkingContent(text) {
+  if (!text) return ''
+  let s = String(text)
+  s = s.replace(/\\r\\n|\\n|\\r/g, '\n')
+  s = s.replace(/<\/?think>/gi, '')
+  return s.trim()
+}
+
+function onUserAvatarError() {
+  userAvatar.value = '/static/logo.png'
 }
 
 // ── 初始化 ──────────────────────────────────────────
@@ -181,6 +219,37 @@ function toggleThinking(idx) {
   if (msg) msg._showThinking = !msg._showThinking
 }
 
+const thinkingStages = ['正在分析问题', '正在结合健康档案', '正在组织建议结构']
+let thinkingTimer = null
+
+function startThinkingAnimation(idx) {
+  stopThinkingAnimation()
+  let tick = 0
+  thinkingTimer = setInterval(() => {
+    const msg = messages.value[idx]
+    if (!msg || !msg.loading) {
+      stopThinkingAnimation()
+      return
+    }
+    const stage = thinkingStages[Math.floor(tick / 4) % thinkingStages.length]
+    const dots = '.'.repeat((tick % 3) + 1)
+    msg.thinking = `${stage}${dots}`
+    msg._thinkingLoading = true
+    tick += 1
+  }, 450)
+}
+
+function stopThinkingAnimation() {
+  if (thinkingTimer) {
+    clearInterval(thinkingTimer)
+    thinkingTimer = null
+  }
+}
+
+onUnmounted(() => {
+  stopThinkingAnimation()
+})
+
 // ── 会话管理 ──────────────────────────────────────────
 function loadSession(sessionId, title) {
   currentSessionId.value = sessionId
@@ -202,10 +271,16 @@ function loadSession(sessionId, title) {
           role: m.role,
           content: m.content || '',
           thinking: m.thinking || '',
+          _thinkingLoading: false,
           _showThinking: false
         }))
         scrollToBottom()
+      } else {
+        uni.showToast({ title: getResponseMessage(res.data) || '历史记录加载失败', icon: 'none' })
       }
+    },
+    fail() {
+      uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
     }
   })
 }
@@ -247,11 +322,13 @@ function sendMessage() {
     role: 'assistant',
     content: '',
     loading: true,
-    thinking: '',
+    thinking: '正在思考.',
+    _thinkingLoading: true,
     _showThinking: false
   }
   messages.value.push(loadingMsg)
   const loadingIdx = messages.value.length - 1
+  startThinkingAnimation(loadingIdx)
   scrollToBottom()
 
   isLoading.value = true
@@ -269,29 +346,35 @@ function sendMessage() {
     },
     timeout: 120000,
     success(res) {
+      stopThinkingAnimation()
       isLoading.value = false
+      const body = res.data || {}
       if (res.data && res.data.code === 200 && res.data.data) {
-        const data = res.data.data
+        const data = body.data
         if (!currentSessionId.value) {
           currentSessionId.value = data.sessionId
           const title = text.length > 15 ? text.slice(0, 15) + '…' : text
           currentSessionTitle.value = title
           uni.setNavigationBarTitle({ title })
         }
+        if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
         messages.value[loadingIdx] = {
           _localId: loadingMsg._localId,
           role: 'assistant',
           content: data.content || '',
-          thinking: data.thinking || '',
+          thinking: formatThinkingContent(data.thinking || ''),
+          _thinkingLoading: false,
           _showThinking: false,
           loading: false
         }
       } else {
+        if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
         messages.value[loadingIdx] = {
           _localId: loadingMsg._localId,
           role: 'assistant',
-          content: (res.data && res.data.msg) || '回复失败，请稍后重试',
+          content: getResponseMessage(body) || '回复失败，请稍后重试',
           thinking: '',
+          _thinkingLoading: false,
           _showThinking: false,
           loading: false
         }
@@ -299,13 +382,16 @@ function sendMessage() {
       scrollToBottom()
     },
     fail(err) {
+      stopThinkingAnimation()
       isLoading.value = false
       const isTimeout = err && (err.errMsg || '').includes('timeout')
+      if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
       messages.value[loadingIdx] = {
         _localId: loadingMsg._localId,
         role: 'assistant',
         content: isTimeout ? 'AI响应超时，请稍后再试' : '网络异常，请检查网络后重试',
         thinking: '',
+        _thinkingLoading: false,
         _showThinking: false,
         loading: false
       }
@@ -499,11 +585,21 @@ function sendMessage() {
   font-size: 24rpx;
   color: #6c63ff;
   font-weight: 500;
+  flex-shrink: 0;
+}
+.thinking-preview {
   flex: 1;
+  font-size: 22rpx;
+  color: #7a8ba0;
+  margin-left: 10rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .thinking-arrow {
   font-size: 20rpx;
   color: #999;
+  margin-left: 8rpx;
 }
 .thinking-bd {
   padding: 0 20rpx 16rpx;

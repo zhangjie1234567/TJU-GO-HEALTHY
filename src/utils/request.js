@@ -31,8 +31,9 @@ export const apiRequest = ({ url, method = 'GET', data = {}, header = {} }) => {
 
         const body = res.data
         if (body && typeof body === 'object' && 'code' in body) {
-          if (body.code !== 0) {
-            reject(new Error(body.msg || 'API error'))
+          // 兼容旧约定(code=0)与当前后端约定(code=200)
+          if (body.code !== 0 && body.code !== 200) {
+            reject(new Error(body.message || body.msg || 'API error'))
             return
           }
           resolve(body.data)

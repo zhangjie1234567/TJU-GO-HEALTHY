@@ -80,6 +80,10 @@ const editDiet = ref('')
 const editExercise = ref('')
 const isSaving = ref(false)
 
+function getResponseMessage(body) {
+  return (body && (body.message || body.msg)) || ''
+}
+
 function getToken() {
   return uni.getStorageSync('token') || ''
 }
@@ -103,7 +107,12 @@ onMounted(() => {
         const data = res.data.data
         planData.value = { diet: data.diet || '', exercise: data.exercise || '' }
         uni.setStorageSync('myPlan', planData.value)
+      } else if (res.data && res.data.code !== 200) {
+        uni.showToast({ title: getResponseMessage(res.data) || '获取方案失败', icon: 'none' })
       }
+    },
+    fail() {
+      uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
     }
   })
 })
@@ -156,7 +165,7 @@ function saveEdit() {
         editMode.value = false
         uni.showToast({ title: '方案已保存', icon: 'success' })
       } else {
-        uni.showToast({ title: (res.data && res.data.message) || '保存失败', icon: 'none' })
+        uni.showToast({ title: getResponseMessage(res.data) || '保存失败', icon: 'none' })
       }
     },
     fail() {

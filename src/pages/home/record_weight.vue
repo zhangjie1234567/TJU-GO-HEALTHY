@@ -50,13 +50,14 @@
             <text class="rw-axis-label">{{ tick }}</text>
           </view>
         </view>
-        <!-- 趋势点 -->
-        <view class="rw-trend-bar">
-          <view v-for="item in trendList" :key="item.date" class="rw-trend-item">
-            <view class="rw-trend-dot" :style="trendDotStyle(item.weight)"></view>
-            <text class="rw-trend-date">{{ item.date }}</text>
+        <scroll-view class="rw-trend-scroll" scroll-x>
+          <view class="rw-trend-bar">
+            <view v-for="item in chartTrendList" :key="item.date" class="rw-trend-item">
+              <view class="rw-trend-dot" :style="trendDotStyle(item.weight)"></view>
+              <text class="rw-trend-date">{{ formatTrendDate(item.date) }}</text>
+            </view>
           </view>
-        </view>
+        </scroll-view>
       </view>
     </view>
   </view>
@@ -317,6 +318,9 @@
   // 趋势按时间正序展示
   const trendList = computed(() => weightList.value.slice().reverse())
 
+  // 趋势图展示全部记录，超出宽度时横向滚动
+  const chartTrendList = computed(() => trendList.value)
+
   // Y轴刻度计算
   const yAxisTicks = computed(() => {
     if (weightList.value.length === 0) return []
@@ -342,6 +346,14 @@
       marginBottom: `${percent * 60 + 10}px`,
       background: percent > 0.5 ? '#53B1EF' : '#FDD0D0'
     }
+  }
+
+  function formatTrendDate(dateStr) {
+    const parts = String(dateStr || '').split('-')
+    if (parts.length === 3) {
+      return `${parts[1]}-${parts[2]}`
+    }
+    return dateStr
   }
 </script>
 
@@ -603,6 +615,7 @@
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(79, 161, 242, 0.08);
     padding: 16px 12px;
+    overflow: hidden;
   }
 
   .rw-trend-title {
@@ -615,6 +628,14 @@
   .rw-trend-container {
     display: flex;
     gap: 8px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .rw-trend-scroll {
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
   }
 
   .rw-trend-axis {
@@ -639,13 +660,17 @@
   }
 
   .rw-trend-bar {
-    height: 110px;
+    height: 132px;
     display: flex;
     align-items: flex-end;
-    gap: 12px;
-    margin-top: 8px;
-    flex: 1;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-top: 6px;
+    width: max-content;
+    min-width: 100%;
     position: relative;
+    padding: 0 4px 4px 0;
+    box-sizing: border-box;
   }
 
   .rw-trend-item {
@@ -654,7 +679,8 @@
     align-items: center;
     justify-content: flex-end;
     height: 100%;
-    min-width: 40px;
+    flex: 0 0 56px;
+    min-width: 56px;
     box-sizing: border-box;
   }
 
@@ -666,7 +692,7 @@
   }
 
   .rw-trend-date {
-    font-size: 12px;
+    font-size: 11px;
     color: #7a8ba0;
     margin-top: 6px;
     white-space: nowrap;
