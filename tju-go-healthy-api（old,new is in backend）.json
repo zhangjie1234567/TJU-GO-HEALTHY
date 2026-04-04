@@ -74,16 +74,17 @@
           "water": { "type": "number", "example": 85.6, "description": "水分(g)" },
           "protein": { "type": "number", "example": 0.2, "description": "蛋白质(g)" },
           "fat": { "type": "number", "example": 0.2, "description": "脂肪(g)" },
-          "carbohydrate": { "type": "number", "example": 13.5, "description": "碳水化合物(g)" },
-          "fiber": { "type": "number", "example": 1.2, "description": "膳食纤维(g)" },
+          "cho": { "type": "number", "example": 13.5, "description": "CHO(g)" },
+          "dietaryFiber": { "type": "number", "example": 1.2, "description": "Dietary fiber(g)" },
           "vitaminA": { "type": "number", "example": 3, "description": "维生素A(μg)" },
-          "vitaminB1": { "type": "number", "example": 0.06, "description": "维生素B1(mg)" },
-          "vitaminB2": { "type": "number", "example": 0.02, "description": "维生素B2(mg)" },
+          "thiamin": { "type": "number", "example": 0.06, "description": "Thiamin(mg)" },
+          "riboflavin": { "type": "number", "example": 0.02, "description": "Riboflavin(mg)" },
+          "niacin": { "type": "number", "example": 0.6, "description": "Niacin(mg)" },
           "vitaminC": { "type": "number", "example": 4, "description": "维生素C(mg)" },
           "vitaminE": { "type": "number", "example": 0.21, "description": "维生素E(mg)" },
-          "calcium": { "type": "number", "example": 4, "description": "钙(mg)" },
-          "iron": { "type": "number", "example": 0.6, "description": "铁(mg)" },
-          "sodium": { "type": "number", "example": 0.8, "description": "钠(mg)" },
+          "ca": { "type": "number", "example": 4, "description": "Ca(mg)" },
+          "fe": { "type": "number", "example": 0.6, "description": "Fe(mg)" },
+          "na": { "type": "number", "example": 0.8, "description": "Na(mg)" },
           "cholesterol": { "type": "number", "example": 0, "description": "胆固醇(mg)" }
         }
       },
@@ -1581,7 +1582,7 @@
                       "properties": {
                         "protein": { "type": "number", "example": 0.3 },
                         "carbs": { "type": "number", "example": 14 },
-                        "fiber": { "type": "number", "example": 2.4 },
+                        "dietaryFiber": { "type": "number", "example": 2.4 },
                         "vitaminC": { "type": "number", "example": 4.6 }
                       }
                     },

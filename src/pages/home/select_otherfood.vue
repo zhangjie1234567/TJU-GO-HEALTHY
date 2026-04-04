@@ -157,7 +157,7 @@
   onMounted(async () => {
     searchHistory.value = getSearchHistory()
     // 加载推荐加餐食物
-    const allFoods = await getPopularFoods('', 20)
+    const allFoods = await getPopularFoods('', 20, 'other')
     recommendList.value = allFoods
   })
 

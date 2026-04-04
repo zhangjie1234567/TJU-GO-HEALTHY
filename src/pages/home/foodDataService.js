@@ -5,6 +5,25 @@ const MAX_HISTORY_COUNT = 10
 const collectionPendingMap = new Map()
 const mealAddPendingMap = new Map()
 
+const MEAL_RULES = {
+  breakfast: {
+    categoryKeywords: ['谷', '薯', '乳', '蛋', '豆', '果'],
+    nameKeywords: ['粥', '包', '馒', '面包', '麦片', '燕麦', '牛奶', '豆浆', '鸡蛋']
+  },
+  lunch: {
+    categoryKeywords: ['谷', '畜', '禽', '鱼', '虾', '贝', '蛋', '豆', '蔬'],
+    nameKeywords: ['米饭', '面', '鸡', '鱼', '牛', '猪', '虾', '豆腐', '蔬']
+  },
+  dinner: {
+    categoryKeywords: ['蔬', '鱼', '禽', '豆', '菌', '谷'],
+    nameKeywords: ['蔬', '鱼', '豆腐', '杂粮', '燕麦', '粥', '菌']
+  },
+  other: {
+    categoryKeywords: ['果', '坚果', '乳', '豆'],
+    nameKeywords: ['酸奶', '水果', '坚果', '香蕉', '苹果', '牛奶']
+  }
+}
+
 // 后端没有“查询全部收藏食物”接口，这里用内存集合维护当前已知收藏状态。
 const collectedFoodIds = new Set()
 
@@ -66,16 +85,17 @@ function normalizeFoodDetail(detail) {
       water: Number(nutrition.water || 0),
       protein: Number(nutrition.protein || 0),
       fat: Number(nutrition.fat || 0),
-      carbohydrate: Number(nutrition.carbohydrate || 0),
-      fiber: Number(nutrition.fiber || 0),
+      cho: Number(nutrition.cho || 0),
+      dietaryFiber: Number(nutrition.dietaryFiber || 0),
       vitaminA: Number(nutrition.vitaminA || 0),
-      vitaminB1: Number(nutrition.vitaminB1 || 0),
-      vitaminB2: Number(nutrition.vitaminB2 || 0),
+      thiamin: Number(nutrition.thiamin || 0),
+      riboflavin: Number(nutrition.riboflavin || 0),
+      niacin: Number(nutrition.niacin || 0),
       vitaminC: Number(nutrition.vitaminC || 0),
       vitaminE: Number(nutrition.vitaminE || 0),
-      calcium: Number(nutrition.calcium || 0),
-      iron: Number(nutrition.iron || 0),
-      sodium: Number(nutrition.sodium || 0),
+      ca: Number(nutrition.ca || 0),
+      fe: Number(nutrition.fe || 0),
+      na: Number(nutrition.na || 0),
       cholesterol: Number(nutrition.cholesterol || 0)
     },
     relatedRecipes: normalizeArray(detail.relatedRecipes),
@@ -183,9 +203,48 @@ export function getCategories() {
   return ['全部', '主食', '蛋白质', '乳制品', '水果', '蔬菜', '油脂', '谷物']
 }
 
-export async function getPopularFoods(category = '', limit = 4) {
+function includesAny(text, keywords) {
+  return keywords.some((keyword) => text.includes(keyword))
+}
+
+function rankFoodsByMeal(list, mealType) {
+  const rule = MEAL_RULES[mealType]
+  if (!rule) {
+    return list
+  }
+
+  return [...list].sort((a, b) => {
+    const aScore = mealScore(a, rule)
+    const bScore = mealScore(b, rule)
+    return bScore - aScore
+  })
+}
+
+function mealScore(item, rule) {
+  const categoryText = String(item.category || '')
+  const nameText = String(item.name || '')
+  const tagText = Array.isArray(item.tags) ? item.tags.join(',') : ''
+
+  let score = 0
+  if (includesAny(categoryText, rule.categoryKeywords)) {
+    score += 2
+  }
+  if (includesAny(nameText, rule.nameKeywords)) {
+    score += 2
+  }
+  if (includesAny(tagText, rule.nameKeywords)) {
+    score += 1
+  }
+  return score
+}
+
+export async function getPopularFoods(category = '', limit = 4, mealType = '') {
   const list = await searchFoods('', category)
-  return list.slice(0, limit)
+  if (!mealType) {
+    return list.slice(0, limit)
+  }
+
+  return rankFoodsByMeal(list, mealType).slice(0, limit)
 }
 
 export function saveSearchHistory(keyword) {

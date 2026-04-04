@@ -68,10 +68,10 @@
           </view>
         </view>
         <view class="nutrient-big-card">
-          <text class="nutrient-value">{{ foodData.nutrition.carbohydrate }}g</text>
+          <text class="nutrient-value">{{ foodData.nutrition.cho }}g</text>
           <text class="nutrient-label">碳水</text>
           <view class="nutrient-bar">
-            <view class="nutrient-bar-fill" :style="{ width: getNutrientPercent('carbohydrate') }"></view>
+            <view class="nutrient-bar-fill" :style="{ width: getNutrientPercent('cho') }"></view>
           </view>
         </view>
       </view>
@@ -84,7 +84,7 @@
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🌾 膳食纤维</text>
-          <text class="nutrition-value">{{ foodData.nutrition.fiber }}g</text>
+          <text class="nutrition-value">{{ foodData.nutrition.dietaryFiber }}g</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🥕 维生素A</text>
@@ -92,11 +92,15 @@
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🅱️ 维生素B1</text>
-          <text class="nutrition-value">{{ foodData.nutrition.vitaminB1 }}mg</text>
+          <text class="nutrition-value">{{ foodData.nutrition.thiamin }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🅱️ 维生素B2</text>
-          <text class="nutrition-value">{{ foodData.nutrition.vitaminB2 }}mg</text>
+          <text class="nutrition-value">{{ foodData.nutrition.riboflavin }}mg</text>
+        </view>
+        <view class="nutrition-item">
+          <text class="nutrition-name">🧪 烟酸</text>
+          <text class="nutrition-value">{{ foodData.nutrition.niacin }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🍊 维生素C</text>
@@ -108,15 +112,15 @@
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🦴 钙</text>
-          <text class="nutrition-value">{{ foodData.nutrition.calcium }}mg</text>
+          <text class="nutrition-value">{{ foodData.nutrition.ca }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🩸 铁</text>
-          <text class="nutrition-value">{{ foodData.nutrition.iron }}mg</text>
+          <text class="nutrition-value">{{ foodData.nutrition.fe }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🧂 钠</text>
-          <text class="nutrition-value">{{ foodData.nutrition.sodium }}mg</text>
+          <text class="nutrition-value">{{ foodData.nutrition.na }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">💊 胆固醇</text>
@@ -150,7 +154,6 @@
         <view class="meal-set-btn breakfast" @click="openMealPopup('breakfast')">🌅 设置为早餐</view>
         <view class="meal-set-btn lunch" @click="openMealPopup('lunch')">☀️ 设置为午餐</view>
         <view class="meal-set-btn dinner" @click="openMealPopup('dinner')">🌙 设置为晚餐</view>
-        <view class="meal-set-btn other" @click="openMealPopup('other')">🍿 设置为加餐零食</view>
       </view>
     </view>
 
@@ -251,16 +254,17 @@
       water: 0,
       protein: 0,
       fat: 0,
-      carbohydrate: 0,
-      fiber: 0,
+      cho: 0,
+      dietaryFiber: 0,
       vitaminA: 0,
-      vitaminB1: 0,
-      vitaminB2: 0,
+      thiamin: 0,
+      riboflavin: 0,
+      niacin: 0,
       vitaminC: 0,
       vitaminE: 0,
-      calcium: 0,
-      iron: 0,
-      sodium: 0,
+      ca: 0,
+      fe: 0,
+      na: 0,
       cholesterol: 0
     },
     effect: '',
@@ -316,8 +320,8 @@
         value = nutrition.fat
         referenceValue = 60 // 成人每日推荐脂肪摄入量约60g
         break
-      case 'carbohydrate':
-        value = nutrition.carbohydrate
+      case 'cho':
+        value = nutrition.cho
         referenceValue = 300 // 成人每日推荐碳水摄入量约300g
         break
     }
@@ -349,8 +353,7 @@
   const mealTypeNames = {
     breakfast: '早餐',
     lunch: '午餐',
-    dinner: '晚餐',
-    other: '加餐零食'
+    dinner: '晚餐'
   }
 
   // 器皿列表（名称 + 容量g）
@@ -827,11 +830,6 @@
   .meal-set-btn.dinner {
     background: linear-gradient(135deg, #E3F2FD, #90CAF9);
     color: #1565C0;
-  }
-
-  .meal-set-btn.other {
-    background: linear-gradient(135deg, #FCE4EC, #F48FB1);
-    color: #880E4F;
   }
 
   /* ========== 餐次弹窗 ========== */

@@ -249,12 +249,6 @@
       }
     },
     {
-      "path": "pages/home/select_otherfood",
-      "style": {
-        "navigationBarTitleText": "选择其他"
-      }
-    },
-    {
       "path": "pages/communication/method_rank",
       "style": {
         "navigationBarTitleText": "减重方法评分榜"

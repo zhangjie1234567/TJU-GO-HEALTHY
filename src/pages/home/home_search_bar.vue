@@ -174,6 +174,7 @@
     searchFoods, 
     getSearchSuggestions, 
     getCategories, 
+    getPopularFoods,
     saveSearchHistory,
     getSearchHistory,
     clearSearchHistory,
@@ -323,12 +324,37 @@
   // ========== 数据加载 ==========
   const loadPopularFoods = async () => {
     try {
-      // 一次请求拉取后端食物列表，前端按分类切片，避免同一动作触发多次接口请求。
-      const allFoods = await searchFoods('', '')
+      const [fruits, vegetables, grains] = await Promise.all([
+        getPopularFoods('水果', 4),
+        getPopularFoods('蔬菜', 4),
+        getPopularFoods('谷物', 4)
+      ])
 
-      fruitList.value = allFoods.filter((item) => item.category === '水果').slice(0, 4)
-      vegetableList.value = allFoods.filter((item) => item.category === '蔬菜').slice(0, 4)
-      grainList.value = allFoods.filter((item) => item.category === '谷物').slice(0, 4)
+      const pickByKeywords = (list, keywords) => {
+        return list
+          .filter((item) => {
+            const text = `${item.name || ''}${item.category || ''}${(item.tags || []).join('')}`
+            return keywords.some((keyword) => text.includes(keyword))
+          })
+          .slice(0, 4)
+      }
+
+      let finalVegetables = vegetables
+      let finalGrains = grains
+
+      if (finalVegetables.length === 0 || finalGrains.length === 0) {
+        const allFoods = await searchFoods('', '')
+        if (finalVegetables.length === 0) {
+          finalVegetables = pickByKeywords(allFoods, ['蔬', '菜', '瓜', '茄', '菌', '藻'])
+        }
+        if (finalGrains.length === 0) {
+          finalGrains = pickByKeywords(allFoods, ['谷', '米', '麦', '燕麦', '杂粮', '薯'])
+        }
+      }
+
+      fruitList.value = fruits
+      vegetableList.value = finalVegetables
+      grainList.value = finalGrains
     } catch (error) {
       console.error('加载热门食物失败', error)
     }

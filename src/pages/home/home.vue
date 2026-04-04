@@ -79,13 +79,6 @@
             </view>
             <text class="tag" @click="goToSelect('dinner')" hover-class="tag-hover">+ 晚餐</text>
           </view>
-          <!-- 零食 -->
-          <view class="calories-item">
-            <view class="calories-card" @click="goToSelect('other')" hover-class="calories-card-hover">
-              <text class="card-label">{{ calories.other }}千卡</text>
-            </view>
-            <text class="tag" @click="goToSelect('other')" hover-class="tag-hover">+ 零食</text>
-          </view>
         </view>
         <view class="health-link" @click="showRemindPopup = true" hover-class="link-hover">
           <text class="link-text">— 一键设置健康提醒 —</text>
@@ -454,16 +447,14 @@
   const calories = ref({
     breakfast: 0,
     lunch: 0,
-    dinner: 0,
-    other: 0
+    dinner: 0
   });
   // 跳转到选择页面
   function goToSelect(type) {
     let map = {
       breakfast: '/pages/home/select_breakfast',
       lunch: '/pages/home/select_lunch',
-      dinner: '/pages/home/select_dinner',
-      other: '/pages/home/select_otherfood',
+      dinner: '/pages/home/select_dinner'
     };
     navigateToPage(map[type] + '?from=home');
   }
@@ -477,8 +468,7 @@
       calories.value = {
         breakfast: 0,
         lunch: 0,
-        dinner: 0,
-        other: 0
+        dinner: 0
       };
     }
   }
