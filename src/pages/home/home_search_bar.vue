@@ -42,7 +42,6 @@
             class="suggestion-item"
             @click="selectSuggestion(item)"
           >
-            <image class="suggestion-img" :src="item.image" mode="aspectFill" />
             <view class="suggestion-info">
               <text class="suggestion-name">{{ item.name }}</text>
               <text class="suggestion-category">{{ item.category }}</text>
@@ -88,7 +87,6 @@
       </view>
       <view v-else class="food-list">
         <view v-for="item in searchResults" :key="item.id" class="food-card" @click="goToDetail(item)">
-          <image class="food-img" :src="item.image" mode="aspectFill" />
           <view class="food-info">
             <view class="food-name">{{ item.name }}</view>
             <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -110,7 +108,6 @@
         <view class="section-title">🍓 热门水果</view>
         <view class="food-list">
           <view v-for="item in fruitList" :key="item.id" class="food-card" @click="goToDetail(item)">
-            <image class="food-img" :src="item.image" mode="aspectFill" />
             <view class="food-info">
               <view class="food-name">{{ item.name }}</view>
               <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -130,7 +127,6 @@
         <view class="section-title">🥬 热门蔬菜</view>
         <view class="food-list">
           <view v-for="item in vegetableList" :key="item.id" class="food-card" @click="goToDetail(item)">
-            <image class="food-img" :src="item.image" mode="aspectFill" />
             <view class="food-info">
               <view class="food-name">{{ item.name }}</view>
               <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -150,7 +146,6 @@
         <view class="section-title">🌾 热门谷物</view>
         <view class="food-list">
           <view v-for="item in grainList" :key="item.id" class="food-card" @click="goToDetail(item)">
-            <image class="food-img" :src="item.image" mode="aspectFill" />
             <view class="food-info">
               <view class="food-name">{{ item.name }}</view>
               <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -515,14 +510,6 @@
     background: rgba(79, 161, 242, 0.12);
   }
 
-  .suggestion-img {
-    width: 40px;
-    height: 40px;
-    border-radius: 6px;
-    margin-right: 12px;
-    object-fit: cover;
-  }
-
   .suggestion-info {
     flex: 1;
     display: flex;
@@ -689,14 +676,6 @@
   .food-card:active {
     transform: scale(0.98);
     box-shadow: 0 4px 12px rgba(79, 161, 242, 0.12);
-  }
-
-  .food-img {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    margin-right: 12px;
-    object-fit: cover;
   }
 
   .food-info {

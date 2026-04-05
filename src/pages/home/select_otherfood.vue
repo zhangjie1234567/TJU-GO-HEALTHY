@@ -30,7 +30,6 @@
             class="suggestion-item"
             @click="selectSuggestion(item)"
           >
-            <image class="suggestion-img" :src="item.image" mode="aspectFill" />
             <view class="suggestion-info">
               <text class="suggestion-name">{{ item.name }}</text>
               <text class="suggestion-category">{{ item.category }}</text>
@@ -80,7 +79,6 @@
           class="food-card"
           @click="goToDetail(item)"
         >
-          <image class="food-img" :src="item.image" mode="aspectFill" />
           <view class="food-info">
             <view class="food-name">{{ item.name }}</view>
             <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -110,7 +108,6 @@
           class="food-card"
           @click="goToDetail(item)"
         >
-          <image class="food-img" :src="item.image" mode="aspectFill" />
           <view class="food-info">
             <view class="food-name">{{ item.name }}</view>
             <view class="food-calorie">{{ item.energy }}千卡/100克</view>
@@ -346,13 +343,6 @@
           background: rgba(79, 161, 242, 0.15);
         }
 
-        .suggestion-img {
-          width: 60rpx;
-          height: 60rpx;
-          border-radius: 8rpx;
-          margin-right: 12rpx;
-        }
-
         .suggestion-info {
           flex: 1;
 
@@ -519,13 +509,6 @@
 
     &:active {
       transform: scale(0.98);
-    }
-
-    .food-img {
-      width: 100rpx;
-      height: 100rpx;
-      border-radius: 12rpx;
-      margin-right: 16rpx;
     }
 
     .food-info {

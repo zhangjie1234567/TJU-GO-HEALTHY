@@ -2,7 +2,6 @@
   <view class="food-detail-page">
     <!-- 顶部食物信息区 -->
     <view class="food-header">
-      <image class="food-cover" :src="foodData.image" mode="aspectFill" />
       <view class="food-basic-info">
         <view class="food-name">{{ foodData.name }}</view>
         <view class="food-category-tag">
@@ -89,14 +88,6 @@
         <view class="nutrition-item">
           <text class="nutrition-name">🥕 维生素A</text>
           <text class="nutrition-value">{{ foodData.nutrition.vitaminA }}μg</text>
-        </view>
-        <view class="nutrition-item">
-          <text class="nutrition-name">🅱️ 维生素B1</text>
-          <text class="nutrition-value">{{ foodData.nutrition.thiamin }}mg</text>
-        </view>
-        <view class="nutrition-item">
-          <text class="nutrition-name">🅱️ 维生素B2</text>
-          <text class="nutrition-value">{{ foodData.nutrition.riboflavin }}mg</text>
         </view>
         <view class="nutrition-item">
           <text class="nutrition-name">🧪 烟酸</text>
@@ -479,21 +470,10 @@
 
   /* ========== 顶部食物信息区 ========== */
   .food-header {
-    display: flex;
-    align-items: flex-start;
     background: white;
     padding: 20px 16px;
     margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(79, 161, 242, 0.08);
-  }
-
-  .food-cover {
-    width: 120px;
-    height: 120px;
-    border-radius: 12px;
-    margin-right: 16px;
-    object-fit: cover;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .food-basic-info {
