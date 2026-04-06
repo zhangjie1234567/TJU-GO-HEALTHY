@@ -45,7 +45,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
-import { prependPost } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
 const title = ref('')
@@ -105,45 +105,41 @@ const onVisibilityChange = (e) => {
   selectedVisibility.value = visibilityOptions[index]
 }
 
-const publishPost = () => {
+const publishPost = async () => {
   if (!currentUser.value.name || currentUser.value.name === '未登录用户') {
     uni.showToast({ title: '请先去登录页认证账号', icon: 'none' })
     return
   }
-
   if (!title.value.trim() || !content.value.trim()) {
     uni.showToast({ title: '请填写标题和内容', icon: 'none' })
     return
   }
-
-  const post = {
-    id: Date.now(),
-    user: currentUser.value.name,
-    studentId: currentUser.value.studentId,
-    avatar: currentUser.value.avatar,
-    title: title.value.trim(),
-    desc: content.value.trim(),
-    tag: tag.value.trim() || '日常分享',
-    type: 'recommend',
-    likes: 0,
-    comments: 0,
-    following: false,
-    collected: false,
-    visibility: selectedVisibility.value,
-    createdAt: Date.now()
+  uni.showLoading({ title: '发布中...' })
+  try {
+    const userId = uni.getStorageSync('current_user_id') || 1
+    await apiRequest({
+      url: '/api/community/post',
+      method: 'POST',
+      data: {
+        title: title.value.trim(),
+        content: content.value.trim(),
+        tag: tag.value.trim() || '日常分享',
+        visibility: selectedVisibility.value
+      },
+      header: { 'X-User-Id': userId }
+    })
+    uni.hideLoading()
+    uni.showToast({ title: '发布成功', icon: 'success' })
+    title.value = ''
+    tag.value = ''
+    content.value = ''
+    selectedVisibility.value = '所有人可见'
+    setTimeout(() => uni.navigateBack(), 350)
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+    console.error('发布帖子失败', e)
   }
-
-  prependPost(post)
-
-  uni.showToast({ title: '发布成功', icon: 'success' })
-  title.value = ''
-  tag.value = ''
-  content.value = ''
-  selectedVisibility.value = '所有人可见'
-
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 350)
 }
 </script>
 

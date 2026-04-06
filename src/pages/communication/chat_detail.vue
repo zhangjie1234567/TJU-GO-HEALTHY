@@ -33,9 +33,11 @@ import {
   openOrCreateChatThread,
   upsertChatThread
 } from './community-store'
+import { apiRequest } from '../../utils/request'
 
 const text = ref('')
 const threadId = ref('')
+const useApi = ref(false)
 const messages = ref([])
 const target = ref({ name: '用户', avatar: '🙂' })
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
@@ -61,12 +63,26 @@ const loadCurrentUser = () => {
   }
 }
 
-const reloadMessages = () => {
+const reloadMessages = async () => {
   if (!threadId.value) return
-  messages.value = getChatMessages(threadId.value).map(item => ({
-    ...item,
-    time: item.time || Date.now()
-  }))
+  if (useApi.value) {
+    try {
+      const res = await apiRequest({ url: `/api/community/chat/${threadId.value}/messages`, method: 'GET' })
+      messages.value = (res || []).map(item => ({
+        id: item.id,
+        sender: item.senderId === (uni.getStorageSync('current_user_id') || 1) ? currentUser.value.name : target.value.name,
+        content: item.content,
+        time: item.createTime || Date.now()
+      }))
+    } catch (e) {
+      console.error('加载消息失败:', e)
+    }
+  } else {
+    messages.value = getChatMessages(threadId.value).map(item => ({
+      ...item,
+      time: item.time || Date.now()
+    }))
+  }
 }
 
 const formatMessageTime = (time) => {
@@ -77,42 +93,64 @@ const formatMessageTime = (time) => {
   return `${hour}:${minute}`
 }
 
-onLoad((options) => {
+onLoad(async (options) => {
   loadCurrentUser()
 
   const name = decodeURIComponent(options?.name || '用户')
   const avatar = decodeURIComponent(options?.avatar || '🙂')
   target.value = { name, avatar }
 
-  const thread = openOrCreateChatThread(name, avatar)
-  threadId.value = thread.id
-  markChatThreadRead(threadId.value)
-
-  uni.setNavigationBarTitle({ title: `与${name}私聊` })
-  reloadMessages()
-})
-
-onShow(() => {
-  if (threadId.value) {
+  if (options?.threadId && !isNaN(Number(options.threadId))) {
+    useApi.value = true
+    threadId.value = Number(options.threadId)
+  } else {
+    const thread = openOrCreateChatThread(name, avatar)
+    threadId.value = thread.id
     markChatThreadRead(threadId.value)
   }
-  reloadMessages()
+
+  uni.setNavigationBarTitle({ title: `与${name}私聊` })
+  await reloadMessages()
 })
 
-const sendMessage = () => {
+onShow(async () => {
+  if (threadId.value && !useApi.value) {
+    markChatThreadRead(threadId.value)
+  }
+  await reloadMessages()
+})
+
+const sendMessage = async () => {
   const content = text.value.trim()
   if (!content) return
 
-  appendChatMessage(threadId.value, currentUser.value.name, content)
-  upsertChatThread({
-    id: threadId.value,
-    name: target.value.name,
-    avatar: target.value.avatar,
-    lastText: content,
-    updatedAt: Date.now()
-  })
-  text.value = ''
-  reloadMessages()
+  if (useApi.value) {
+    try {
+      const userId = uni.getStorageSync('current_user_id') || 1
+      await apiRequest({
+        url: '/api/community/chat/send',
+        method: 'POST',
+        header: { 'X-User-Id': userId },
+        data: { threadId: threadId.value, receiverId: 0, content }
+      })
+      text.value = ''
+      await reloadMessages()
+    } catch (e) {
+      console.error('发送消息失败:', e)
+      uni.showToast({ title: '发送失败，请重试', icon: 'none' })
+    }
+  } else {
+    appendChatMessage(threadId.value, currentUser.value.name, content)
+    upsertChatThread({
+      id: threadId.value,
+      name: target.value.name,
+      avatar: target.value.avatar,
+      lastText: content,
+      updatedAt: Date.now()
+    })
+    text.value = ''
+    reloadMessages()
+  }
 }
 </script>
 

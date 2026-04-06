@@ -102,7 +102,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
-import { getPosts, savePosts } from './community-store'
+import { apiRequest } from '../../utils/request'
 import { getCollections, saveCollections } from '../my/my-store'
 
 const searchText = ref('')
@@ -132,9 +132,31 @@ const loadCurrentUser = () => {
 	}
 }
 
-const loadPosts = () => {
-	const list = getPosts()
-	posts.value = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+const loadPosts = async () => {
+	try {
+		const keyword = searchText.value.trim()
+		const params = { page: 1, size: 50 }
+		if (keyword) params.keyword = keyword
+		const data = await apiRequest({ url: '/api/community/post', method: 'GET', data: params })
+		posts.value = (data || []).map(item => ({
+			id: item.id,
+			userId: item.userId,
+			user: `用户${item.userId}`,
+			avatar: item.avatar || '🙂',
+			title: item.title,
+			desc: item.content,
+			tag: item.tags || '社区',
+			likes: item.likeCount || 0,
+			comments: item.commentCount || 0,
+			visibility: item.visibility || '所有人可见',
+			following: false,
+			collected: false,
+			liked: false
+		}))
+	} catch (e) {
+		console.error('加载帖子失败', e)
+		posts.value = []
+	}
 }
 
 onShow(() => {
@@ -142,27 +164,8 @@ onShow(() => {
 	loadPosts()
 })
 
-// 检查当前用户是否能看到该帖子
-const canSeePost = (post) => {
-	const visibility = post.visibility || '所有人可见'
-	const isOwnPost = post.user === currentUser.value.name
-	
-	switch (visibility) {
-		case '所有人可见':
-			return true
-		case '部分可见':
-			// 发布者、关注者能看到
-			return isOwnPost || post.following
-		case '部分不可见':
-			// 只有发布者能看到
-			return isOwnPost
-		case '私密':
-			// 只有发布者能看到
-			return isOwnPost
-		default:
-			return true
-	}
-}
+// 后端已过滤权限，前端直接展示
+const canSeePost = () => true
 
 // 获取可见范围的显示标签
 const getVisibilityLabel = (visibility) => {
@@ -187,13 +190,12 @@ const getVisibilityClass = (visibility) => {
 }
 
 const filteredPosts = computed(() => {
-	let result = posts.value
-		.filter(item => item.type === currentTab.value)
-		.filter(item => canSeePost(item))
-	
+	let result = posts.value.filter(item => canSeePost(item))
+	if (currentTab.value === 'follow') {
+		result = result.filter(item => item.following)
+	}
 	const keyword = searchText.value.trim()
 	if (!keyword) return result
-
 	result = result.filter(item =>
 		item.title.includes(keyword) || item.desc.includes(keyword) || item.tag.includes(keyword)
 	)
@@ -208,72 +210,31 @@ const toggleFollow = (id) => {
 	const target = posts.value.find(item => item.id === id)
 	if (!target) return
 	target.following = !target.following
-	savePosts(posts.value)
-	uni.showToast({
-		title: target.following ? '已关注' : '已取消关注',
-		icon: 'none'
-	})
+	uni.showToast({ title: target.following ? '已关注' : '已取消关注', icon: 'none' })
 }
 
 const toggleCollect = (id) => {
 	const target = posts.value.find(item => item.id === id)
 	if (!target) return
-	
-	// 更新该帖子的 collected 状态
 	target.collected = !target.collected
-	savePosts(posts.value)
-
-	// 同时更新"我的收藏"中的数据
 	const collections = getCollections()
-	
 	if (target.collected) {
-		// 添加到收藏 - 添加到"动态"分类
-		const postItem = {
-			id: target.id,
-			name: target.title,
-			desc: target.desc,
-			tag: target.tag,
-			user: target.user,
-			avatar: target.avatar,
-			savedAt: Date.now()
-		}
-		
-		// 如果动态分类不存在，则创建
-		if (!collections.posts) {
-			collections.posts = []
-		}
-		
-		// 检查是否已经存在，避免重复
-		if (!collections.posts.find(item => item.id === postItem.id)) {
-			collections.posts.unshift(postItem)
-		}
+		const postItem = { id: target.id, name: target.title, desc: target.desc, tag: target.tag, user: target.user, avatar: target.avatar, savedAt: Date.now() }
+		if (!collections.posts) collections.posts = []
+		if (!collections.posts.find(item => item.id === postItem.id)) collections.posts.unshift(postItem)
 	} else {
-		// 从收藏中删除 - 从"动态"分类中删除
-		if (collections.posts) {
-			collections.posts = collections.posts.filter(item => item.id !== id)
-		}
+		if (collections.posts) collections.posts = collections.posts.filter(item => item.id !== id)
 	}
-	
 	saveCollections(collections)
-	
-	uni.showToast({
-		title: target.collected ? '已收藏' : '已取消收藏',
-		icon: 'none'
-	})
+	uni.showToast({ title: target.collected ? '已收藏' : '已取消收藏', icon: 'none' })
 }
 
 const toggleLike = (id) => {
 	const target = posts.value.find(item => item.id === id)
 	if (!target) return
-
-	const liked = Boolean(target.liked)
-	target.liked = !liked
+	target.liked = !target.liked
 	target.likes = Math.max(0, Number(target.likes || 0) + (target.liked ? 1 : -1))
-	savePosts(posts.value)
-	uni.showToast({
-		title: target.liked ? '已点赞' : '已取消点赞',
-		icon: 'none'
-	})
+	uni.showToast({ title: target.liked ? '已点赞' : '已取消点赞', icon: 'none' })
 }
 
 const sharePost = () => {
@@ -288,7 +249,8 @@ const privateChat = (item) => {
 
 // 检查是否是自己的帖子
 const isOwnPost = (item) => {
-	return item.user === currentUser.value.name
+	const currentUserId = uni.getStorageSync('current_user_id') || 1
+	return item.userId === currentUserId
 }
 
 // 显示删除确认
@@ -307,22 +269,19 @@ const showDeleteConfirm = (item) => {
 }
 
 // 删除列表中的帖子
-const deleteListPost = (id) => {
+const deleteListPost = async (id) => {
 	try {
-		posts.value = posts.value.filter(item => item.id !== id)
-		savePosts(posts.value)
-		// 同时删除评论数据
-		uni.removeStorageSync(`community_comments_${id}`)
-		uni.showToast({
-			title: '帖子已删除',
-			icon: 'success'
+		const userId = uni.getStorageSync('current_user_id') || 1
+		await apiRequest({
+			url: `/api/community/post/${id}`,
+			method: 'DELETE',
+			header: { 'X-User-Id': userId }
 		})
+		posts.value = posts.value.filter(item => item.id !== id)
+		uni.showToast({ title: '帖子已删除', icon: 'success' })
 	} catch (error) {
 		console.error('删除失败:', error)
-		uni.showToast({
-			title: '删除失败，请重试',
-			icon: 'none'
-		})
+		uni.showToast({ title: '删除失败，请重试', icon: 'none' })
 	}
 }
 

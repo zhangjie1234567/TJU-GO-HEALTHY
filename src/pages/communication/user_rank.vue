@@ -32,9 +32,9 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
-import { getUserMetrics, saveUserMetrics } from './community-store'
+import { apiRequest } from '../../utils/request'
 
-const metricList = ref([])
+const rankData = ref({ exercise: [], days: [], clock: [] })
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
 const form = ref({
   exercise: '',
@@ -42,8 +42,13 @@ const form = ref({
   clock: ''
 })
 
-const loadMetrics = () => {
-  metricList.value = getUserMetrics()
+const loadMetrics = async () => {
+  try {
+    const res = await apiRequest({ url: '/api/community/rank/user', method: 'GET' })
+    if (res) rankData.value = res
+  } catch (e) {
+    console.error('加载用户排行失败:', e)
+  }
 }
 
 const loadCurrentUser = () => {
@@ -73,61 +78,40 @@ onShow(() => {
   loadMetrics()
 })
 
-const buildTopList = (key, suffix) => {
-  return [...metricList.value]
-    .sort((a, b) => Number(b[key]) - Number(a[key]))
-    .slice(0, 5)
-    .map(item => ({
-      user: item.user,
-      value: `${item[key]} ${suffix}`
-    }))
-}
-
 const rankBlocks = computed(() => [
-  { key: 'exercise', title: '运动量', list: buildTopList('exercise', 'km') },
-  { key: 'days', title: '坚持天数', list: buildTopList('days', '天') },
-  { key: 'clock', title: '打卡数', list: buildTopList('clock', '次') }
+  { key: 'exercise', title: '运动量', list: (rankData.value.exercise || []).slice(0, 5).map(r => ({ user: r.user, value: `${r.value} km` })) },
+  { key: 'days', title: '坦持天数', list: (rankData.value.days || []).slice(0, 5).map(r => ({ user: r.user, value: `${r.value} 天` })) },
+  { key: 'clock', title: '打卡数', list: (rankData.value.clock || []).slice(0, 5).map(r => ({ user: r.user, value: `${r.value} 次` })) }
 ])
 
-const submitMetric = () => {
+const submitMetric = async () => {
   const user = currentUser.value.name
-  const studentId = currentUser.value.studentId
-  const exercise = Number(form.value.exercise || 0)
-  const days = Number(form.value.days || 0)
-  const clock = Number(form.value.clock || 0)
-
   if (!user || user === '未登录用户') {
     uni.showToast({ title: '请先去登录页认证账号', icon: 'none' })
     return
   }
-
+  const exercise = Number(form.value.exercise || 0)
+  const days = Number(form.value.days || 0)
+  const clock = Number(form.value.clock || 0)
   if (exercise < 0 || days < 0 || clock < 0) {
     uni.showToast({ title: '数据不能为负数', icon: 'none' })
     return
   }
-
-  const target = metricList.value.find(item =>
-    studentId ? item.studentId === studentId : item.user === user
-  )
-  if (target) {
-    target.exercise += exercise
-    target.days += days
-    target.clock += clock
-    target.user = user
-  } else {
-    metricList.value.push({
-      id: Date.now(),
-      user,
-      studentId,
-      exercise,
-      days,
-      clock
+  try {
+    const userId = uni.getStorageSync('current_user_id') || 1
+    await apiRequest({
+      url: '/api/community/rank/user/add',
+      method: 'POST',
+      header: { 'X-User-Id': userId },
+      data: { exercise, days, clock }
     })
+    form.value = { exercise: '', days: '', clock: '' }
+    await loadMetrics()
+    uni.showToast({ title: '数据已更新', icon: 'success' })
+  } catch (e) {
+    console.error('提交指标失败:', e)
+    uni.showToast({ title: '提交失败，请重试', icon: 'none' })
   }
-
-  saveUserMetrics(metricList.value)
-  form.value = { exercise: '', days: '', clock: '' }
-  uni.showToast({ title: '数据已更新', icon: 'success' })
 }
 </script>
 
