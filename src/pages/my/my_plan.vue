@@ -305,7 +305,8 @@ import {
 	getCurrentPlan,
 	setCurrentPlan,
 	getUserPlans,
-	saveUserPlans
+	createUserPlan,
+	updateUserPlan
 } from './my-store'
 
 const plans = ref([])
@@ -408,20 +409,44 @@ const otherPlans = computed(() => {
 	return plans.value.filter(p => p.id !== (currentPlan.value?.id))
 })
 
-const loadData = () => {
-	plans.value = getUserPlans()
-	const current = getCurrentPlan()
-	currentPlan.value = current || null
+const safeParseJSON = (value, fallback) => {
+	if (!value) return fallback
+	if (typeof value === 'object') return value
+	try {
+		return JSON.parse(value)
+	} catch (error) {
+		return fallback
+	}
+}
+
+const loadData = async () => {
+	try {
+		const [planList, current] = await Promise.all([
+			getUserPlans(),
+			getCurrentPlan()
+		])
+		plans.value = planList || []
+		currentPlan.value = current || null
+	} catch (error) {
+		plans.value = []
+		currentPlan.value = null
+	}
 }
 
 const selectPlan = (plan) => {
 	uni.showModal({
 		title: '切换方案',
 		content: `确定切换到"${plan.name}"吗？`,
-		success(res) {
+		async success(res) {
 			if (res.confirm) {
-				setCurrentPlan(plan)
-				currentPlan.value = plan
+				const ok = await setCurrentPlan(plan)
+				if (!ok) return
+				await loadData()
+				// setCurrentPlan 已写缓存，但 loadData 可能再次覆盖，确保缓存与当前一致
+				if (currentPlan.value?.id) {
+					uni.setStorageSync('current_plan_cache', JSON.stringify(currentPlan.value))
+				}
+				generateTodayTasks()
 				uni.showToast({
 					title: '方案已切换',
 					icon: 'none'
@@ -431,7 +456,7 @@ const selectPlan = (plan) => {
 	})
 }
 
-const savePlan = () => {
+const savePlan = async () => {
 	if (!newPlan.value.name) {
 		uni.showToast({
 			title: '请输入方案名称',
@@ -440,18 +465,20 @@ const savePlan = () => {
 		return
 	}
 
-	const plan = {
-		id: Date.now().toString(),
-		...newPlan.value,
-		createdAt: new Date().toISOString()
+	if (!uni.getStorageSync('auth_token')) {
+		uni.showToast({
+			title: '请先登录后再创建方案',
+			icon: 'none'
+		})
+		return
 	}
 
-	plans.value.unshift(plan)
-	saveUserPlans(plans.value)
+	const plan = await createUserPlan(newPlan.value)
+	if (!plan) return
 
-	// 创建后自动设置为当前方案
-	setCurrentPlan(plan)
-	currentPlan.value = plan
+	await setCurrentPlan(plan)
+	await loadData()
+	generateTodayTasks()
 
 	showAddModal.value = false
 	newPlan.value = {
@@ -472,32 +499,78 @@ const usePlanTemplate = (template) => {
 	uni.showModal({
 		title: '使用模板',
 		content: `确定使用"${template.name}"吗？\n\n目标: ${template.target}\n周期: ${template.duration}天`,
-		success(res) {
+		async success(res) {
 			if (res.confirm) {
-				const plan = {
-					id: Date.now().toString(),
+				// 拿到已有方案 id（来自当前状态或缓存），避免依赖后端 POST/PUT 成功
+				let existingId = currentPlan.value?.id
+				if (!existingId) {
+					try {
+						const raw = uni.getStorageSync('current_plan_cache')
+						const cached = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null
+						if (cached?.id) existingId = cached.id
+					} catch (e) {}
+				}
+
+				// 立即构建富方案对象并写入缓存，让用户立刻看到切换效果
+				const richPlan = {
+					id: existingId || 0,
 					name: template.name,
 					desc: template.desc,
+					description: template.desc,
+					type: template.target,
 					icon: template.icon,
 					target: template.target,
 					duration: template.duration,
 					details: template.details,
-					isTemplate: true,
-					createdAt: new Date().toISOString()
+					isTemplate: true
 				}
-
-				plans.value.unshift(plan)
-				saveUserPlans(plans.value)
-				setCurrentPlan(plan)
-				currentPlan.value = plan
+				currentPlan.value = richPlan
+				uni.setStorageSync('current_plan_cache', JSON.stringify(richPlan))
+				generateTodayTasks()
 
 				showDetailModal.value = false
 				selectedTemplate.value = null
 
-				uni.showToast({
-					title: '已使用模板，开始你的健身之旅！',
-					icon: 'success'
-				})
+				uni.showToast({ title: '已使用模板，开始你的健身之旅！', icon: 'success' })
+
+				// 后台异步同步到服务器（不阻塞 UI，失败不影响本地显示）
+				;(async () => {
+					try {
+						let syncedId = existingId
+						if (syncedId) {
+							// 有已知 id：先尝试 PUT 更新方案内容
+							const updated = await updateUserPlan(syncedId, richPlan)
+							if (updated?.id) syncedId = updated.id
+						} else {
+							// 无 id：尝试 POST 创建
+							const created = await createUserPlan(richPlan)
+							if (created?.id) syncedId = created.id
+						}
+						if (syncedId) {
+							await setCurrentPlan({ id: syncedId })
+							// 服务端有效 id 写回缓存
+							const finalPlan = { ...richPlan, id: syncedId }
+							currentPlan.value = finalPlan
+							uni.setStorageSync('current_plan_cache', JSON.stringify(finalPlan))
+						}
+					} catch (e) { /* 后台同步失败不影响本地 */ }
+					// 后台刷新方案列表
+					loadData().then(() => {
+						// loadData 后用本地模板数据修复可能被覆盖的 currentPlan
+						if (currentPlan.value) {
+							const merged = {
+								...currentPlan.value,
+								name: richPlan.name,
+								icon: richPlan.icon,
+								details: richPlan.details,
+								target: richPlan.target,
+								isTemplate: true
+							}
+							currentPlan.value = merged
+							uni.setStorageSync('current_plan_cache', JSON.stringify(merged))
+						}
+					})
+				})()
 			}
 		}
 	})
@@ -590,7 +663,7 @@ const generateTodayTasks = () => {
 
 	// 加载已完成状态
 	const tasksStateStr = uni.getStorageSync(`tasks_${new Date().toDateString()}`)
-	const tasksState = tasksStateStr ? JSON.parse(tasksStateStr) : {}
+	const tasksState = safeParseJSON(tasksStateStr, {})
 
 	todayTasks.value = dailyTasks.map((task, index) => ({
 		...task,
@@ -705,8 +778,19 @@ const getCurrentWeekPlan = computed(() => {
 })
 
 onShow(() => {
-	loadData()
-	generateTodayTasks()
+	// 先读缓存立即渲染，不阻塞页面显示
+	try {
+		const cachedPlan = uni.getStorageSync('current_plan_cache')
+		if (cachedPlan) {
+			const p = typeof cachedPlan === 'string' ? JSON.parse(cachedPlan) : cachedPlan
+			if (p?.id) {
+				currentPlan.value = p
+				generateTodayTasks()
+			}
+		}
+	} catch (e) {}
+	// 后台异步刷新
+	loadData().then(() => generateTodayTasks())
 })
 </script>
 

@@ -15,8 +15,8 @@
             </view>
             <view class="form-group">
               <text class="form-label">学号</text>
-              <input v-model="form.studentId" class="form-input" type="number" placeholder="请输入10位学号"
-                placeholder-class="input-placeholder" maxlength="10" @input="onStudentIdInput" />
+              <input v-model="form.studentId" class="form-input" type="text" placeholder="请输入学号（3-20位字母或数字）"
+                placeholder-class="input-placeholder" maxlength="20" @input="onStudentIdInput" />
               <text v-if="showStudentIdError" class="form-error">学号格式不正确</text>
             </view>
             <view class="remember-row">
@@ -53,11 +53,11 @@
   const showStudentIdError = ref(false)
   const isSubmitting = ref(false)
 
-  // 学号仅允许数字，最多10位
+  // 学号输入预处理：去掉空白，限制长度
   function onStudentIdInput(e) {
-    const val = (e.detail?.value ?? '').replace(/\D/g, '').slice(0, 10)
+    const val = String(e.detail?.value ?? '').trim().slice(0, 20)
     form.studentId = val
-    showStudentIdError.value = val.length > 0 && val.length !== 10
+    showStudentIdError.value = val.length > 0 && !validateStudentId(val)
   }
 
   function onRememberChange(e) {
@@ -65,7 +65,7 @@
   }
 
   function validateStudentId(id) {
-    return /^\d{10}$/.test((id || '').trim())
+    return /^[A-Za-z0-9]{3,20}$/.test((id || '').trim())
   }
 
   function onSubmit() {
@@ -143,7 +143,7 @@
     try {
       const savedId = uni.getStorageSync('login_remember_studentId')
       const savedName = uni.getStorageSync('login_remember_name')
-      if (savedId) form.studentId = String(savedId).slice(0, 10)
+      if (savedId) form.studentId = String(savedId).slice(0, 20)
       if (savedName) form.name = savedName
       if (savedId || savedName) form.rememberMe = true
     } catch (e) {}

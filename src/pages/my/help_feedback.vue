@@ -179,9 +179,9 @@ const filteredHelpItems = computed(() => {
 	)
 })
 
-const loadData = () => {
+const loadData = async () => {
 	helpItems.value = getHelpContent()
-	feedbackList.value = getFeedbackList()
+	feedbackList.value = await getFeedbackList()
 }
 
 const showHelpDetail = (item) => {
@@ -212,7 +212,7 @@ const getFeedbackTypeLabel = (type) => {
 	return typeMap[type] || type
 }
 
-const submitFeedback = () => {
+const submitFeedback = async () => {
 	if (!feedbackForm.value.content.trim()) {
 		uni.showToast({
 			title: '请输入反馈内容',
@@ -221,7 +221,7 @@ const submitFeedback = () => {
 		return
 	}
 
-	const feedback = saveFeedback({
+	const feedback = await saveFeedback({
 		type: feedbackForm.value.type,
 		content: feedbackForm.value.content,
 		targetAI: feedbackForm.value.targetAI,

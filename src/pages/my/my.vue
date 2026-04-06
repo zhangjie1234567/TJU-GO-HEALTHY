@@ -83,8 +83,7 @@ import {
 	getCurrentUser,
 	getCurrentPlan,
 	getCollections,
-	getDailyData,
-	getYearlyReport
+	getDailyData
 } from './my-store'
 
 const currentUser = ref({
@@ -100,10 +99,33 @@ const dailyData = ref([])
 
 const totalCollections = computed(() => {
 	if (!collections.value) return 0
-	return (collections.value.posts || []).length
+	return Object.values(collections.value).reduce((sum, list) => {
+		return sum + (Array.isArray(list) ? list.length : 0)
+	}, 0)
 })
 
 const totalDataPoints = computed(() => dailyData.value.length)
+
+const loadData = async () => {
+	try {
+		const [user, plan, collectionData, daily] = await Promise.all([
+			getCurrentUser(),
+			getCurrentPlan(),
+			getCollections(),
+			getDailyData()
+		])
+		currentUser.value = user || {
+			name: '未登录',
+			studentId: '点击登录',
+			avatar: '😊'
+		}
+		currentPlan.value = plan || null
+		collections.value = collectionData || { posts: [] }
+		dailyData.value = daily || []
+	} catch (e) {
+		// Promise.all 意外抛出时不影响页面渲染
+	}
+}
 
 const goToPage = (page) => {
 	const routes = {
@@ -124,10 +146,16 @@ const goToPage = (page) => {
 }
 
 onShow(() => {
-	currentUser.value = getCurrentUser()
-	currentPlan.value = getCurrentPlan()
-	collections.value = getCollections()
-	dailyData.value = getDailyData()
+	// 先同步读缓存，立即显示用户名，消除"未登录"闪烁
+	try {
+		const raw = uni.getStorageSync('current_user_profile')
+		if (raw) {
+			const cached = typeof raw === 'string' ? JSON.parse(raw) : raw
+			if (cached?.name) currentUser.value = cached
+		}
+	} catch (e) {}
+	// 后台异步刷新，不阻塞渲染
+	loadData()
 })
 </script>
 

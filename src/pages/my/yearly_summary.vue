@@ -343,17 +343,23 @@ const weightChart = computed(() => {
 	return chart
 })
 
-const loadData = () => {
+const loadData = async () => {
 	// 加载每日数据
-	dailyData.value = getDailyData()
+	dailyData.value = await getDailyData()
 	
 	// 计算真实统计数据
 	calculateYearlyStats()
 	
-	// 尝试从存储加载已保存的报告
-	const report = getYearlyReport()
-	if (report && report.goals && report.goals.length > 0) {
-		yearlyData.value.goals = report.goals
+	// 尝试从后端加载已保存的报告
+	const report = await getYearlyReport(currentYear)
+	if (report) {
+		yearlyData.value = {
+			...yearlyData.value,
+			...report,
+			goals: report.goals?.length ? report.goals : generateGoals(),
+			achievements: report.achievements?.length ? report.achievements : yearlyData.value.achievements,
+			highlights: report.highlights?.length ? report.highlights : yearlyData.value.highlights
+		}
 	} else {
 		yearlyData.value.goals = generateGoals()
 	}
@@ -460,8 +466,8 @@ const getHeatmapColor = (count) => {
 	return '#003d82'
 }
 
-const regenerateReport = () => {
-	loadData()
+const regenerateReport = async () => {
+	await loadData()
 	uni.showToast({
 		title: '报告已刷新',
 		icon: 'none'
@@ -494,7 +500,7 @@ const addNewGoal = () => {
 	showGoalModal.value = true
 }
 
-const saveNewGoal = () => {
+const saveNewGoal = async () => {
 	if (!newGoal.value.name) {
 		uni.showToast({
 			title: '请输入目标名称',
@@ -509,7 +515,7 @@ const saveNewGoal = () => {
 		progress: newGoal.value.progress
 	})
 
-	saveYearlyReport(yearlyData.value)
+	await saveYearlyReport(yearlyData.value)
 	showGoalModal.value = false
 	newGoal.value = { name: '', desc: '', progress: 0 }
 

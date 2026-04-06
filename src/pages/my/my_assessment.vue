@@ -140,7 +140,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
-import { getAssessmentReport } from './my-store'
+import { getAssessmentReport, deleteAssessmentReport } from './my-store'
 
 const assessmentReport = ref(null)
 
@@ -158,8 +158,8 @@ const goToLogin = () => {
 	})
 }
 
-const loadData = () => {
-	assessmentReport.value = getAssessmentReport()
+const loadData = async () => {
+	assessmentReport.value = await getAssessmentReport()
 }
 
 const getHealthScoreDescription = () => {
@@ -186,9 +186,10 @@ const reassessQuestion = () => {
 		content: '这将清空原有测评，并返回登录页重新填写问卷',
 		confirmText: '确定',
 		cancelText: '取消',
-		success(res) {
+		async success(res) {
 			if (res.confirm) {
-				uni.removeStorageSync('my_assessment_report')
+				const deleted = await deleteAssessmentReport()
+				if (!deleted) return
 				uni.navigateTo({
 					url: '/pages/login/login'
 				})
