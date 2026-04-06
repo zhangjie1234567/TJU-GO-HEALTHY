@@ -7,41 +7,45 @@
         <text class="category-title">自选菜</text>
         <view class="food-list">
           <view class="food-item" v-for="(food, index) in foods" :key="index">
-            <text class="food-name">{{ food.name }}</text>
+            <text class="food-name">{{ food.dishName }}</text> 
             <text class="food-price">{{ food.price }}元</text>
           </view>
         </view>
       </view>
       
-      <view class="category-section">
-        <text class="category-title">特色菜</text>
-        <view class="food-list">
-          <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
-            <text class="food-name">{{ food.name }}</text>
-            <text class="food-price">{{ food.price }}元</text>
-          </view>
-        </view>
+        <view class="category-section">
+    <text class="category-title">特色菜</text>
+    <view class="food-list">
+      <!-- 这里循环的是 specialFoods -->
+      <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
+        <text class="food-name">{{ food.dishName }}</text> 
+        <text class="food-price">{{ food.price }}元</text>
       </view>
+    </view>
+</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-
-const foods = reactive([
-  { name: '桃园菜品1', price: 12, score: 4.5 },
-  { name: '桃园菜品2', price: 15, score: 4.2 },
-  { name: '桃园菜品3', price: 10, score: 4.0 },
-  { name: '桃园菜品4', price: 13, score: 4.3 },
-  { name: '桃园菜品5', price: 11, score: 4.1 }
-])
-
-const specialFoods = reactive([
-  { name: '桃园特色菜1', price: 20, score: 4.8 },
-  { name: '桃园特色菜2', price: 25, score: 4.7 },
-  { name: '桃园特色菜3', price: 18, score: 4.6 }
-])
+import { ref, onMounted } from 'vue'
+const foods = ref([])
+const specialFoods = ref([])
+const apiUrl = 'http://localhost:8080'
+const fetchRealData = async () => {
+  const today = new Date().toISOString().slice(0, 10)
+  const url = `${apiUrl}/canteens/menus?canteenName=${encodeURIComponent('桃园')}&date=${today}`
+  try {
+    uni.request({ url, method: 'GET', success: (res) => {
+      if (res.data && res.data.code === 1) {
+        const allData = res.data.data
+        foods.value = allData.filter(item => item.price <= 8)
+        specialFoods.value = allData.filter(item => item.price > 8)
+      }
+    }, fail: (err) => { console.error('请求失败', err) }})
+  } catch (e) { console.error('出错了', e) }
+}
+onMounted(() => { fetchRealData() })
 </script>
 
 <style lang="scss" scoped>
@@ -104,6 +108,4 @@ const specialFoods = reactive([
   color: #333;
   font-weight: 600;
 }
-
-
 </style>

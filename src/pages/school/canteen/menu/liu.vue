@@ -7,41 +7,68 @@
         <text class="category-title">自选菜</text>
         <view class="food-list">
           <view class="food-item" v-for="(food, index) in foods" :key="index">
-            <text class="food-name">{{ food.name }}</text>
+            <text class="food-name">{{ food.dishName }}</text> 
             <text class="food-price">{{ food.price }}元</text>
           </view>
         </view>
       </view>
       
-      <view class="category-section">
-        <text class="category-title">特色菜</text>
-        <view class="food-list">
-          <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
-            <text class="food-name">{{ food.name }}</text>
-            <text class="food-price">{{ food.price }}元</text>
-          </view>
-        </view>
+        <view class="category-section">
+    <text class="category-title">特色菜</text>
+    <view class="food-list">
+      <!-- 这里循环的是 specialFoods -->
+      <view class="food-item" v-for="(food, index) in specialFoods" :key="index">
+        <text class="food-name">{{ food.dishName }}</text> 
+        <text class="food-price">{{ food.price }}元</text>
       </view>
+    </view>
+</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 
-const foods = reactive([
-  { name: '留园菜品1', price: 3, score: 7.5 },
-  { name: '留园菜品2', price: 6, score: 8.5 },
-  { name: '留园菜品3', price: 5, score: 8.0 },
-  { name: '留园菜品4', price: 4, score: 7.8 },
-  { name: '留园菜品5', price: 7, score: 8.2 }
-])
+// 1. 定义响应式变量
+const foods = ref([]) // 自选菜
+const specialFoods = ref([]) // 特色菜
 
-const specialFoods = reactive([
-  { name: '留园特色菜1', price: 12, score: 9.0 },
-  { name: '留园特色菜2', price: 14, score: 8.8 },
-  { name: '留园特色菜3', price: 10, score: 8.5 }
-])
+// 2. 这里的 apiUrl 要和后端对应
+const apiUrl = 'http://localhost:8080'
+
+// 3. 获取数据的函数
+const fetchRealData = async () => {
+  const today = new Date().toISOString().slice(0, 10) // 获取 2026-03-10 格式
+  const url = `${apiUrl}/canteens/menus?canteenName=${encodeURIComponent('留园')}&date=${today}`
+
+  try {
+    // 使用 uni.request (小程序/跨端标准)
+    uni.request({
+      url: url,
+      method: 'GET',
+      success: (res) => {
+        if (res.data && res.data.code === 1) {
+          const allData = res.data.data
+          
+          // 逻辑：价格 > 8 元归到特色菜，否则归到自选菜
+          foods.value = allData.filter(item => item.price <= 8)
+          specialFoods.value = allData.filter(item => item.price > 8)
+        }
+      },
+      fail: (err) => {
+        console.error('请求失败', err)
+      }
+    })
+  } catch (e) {
+    console.error('出错了', e)
+  }
+}
+
+// 4. 页面挂载时调用
+onMounted(() => {
+  fetchRealData()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -104,6 +131,4 @@ const specialFoods = reactive([
   color: #333;
   font-weight: 600;
 }
-
-
 </style>

@@ -1,26 +1,57 @@
 <template>
   <view class="page">
+    <view class="header">
+      <view class="back" @click="goBack">‹</view>
+      <text class="title">校内设施</text>
+    </view>
+
     <view class="content">
       <view class="card water-card">
-        <text class="card-title">我的水卡</text>
-        <view class="water-row">
-          <text>我的余额</text>
-          <text>56 元</text>
+        <view class="water-top">
+          <view>
+            <text class="card-title">我的水卡</text>
+            <text class="muted">消费记录</text>
+          </view>
+          <view class="stats">
+            <text class="big">{{ cardVolume }}</text>
+            <text class="muted small">ml</text>
+          </view>
         </view>
-      </view>
-      
-      <view class="card record-card" @click="goToRecords">
-        <text class="card-title">消费记录</text>
-        <text class="record-desc">查看详细消费和充值记录</text>
+
+        <view class="water-bottom">
+          <view>
+            <text class="muted">我的余额</text>
+            <text class="balance">{{ balance }} 元</text>
+          </view>
+          <view class="actions">
+            <button class="btn recharge" @click.stop>充值</button>
+            <button class="btn history" @click.stop>明细</button>
+          </view>
+        </view>
       </view>
 
       <text class="section-title">位置</text>
 
-      <view class="location-card" v-for="(loc, idx) in locations" :key="idx" @click="goToDetail(loc.title)">
+      <view class="location-card" v-for="(loc, idx) in locations" :key="idx">
         <image class="loc-thumb" src="/static/school/main/facilities.png" mode="aspectFill" />
         <view class="loc-info">
-          <text class="loc-name">{{ loc.title }}</text>
+          <text class="loc-name">{{ loc.name }}</text>
+          <text v-if="loc.position && loc.position.indexOf('xxx') === -1" class="loc-pos">{{ loc.position }}</text>
         </view>
+      </view>
+
+      <text class="section-title">消费记录</text>
+      <view class="records">
+        <view v-for="r in records" :key="r.id || r.time || r.consumeTime" class="record-item">
+          <view class="record-left">
+            <text class="record-time">{{ formatDate(r.consumeTime || r.time || r.createdAt) }}</text>
+            <text class="record-desc">{{ r.desc || r.note || r.location || '' }}</text>
+          </view>
+          <view class="record-right">
+            <text :class="['amount', isDebit(r) ? 'debit' : 'credit']">{{ formatAmount(r) }}</text>
+          </view>
+        </view>
+        <view v-if="records.length === 0" class="no-records">暂无消费记录</view>
       </view>
 
     </view>
@@ -28,87 +59,130 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
+const apiUrl = ref('http://localhost:8080')
+const locations = reactive([])
+const records = ref([])
+const cardVolume = ref('5600')
+const balance = ref(56)
 
-const locations = reactive([
-  { title: '校内饮水机' },
-  { title: '校内打印机' },
-  { title: '校内打印店' },
-  { title: '校内超市' }
-])
-
-const goToDetail = (title) => {
+const apiGet = async (path) => {
+  const url = `${apiUrl.value}${path}`
   try {
-    // @ts-ignore
-    if (typeof uni !== 'undefined' && uni.navigateTo) {
-      let url = ''
-      switch (title) {
-        case '校内饮水机':
-          url = '/pages/school/facilities/water'
-          break
-        case '校内打印机':
-          url = '/pages/school/facilities/printer'
-          break
-        case '校内打印店':
-          url = '/pages/school/facilities/print_shop'
-          break
-        case '校内超市':
-          url = '/pages/school/facilities/shop'
-          break
-      }
-      if (url) {
-        uni.navigateTo({ url })
-      }
-      return
+    if (typeof uni !== 'undefined' && uni.request) {
+      return new Promise((resolve, reject) => {
+        // @ts-ignore
+        uni.request({ url, method: 'GET', success: (res) => resolve(res.data), fail: reject })
+      })
     }
-  } catch (e) {}
-  // 浏览器环境 fallback
-  let href = ''
-  switch (title) {
-    case '校内饮水机':
-      href = '/#/pages/school/facilities/water'
-      break
-    case '校内打印机':
-      href = '/#/pages/school/facilities/printer'
-      break
-    case '校内打印店':
-      href = '/#/pages/school/facilities/print_shop'
-      break
-    case '校内超市':
-      href = '/#/pages/school/facilities/shop'
-      break
-  }
-  if (href) {
-    window.location.href = href
+    const res = await fetch(url)
+    return await res.json()
+  } catch (e) {
+    console.warn('apiGet failed', e)
+    return null
   }
 }
 
-const goToRecords = () => {
+const formatDate = (iso) => {
+  if (!iso) return ''
+  // accept '2026-03-10T13:45:09' or '2026-03-10 13:45:09' or timestamp
   try {
-    // @ts-ignore
-    if (typeof uni !== 'undefined' && uni.navigateTo) {
-      uni.navigateTo({ url: '/pages/school/facilities/records' })
-      return
-    }
-  } catch (e) {}
-  // 浏览器环境 fallback
-  const href = '/#/pages/school/facilities/records'
-  window.location.href = href
+    let s = String(iso)
+    s = s.replace('T', ' ')
+    // remove seconds if present
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(:?\d{2})?/) 
+    if (m) return `${m[1]} ${m[2]}`
+    return s
+  } catch (e) { return String(iso) }
 }
+
+const isDebit = (r) => {
+  if (r.type) {
+    const t = String(r.type).toLowerCase()
+    return t === 'debit' || t === 'expense' || t === 'consume'
+  }
+  // fallback: negative amount implies debit
+  if (typeof r.amount === 'number') return r.amount < 0
+  const amt = parseFloat(r.amount)
+  if (!isNaN(amt)) return amt < 0
+  // if unknown, assume debit
+  return true
+}
+
+const formatAmount = (r) => {
+  const raw = (r.amount !== undefined) ? r.amount : (r.value !== undefined ? r.value : '')
+  const num = parseFloat(raw)
+  if (!isNaN(num)) {
+    const abs = Math.abs(num).toFixed(2).replace(/\.00$/, '')
+    return (num < 0 ? '-' : '+') + abs
+  }
+  // fallback to string
+  return String(raw)
+}
+
+const fetchFacilities = async () => {
+  const res = await apiGet('/facilities')
+  if (res && res.data) {
+    locations.splice(0, locations.length, ...res.data)
+  } else {
+    locations.splice(0, locations.length, { name: '45教三楼饮水机', position: '' }, { name: '校内打印机', position: '' })
+  }
+}
+
+const fetchRecords = async () => {
+  const res = await apiGet('/facilities/records')
+  let list = []
+  if (res && res.data) list = res.data
+  else if (Array.isArray(res)) list = res
+  else list = [{ id: 1, amount: -0.58, consumeTime: '2026-03-10T13:45:09' }, { id: 2, amount: -0.27, consumeTime: '2026-03-10T13:44:50' }]
+  // normalize amounts and sort by time desc
+  records.value = list.map(it => ({ ...it }))
+}
+
+onMounted(async () => {
+  await fetchFacilities()
+  await fetchRecords()
+})
+
+const goBack = () => { try{ if (typeof uni !== 'undefined' && uni.navigateBack) { uni.navigateBack({ delta: 1 }); return } } catch(e){} if (window && window.history) window.history.back() }
 </script>
 
 <style lang="scss" scoped>
 .page { min-height: 100vh; background: #fff; padding-top: 24rpx; font-family: "PingFang SC", "Microsoft Yahei", Arial, sans-serif }
-
+.header { display:flex; align-items:center; height:88rpx; padding:0 24rpx }
+.back { font-size:48rpx; line-height:88rpx; width:88rpx; color:#111 }
+.title { font-size:36rpx; font-weight:700; margin-left:8rpx }
 .content { padding:24rpx }
-.card-title { display: block; font-size:34rpx; font-weight:700; margin-bottom: 20rpx; text-align: center; }
-.card { background:#BEEAFB; border-radius:30rpx; padding:20rpx; margin-bottom:20rpx }
-.record-card { background:#DFF4FF; border-radius:30rpx; padding:20rpx; margin-bottom:20rpx; cursor: pointer }
-.record-desc { font-size:24rpx; color:#666; margin-top:8rpx; text-align: center }
-.water-row { display:flex; justify-content:space-between; margin-top:12rpx; font-weight:700 }
-.section-title { display: block; font-size:34rpx; font-weight:700; margin-bottom: 20rpx; margin-left: 10rpx; }
-.location-card { display:flex; align-items:center; justify-content: space-between; background:#fff; border-radius:18rpx; padding:12rpx; box-shadow:0 8rpx 20rpx rgba(0,0,0,0.08); margin-bottom:16rpx }
-.loc-thumb { width:180rpx; height:120rpx; border-radius:12rpx; margin-right:18rpx }
-.loc-info { flex: 1; }
-.loc-name { font-size:28rpx; font-weight:700 }
+
+.card { background:#BEEAFB; border-radius:20rpx; padding:18rpx; margin-bottom:18rpx }
+.water-card { border-radius:20rpx; padding:18rpx }
+.water-top { display:flex; justify-content:space-between; align-items:center }
+.card-title { font-size:28rpx; font-weight:800 }
+.muted { color:#666; display:block }
+.stats { text-align:right }
+.big { font-size:34rpx; font-weight:800; color:#0b3b45 }
+.small { font-size:22rpx }
+.water-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:14rpx }
+.balance { font-size:26rpx; font-weight:800; color:#0b3b45 }
+.actions { display:flex; gap:12rpx }
+.btn { padding:8rpx 18rpx; border-radius:20rpx; border:none }
+.recharge { background:#4ecdc4; color:#fff }
+.history { background:#fff; color:#4ecdc4; border:1px solid #4ecdc4 }
+
+.section-title { font-size:30rpx; font-weight:700; margin:12rpx 0 }
+.location-card { display:flex; align-items:center; background:#fff; border-radius:12rpx; padding:12rpx; box-shadow:0 8rpx 20rpx rgba(0,0,0,0.06); margin-bottom:12rpx }
+.loc-thumb { width:120rpx; height:80rpx; border-radius:10rpx; margin-right:14rpx }
+.loc-name { font-size:26rpx; font-weight:700 }
+.loc-pos { color:#999; margin-top:6rpx }
+
+.records { margin-top:12rpx }
+.record-item { display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:12rpx; padding:14rpx; margin-bottom:10rpx; box-shadow:0 6rpx 16rpx rgba(0,0,0,0.03) }
+.record-left { display:flex; flex-direction:column }
+.record-time { color:#666; font-size:22rpx; margin-bottom:6rpx }
+.record-desc { color:#333; font-size:24rpx }
+.record-right { text-align:right }
+.amount { font-size:26rpx; font-weight:800 }
+.debit { color:#ff4d4f }
+.credit { color:#28a745 }
+.no-records { color:#999; padding:18rpx; text-align:center }
 </style>

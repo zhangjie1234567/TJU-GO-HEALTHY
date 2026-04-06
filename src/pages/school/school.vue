@@ -24,7 +24,10 @@
 </template>
 
 <script setup>
-const items = [
+import { reactive, ref } from 'vue'
+
+// 保持搜索框不变；项目内已有图标请根据实际素材替换路径
+const items = reactive([
   { name: 'map', label: '地图', img: '/static/school/main/map.png', wordImg: '/static/school/main/map_word.png' },
   { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png', wordImg: '/static/school/main/timetable_word.png' },
   { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png', wordImg: '/static/school/main/fitness_word.png' },
@@ -49,27 +52,65 @@ const fallbackToHashRoute = (url) => {
   window.location.hash = `#${url}`
 }
 
-const onItemClick = (item) => {
-  const url = routeMap[item.name]
-  if (!url) {
-    return
-  }
+const navigating = ref(false)
 
+// Helper: perform navigation in uni runtime or fallback to H5 hash
+const doNavigate = (url) => {
+  return new Promise((resolve) => {
+    try {
+      if (typeof uni !== 'undefined' && uni.navigateTo) {
+        try {
+          uni.navigateTo({
+            url,
+            success: (res) => resolve({ ok: true, res }),
+            fail: (err) => resolve({ ok: false, err }),
+            complete: () => {}
+          })
+          return
+        } catch (e) {
+          resolve({ ok: false, err: e })
+          return
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // browser fallback
+    try {
+      const href = '/#' + url.replace('/pages', '/pages')
+      window.location.href = href
+      setTimeout(() => resolve({ ok: true }), 600)
+    } catch (e) {
+      resolve({ ok: false, err: e })
+    }
+  })
+}
+
+const navigateToSafe = async (url) => {
   try {
-    // @ts-ignore
-    if (typeof uni !== 'undefined' && typeof uni.navigateTo === 'function') {
-      // @ts-ignore
-      uni.navigateTo({
-        url,
-        fail: () => fallbackToHashRoute(url)
-      })
-      return
+    const result = await doNavigate(url)
+    // ignore known navigation-cancelled errors
+    if (result && result.err && result.err.errMsg && typeof result.err.errMsg === 'string' && result.err.errMsg.includes('Navigation cancelled')) {
+      // ignore
     }
   } catch (e) {
-    fallbackToHashRoute(url)
+    // ignore
+  } finally {
+    navigating.value = false
   }
+}
 
-  fallbackToHashRoute(url)
+const onItemClick = async (item) => {
+  if (navigating.value) return
+  navigating.value = true
+
+  if (item.name === 'map') { await navigateToSafe('/pages/school/map/map'); return }
+  if (item.name === 'timetable') { await navigateToSafe('/pages/school/schedule/schedule'); return }
+  if (item.name === 'fitness') { await navigateToSafe('/pages/school/fitness/fitness'); return }
+  if (item.name === 'facilities') { await navigateToSafe('/pages/school/facilities/facilities'); return }
+  if (item.name === 'canteen') { await navigateToSafe('/pages/school/canteen/canteen'); return }
+  if (item.name === 'others') { await navigateToSafe('/pages/school/others/others'); return }
 }
 </script>
 

@@ -23,30 +23,30 @@
         <text class="empty-text" v-if="todayMeals[type].length === 0">还没有记录，快去干饭吧~</text>
         
         <view class="food-list" v-else>
-            <view class="food-item" v-for="(item, index) in todayMeals[type]" :key="index">
+            <view class="food-item" v-for="(item, index) in todayMeals[type]" :key="item.id || index">
             <view class="food-info">
                 <text class="food-name">{{ item.name }}</text>
                 <text class="food-price">￥{{ item.price }}</text>
             </view>
-            <view class="delete-btn" @click.stop="deleteMeal(type, index)">×</view>
+            <view class="delete-btn" @click.stop="deleteMeal(item, type, index)">×</view>
             </view>
         </view>
         </view>
         
         <!-- 历史记录区域 -->
         <view class="history-section">
-        <button class="toggle-history-btn" @click="showHistory = !showHistory">
+        <button class="toggle-history-btn" @click="toggleHistory">
             {{ showHistory ? '收起历史记录' : '查看历史记录' }}
         </button>
         
         <view class="history-list" v-if="showHistory">
-            <view class="history-card" v-for="(record, date) in mockHistory" :key="date">
+            <view class="history-card" v-for="(record, date) in history" :key="date">
             <text class="history-date">{{ date }}</text>
             <view class="history-row" v-for="(label, type) in mealMap" :key="type">
                 <block v-if="record[type] && record[type].length > 0">
                 <text class="row-label">{{ label }}：</text>
                 <text class="row-content">
-                    {{ record[type].map(f => `${f.name}(${f.price}元)`).join('、') }}
+                    {{ formatRecordList(record[type]) }}
                 </text>
                 </block>
             </view>
@@ -56,13 +56,13 @@
     </view>
     
     <!-- 添加食物弹窗 -->
-    <view class="modal-mask" v-if="showAddModal" @click="showAddModal = false">
+    <view class="modal-mask" v-if="showAddModal" @click="closeAddModal">
         <view class="modal-body" @click.stop>
         <text class="modal-header">添加{{ mealMap[currentMealType] }}内容</text>
         <input type="text" v-model="newFood.name" placeholder="请输入食物名称" class="input-box" />
         <input type="digit" v-model="newFood.price" placeholder="请输入价格 (元)" class="input-box" />
         <view class="modal-footer">
-            <button class="btn btn-cancel" @click="showAddModal = false">取消</button>
+            <button class="btn btn-cancel" @click="closeAddModal">取消</button>
             <button class="btn btn-confirm" @click="confirmAdd">确定</button>
         </view>
         </view>
@@ -71,81 +71,232 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 
-// 基础配置
+const apiBase = 'http://localhost:8080'
+
+// API helper supporting uni.request and fetch
+const apiRequest = (method, path, data = null, params = null) => {
+  const url = new URL(apiBase + path)
+  if (params) {
+    Object.keys(params).forEach(k => { if (params[k] !== undefined && params[k] !== null) url.searchParams.set(k, params[k]) })
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof uni !== 'undefined' && uni.request) {
+        // @ts-ignore
+        uni.request({
+          url: url.toString(),
+          method: method.toUpperCase(),
+          data: data,
+          success: (res) => {
+            // uni returns { statusCode, data }
+            if (res && res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(res.data)
+            } else {
+              reject(res)
+            }
+          },
+          fail: (err) => reject(err)
+        })
+        return
+      }
+    } catch (e) {
+      // continue to fetch fallback
+    }
+
+    // fetch fallback for H5
+    const fetchOpts = { method: method.toUpperCase(), headers: { 'Content-Type': 'application/json' } }
+    if (data) fetchOpts.body = JSON.stringify(data)
+    fetch(url.toString(), fetchOpts).then(async r => {
+      const json = await r.json().catch(() => null)
+      if (r.ok) resolve(json)
+      else reject({ status: r.status, body: json })
+    }).catch(err => reject(err))
+  })
+}
+
+// meal types
 const mealMap = { breakfast: '早饭', lunch: '午饭', dinner: '晚饭' }
 
-// 响应式数据
-const todayMeals = reactive({
-    breakfast: [],
-    lunch: [],
-    dinner: []
-})
-
+const todayMeals = reactive({ breakfast: [], lunch: [], dinner: [] })
+const history = reactive({})
 const showHistory = ref(false)
 const showAddModal = ref(false)
 const currentMealType = ref('')
 const newFood = reactive({ name: '', price: '' })
+const todayDate = ref(new Date().toISOString().slice(0,10))
 
-// 模拟的历史数据
-const mockHistory = {
-    '2024-12-10': {
-    breakfast: [{ name: '小笼包', price: 8 }, { name: '豆浆', price: 2 }],
-    lunch: [{ name: '一荤一素套餐', price: 15 }],
-    dinner: [{ name: '皮蛋瘦肉粥', price: 12 }]
-    }
-}
-
-// 计算属性：今日总开销
 const totalCost = computed(() => {
-    let sum = 0
-    Object.values(todayMeals).forEach(list => {
-    list.forEach(item => {
-        sum += Number(item.price) || 0
-    })
-    })
-    return sum.toFixed(1)
+  let sum = 0
+  // 确保 item.price 是数字
+  Object.values(todayMeals).forEach(list => list.forEach(item => { 
+    sum += parseFloat(item.price) || 0 
+  }))
+  return sum.toFixed(2) // 建议保留两位小数，外卖通常有几毛钱
 })
 
-// 方法
-const openAddModal = (type) => {
-    currentMealType.value = type
-    newFood.name = ''
-    newFood.price = ''
-    showAddModal.value = true
+const formatRecordList = (list) => {
+  if (!Array.isArray(list)) return ''
+  return list.map(f => `${f.name}(${f.price}元)`).join('、')
 }
 
-const confirmAdd = () => {
-  // 修复 bug：确保 name 是字符串且 price 是有效数字，避免 trim() 在非字符串上报错
-    const nameStr = String(newFood.name || '').trim()
-    const priceVal = parseFloat(newFood.price)
+const getPayload = (res) => {
+  if (res == null) return null
+  if (res.data !== undefined) return res.data
+  if (res.code !== undefined && res.data !== undefined) return res.data
+  return res
+}
 
-    if (!nameStr) {
-    uni.showToast({ title: '请输入名称', icon: 'none' })
-    return
-    }
-    if (isNaN(priceVal) || priceVal < 0) {
-    uni.showToast({ title: '请输入价格', icon: 'none' })
-    return
-    }
+const mapItemType = (t) => {
+  if (t === undefined || t === null) return null
+  const s = String(t).toLowerCase()
+  if (['breakfast','早','早饭','1','"1"'].includes(s) || s.includes('早')) return 'breakfast'
+  if (['lunch','中','午饭','2','"2"'].includes(s) || s.includes('午')) return 'lunch'
+  if (['dinner','晚','晚饭','3','"3"'].includes(s) || s.includes('晚')) return 'dinner'
+  // fallback: try numeric
+  if (s === '1') return 'breakfast'
+  if (s === '2') return 'lunch'
+  if (s === '3') return 'dinner'
+  return null
+}
 
-    todayMeals[currentMealType.value].push({
-    name: nameStr,
-    price: priceVal
+const normalizeDailyMeals = (payload) => {
+  // 先清空当前显示
+  ['breakfast','lunch','dinner'].forEach(k => todayMeals[k].splice(0, todayMeals[k].length))
+
+  if (!payload) return
+
+  // 【关键修复】：如果后端返回的数据里有 meals 属性，则取 meals
+  const source = payload.meals ? payload.meals : payload
+
+  if (source.breakfast || source.lunch || source.dinner) {
+    ['breakfast','lunch','dinner'].forEach(k => {
+      if (Array.isArray(source[k])) {
+        source[k].forEach(item => todayMeals[k].push(item))
+      }
     })
-    showAddModal.value = false
+    return
+  }
+  
+  // 处理数组格式的兜底逻辑
+  const list = Array.isArray(payload) ? payload : (payload.list || [])
+  if (list.length > 0) {
+    list.forEach(item => {
+      const t = mapItemType(item.type || item.meal_type || item.mealType)
+      const key = t || 'lunch'
+      todayMeals[key].push(item)
+    })
+  }
 }
 
-const deleteMeal = (type, index) => {
+const loadToday = async (dateStr) => {
+  try {
+    const res = await apiRequest('get', '/meals', null, { date: dateStr })
+    const payload = getPayload(res)
+    console.debug('loadToday payload:', payload)
+    normalizeDailyMeals(payload)
+  } catch (e) {
+    console.warn('loadToday failed', e)
+  }
+}
+
+const normalizeHistory = (payload) => {
+  Object.keys(history).forEach(k => delete history[k])
+  if (!payload || !Array.isArray(payload)) return
+
+  payload.forEach(entry => {
+    if (!entry) return
+    const date = entry.date || entry.day
+    if (!date) return
+
+    // 【关键修复】：判断 entry.meals 是否存在
+    if (entry.meals) {
+      // 确保 meals 下面的 key 是 breakfast/lunch/dinner
+      history[date] = entry.meals
+    } else if (entry.breakfast || entry.lunch || entry.dinner) {
+      history[date] = { 
+          breakfast: entry.breakfast || [], 
+          lunch: entry.lunch || [], 
+          dinner: entry.dinner || [] 
+      }
+    }
+  })
+}
+
+const loadHistory = async () => {
+  try {
+    const res = await apiRequest('get', '/meals/history')
+    const payload = getPayload(res)
+    console.debug('loadHistory payload:', payload)
+    normalizeHistory(payload)
+  } catch (e) {
+    console.warn('loadHistory failed', e)
+  }
+}
+
+const openAddModal = (type) => {
+  currentMealType.value = type
+  newFood.name = ''
+  newFood.price = ''
+  showAddModal.value = true
+}
+
+const closeAddModal = () => { showAddModal.value = false }
+
+const confirmAdd = async () => {
+  const nameStr = String(newFood.name || '').trim()
+  const priceVal = parseFloat(newFood.price)
+  if (!nameStr) { uni.showToast({ title: '请输入名称', icon: 'none' }); return }
+  if (isNaN(priceVal) || priceVal < 0) { uni.showToast({ title: '请输入价格', icon: 'none' }); return }
+
+  // include mealType and meal_type to match backend expectations
+  const payload = { date: todayDate.value, type: currentMealType.value, mealType: currentMealType.value, meal_type: currentMealType.value, name: nameStr, price: priceVal }
+  try {
+    const res = await apiRequest('post', '/meals', payload)
+    console.debug('confirmAdd resp:', res)
+    // reload today's data to keep server authoritative
+    await loadToday(todayDate.value)
+    // if history panel is open, refresh
+    if (showHistory.value) await loadHistory()
+    uni.showToast({ title: '添加成功', icon: 'success' })
+    showAddModal.value = false
+  } catch (e) {
+    console.error('confirmAdd failed', e)
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  }
+}
+
+const deleteMeal = async (item, type, index) => {
+  // if item has id, call backend; otherwise just remove local
+  if (item && item.id) {
+    try {
+      await apiRequest('delete', `/meals/${item.id}`)
+      await loadToday(todayDate.value)
+      uni.showToast({ title: '删除成功', icon: 'success' })
+    } catch (e) {
+      console.error('delete failed', e)
+      uni.showToast({ title: '删除失败', icon: 'none' })
+    }
+  } else {
     todayMeals[type].splice(index, 1)
+    uni.showToast({ title: '已删除', icon: 'success' })
+  }
+}
+
+const toggleHistory = async () => {
+  showHistory.value = !showHistory.value
+  if (showHistory.value) await loadHistory()
 }
 
 const goBack = () => {
-    uni.navigateBack({
-    fail: () => { window.history.back() }
-    })
+  try { uni.navigateBack({}) } catch (e) { window.history.back() }
 }
+
+onMounted(async () => {
+  await loadToday(todayDate.value)
+})
 </script>
 
 <style lang="scss" scoped>

@@ -88,14 +88,17 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 
+// 1. 确保这里的名称和下方对象的键名完全一致，不要有空格
 const canteens = ['留园', '梅园', '竹园', '兰园', '菊园', '桃园']
+
+// 2. 确保这里是你想要显示的真实菜品
 const canteenFoods = {
-  '留园': ['留园菜品1', '留园菜品2', '留园菜品3', '留园菜品4', '留园菜品5', '留园菜品6'],
-  '梅园': ['梅园菜品1', '梅园菜品2', '梅园菜品3', '梅园菜品4', '梅园菜品5', '梅园菜品6'],
-  '竹园': ['竹园菜品1', '竹园菜品2', '竹园菜品3', '竹园菜品4', '竹园菜品5', '竹园菜品6'],
-  '兰园': ['兰园菜品1', '兰园菜品2', '兰园菜品3', '兰园菜品4', '兰园菜品5', '兰园菜品6'],
-  '菊园': ['菊园菜品1', '菊园菜品2', '菊园菜品3', '菊园菜品4', '菊园菜品5', '菊园菜品6'],
-  '桃园': ['桃园菜品1', '桃园菜品2', '桃园菜品3', '桃园菜品4', '桃园菜品5', '桃园菜品6']
+  '留园': ['广东肠粉', '印度飞饼', '重庆小面', '麻辣香锅', '脆皮烤鸭', '日式蛋包饭'],
+  '梅园': ['煎饼果子', '安徽牛肉板面', '黄焖鸡米饭', '地三鲜', '扬州炒饭', '手撕包菜'],
+  '竹园': ['石锅拌饭', '飘香木桶饭', '酸辣土豆丝', '宫保鸡丁', '毛氏红烧肉', '清蒸鱼'],
+  '兰园': ['鱼香肉丝', '糖醋排骨', '什锦蛋炒饭', '番茄炒蛋', '川味水煮鱼', '陕西凉皮'],
+  '菊园': ['自助烧烤', '东北锅包肉', '大碗麻辣烫', '奥尔良烤翅', '炸酱面', '杂粮手抓饼'],
+  '桃园': ['咸蛋黄狮子头', '铁板鸡架', '江西瓦罐汤', '砂锅刀削面', '干煸豆角', '回锅肉']
 }
 
 const canteenRotate = ref(0)
@@ -104,21 +107,20 @@ const selectedCanteen = ref('')
 const selectedFood = ref('')
 const isSpinning = ref(false)
 
+// 3. 计算属性：根据选中的食堂，动态切换转盘上的菜品列表
 const foods = computed(() => {
-  return selectedCanteen.value ? canteenFoods[selectedCanteen.value] : []
+  console.log('当前选中的食堂:', selectedCanteen.value)
+  return selectedCanteen.value ? (canteenFoods[selectedCanteen.value] || []) : []
 })
 
 const spinCanteen = () => {
   if (isSpinning.value) return
-  
   isSpinning.value = true
-  // 累加角度，防止重置回0度产生倒转视觉
   const currentBase = Math.ceil(canteenRotate.value / 360) * 360
   const randomDeg = currentBase + 360 * 5 + Math.floor(Math.random() * 360)
   canteenRotate.value = randomDeg
   
   setTimeout(() => {
-    // 指针在正上方（0度），转盘顺时针转，所以计算索引需用 360 - 角度
     const index = Math.floor((360 - (randomDeg % 360)) / (360 / canteens.length)) % canteens.length
     selectedCanteen.value = canteens[index]
     selectedFood.value = ''
@@ -129,7 +131,6 @@ const spinCanteen = () => {
 
 const spinFood = () => {
   if (isSpinning.value || !selectedCanteen.value) return
-  
   isSpinning.value = true
   const currentBase = Math.ceil(foodRotate.value / 360) * 360
   const randomDeg = currentBase + 360 * 5 + Math.floor(Math.random() * 360)
