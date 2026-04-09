@@ -47,12 +47,39 @@
         <text class="comment-title">评论区</text>
       </view>
 
-      <view v-for="item in commentList" :key="item.id" class="comment-item">
+      <view v-for="item in threadedComments" :key="item.id" class="comment-item">
         <view class="comment-main">
           <text class="comment-user">{{ item.user }}</text>
           <text class="comment-text">{{ item.content }}</text>
         </view>
-        <text class="reply-btn" @click="replyComment(item)">回复</text>
+        <view class="comment-actions">
+          <text class="comment-like-btn" :class="{ active: item.liked }" @click="toggleCommentLike(item)">
+            {{ item.liked ? `已赞 ${item.likes}` : `点赞 ${item.likes}` }}
+          </text>
+          <text class="reply-btn" @click="replyComment(item)">回复</text>
+          <text v-if="item.canDelete" class="comment-delete-btn" @click="deleteComment(item)">删除</text>
+        </view>
+
+        <view v-if="item.replies && item.replies.length" class="reply-list">
+          <view v-for="reply in item.replies" :key="reply.id" class="reply-item">
+            <view class="comment-main">
+              <text class="comment-user">{{ reply.user }}</text>
+              <text class="comment-text">{{ reply.content }}</text>
+            </view>
+            <view class="comment-actions">
+              <text class="comment-like-btn" :class="{ active: reply.liked }" @click="toggleCommentLike(reply)">
+                {{ reply.liked ? `已赞 ${reply.likes}` : `点赞 ${reply.likes}` }}
+              </text>
+              <text class="reply-btn" @click="replyComment(reply)">回复</text>
+              <text v-if="reply.canDelete" class="comment-delete-btn" @click="deleteComment(reply)">删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view v-if="replyTarget" class="replying-tip">
+        <text>正在回复 {{ replyTarget.user }}：</text>
+        <text class="cancel-reply" @click="clearReplyTarget">取消</text>
       </view>
 
       <view class="input-row">
@@ -67,6 +94,7 @@
 import { onLoad } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
 import { apiRequest } from '../../utils/request'
+import { getAuthHeaders, handleAuthError } from './auth-helper'
 
 const post = ref({
   id: 0,
@@ -82,15 +110,47 @@ const post = ref({
 const commentText = ref('')
 const commentList = ref([])
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
+const replyTarget = ref(null)
+
+const getCurrentUserId = () => Number(uni.getStorageSync('current_user_id') || 0)
 
 // 判断是否是自己的帖子
 const isOwnPost = computed(() => {
-  const currentUserId = uni.getStorageSync('current_user_id') || 1
+  const currentUserId = Number(uni.getStorageSync('current_user_id') || 0)
   return post.value.userId === currentUserId
 })
 
+const threadedComments = computed(() => {
+  const list = commentList.value || []
+  const topLevel = list
+    .filter(item => !item.parentId)
+    .map(item => ({ ...item, replies: [] }))
+
+  const topMap = new Map(topLevel.map(item => [item.id, item]))
+  list
+    .filter(item => Boolean(item.parentId))
+    .forEach(item => {
+      const parent = topMap.get(Number(item.parentId))
+      if (parent) {
+        parent.replies.push({ ...item })
+      } else {
+        topLevel.push({ ...item, replies: [] })
+      }
+    })
+
+  return topLevel
+})
+
 const loadCurrentUser = () => {
-  const saved = uni.getStorageSync('current_user_profile')
+  const rawSaved = uni.getStorageSync('current_user_profile')
+  let saved = rawSaved
+  if (typeof rawSaved === 'string') {
+    try {
+      saved = JSON.parse(rawSaved || '{}')
+    } catch (e) {
+      saved = null
+    }
+  }
   if (saved?.name) {
     currentUser.value = {
       name: saved.name,
@@ -115,27 +175,37 @@ onLoad(async (options) => {
   const postId = Number(options?.id || 0)
   if (!postId) { commentList.value = []; return }
   try {
-    const data = await apiRequest({ url: `/api/community/post/${postId}`, method: 'GET' })
+    const data = await apiRequest({ url: `/api/community/post/${postId}`, method: 'GET', header: getAuthHeaders() })
     post.value = {
       ...post.value,
       id: data.id,
       userId: data.userId,
-      user: `用户${data.userId || ''}`,
+      user: data.userName || (data.userId ? `用户${data.userId}` : '社区用户'),
       avatar: data.avatar || '🙂',
       title: data.title,
       desc: data.content,
       tag: data.tags || '社区',
       visibility: data.visibility || '所有人可见',
-      likes: data.likes || 0,
-      comments: data.comments || 0
+      likes: data.likeCount || data.likes || 0,
+      comments: data.commentCount || data.comments || 0,
+      liked: Boolean(data.liked)
     }
     commentList.value = (data.comments_list || []).map(c => ({
       id: c.id,
-      user: `用户${c.userId}`,
+      userId: c.userId,
+      user: c.userName || `用户${c.userId}`,
       content: c.content,
-      time: c.createTime
+      parentId: c.parentId ? Number(c.parentId) : null,
+      time: c.createTime,
+      likes: Number(c.likeCount || 0),
+      liked: Boolean(c.liked),
+      canDelete: Boolean(c.canDelete)
     }))
   } catch (e) {
+    if (handleAuthError(e)) {
+      setTimeout(() => uni.navigateBack({ delta: 1 }), 500)
+      return
+    }
     uni.showToast({ title: '帖子不存在或已被删除', icon: 'none' })
     setTimeout(() => uni.navigateBack({ delta: 1 }), 500)
   }
@@ -186,48 +256,145 @@ const showDeleteConfirm = () => {
 const deletePostFunc = async () => {
   try {
     if (!post.value.id) { uni.showToast({ title: '帖子ID无效', icon: 'none' }); return }
-    const userId = uni.getStorageSync('current_user_id') || 1
     await apiRequest({
       url: `/api/community/post/${post.value.id}`,
       method: 'DELETE',
-      header: { 'X-User-Id': userId }
+      header: getAuthHeaders()
     })
     uni.showToast({ title: '帖子已删除', icon: 'success' })
     setTimeout(() => uni.navigateBack({ delta: 1 }), 500)
   } catch (error) {
+    if (handleAuthError(error)) return
     console.error('删除帖子失败:', error)
     uni.showToast({ title: '删除失败，请重试', icon: 'none' })
   }
 }
 
 const replyComment = (item) => {
-  commentText.value = `回复 ${item.user}：`
+  replyTarget.value = {
+    id: item.id,
+    user: item.user,
+    userId: item.userId
+  }
+  commentText.value = ''
 }
 
-const sendComment = () => {
+const clearReplyTarget = () => {
+  replyTarget.value = null
+}
+
+const sendComment = async () => {
   const text = commentText.value.trim()
   if (!text) {
     uni.showToast({ title: '请输入评论内容', icon: 'none' })
     return
   }
 
-  commentList.value.unshift({
-    id: Date.now(),
-    user: currentUser.value.name,
-    studentId: currentUser.value.studentId,
-    content: text
-  })
-  post.value.comments += 1
-  commentText.value = ''
-  uni.showToast({ title: '评论成功', icon: 'success' })
+  try {
+    const res = await apiRequest({
+      url: `/api/community/post/${post.value.id}/comment`,
+      method: 'POST',
+      header: getAuthHeaders(),
+      data: {
+        content: text,
+        parentId: replyTarget.value?.id || null
+      }
+    })
+
+    const newComment = res?.comment
+    if (newComment) {
+      commentList.value.unshift({
+        id: newComment.id,
+        userId: newComment.userId,
+        user: currentUser.value.name || `用户${newComment.userId}`,
+        content: newComment.content,
+        parentId: newComment.parentId ? Number(newComment.parentId) : null,
+        time: newComment.createTime,
+        likes: Number(newComment.likeCount || 0),
+        liked: false,
+        canDelete: true
+      })
+    }
+
+    post.value.comments = Number(res?.commentCount ?? (post.value.comments + 1))
+    commentText.value = ''
+    clearReplyTarget()
+    uni.showToast({ title: '评论成功', icon: 'success' })
+  } catch (error) {
+    if (handleAuthError(error)) return
+    console.error('评论失败', error)
+    uni.showToast({ title: '评论失败，请重试', icon: 'none' })
+  }
 }
 
-const toggleLike = () => {
-  const liked = Boolean(post.value.liked)
-  post.value.liked = !liked
-  post.value.likes = Math.max(0, Number(post.value.likes || 0) + (post.value.liked ? 1 : -1))
+const toggleLike = async () => {
+  try {
+    const res = await apiRequest({
+      url: `/api/community/post/${post.value.id}/like`,
+      method: 'POST',
+      header: getAuthHeaders()
+    })
 
-  uni.showToast({ title: post.value.liked ? '已点赞' : '已取消点赞', icon: 'none' })
+    post.value.liked = Boolean(res?.liked)
+    post.value.likes = Number(res?.likeCount ?? post.value.likes ?? 0)
+    uni.showToast({ title: post.value.liked ? '已点赞' : '已取消点赞', icon: 'none' })
+  } catch (error) {
+    if (handleAuthError(error)) return
+    console.error('点赞失败', error)
+    uni.showToast({ title: '点赞失败，请重试', icon: 'none' })
+  }
+}
+
+const toggleCommentLike = async (item) => {
+  try {
+    const res = await apiRequest({
+      url: `/api/community/comment/${item.id}/like`,
+      method: 'POST',
+      header: getAuthHeaders()
+    })
+    const nextLiked = Boolean(res?.liked)
+    const nextLikeCount = Number(res?.likeCount ?? item.likes ?? 0)
+    commentList.value = (commentList.value || []).map(comment => {
+      if (comment.id !== item.id) return comment
+      return {
+        ...comment,
+        liked: nextLiked,
+        likes: nextLikeCount
+      }
+    })
+    uni.showToast({ title: nextLiked ? '评论已点赞' : '已取消评论点赞', icon: 'none' })
+  } catch (error) {
+    if (handleAuthError(error)) return
+    console.error('评论点赞失败', error)
+    uni.showToast({ title: '操作失败，请重试', icon: 'none' })
+  }
+}
+
+const deleteComment = (item) => {
+  uni.showModal({
+    title: '删除评论',
+    content: '确定删除这条评论吗？',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        const data = await apiRequest({
+          url: `/api/community/comment/${item.id}`,
+          method: 'DELETE',
+          header: getAuthHeaders()
+        })
+        commentList.value = commentList.value.filter(comment => comment.id !== item.id)
+        if (replyTarget.value?.id === item.id) {
+          clearReplyTarget()
+        }
+        post.value.comments = Number(data?.commentCount ?? Math.max(0, Number(post.value.comments || 0) - 1))
+        uni.showToast({ title: '评论已删除', icon: 'success' })
+      } catch (error) {
+        if (handleAuthError(error)) return
+        console.error('删除评论失败', error)
+        uni.showToast({ title: '删除失败，请重试', icon: 'none' })
+      }
+    }
+  })
 }
 </script>
 
@@ -438,10 +605,26 @@ $bg-blue: #E3F2FD;
   font-weight: 700;
 }
 
-.comment-item {
+.replying-tip {
+  margin-bottom: 10rpx;
+  font-size: 22rpx;
+  color: #5a7891;
+  background: #f2f8ff;
+  border-radius: 12rpx;
+  padding: 8rpx 12rpx;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.cancel-reply {
+  color: #e06666;
+}
+
+.comment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   border-bottom: 1rpx solid #eef4f9;
   padding: 14rpx 0;
 }
@@ -463,12 +646,57 @@ $bg-blue: #E3F2FD;
   color: #607486;
 }
 
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.comment-like-btn {
+  font-size: 21rpx;
+  color: #4f8bc8;
+  background: #eef7ff;
+  border-radius: 16rpx;
+  padding: 6rpx 12rpx;
+
+  &.active {
+    background: #ffebef;
+    color: #e44b68;
+  }
+}
+
 .reply-btn {
   font-size: 22rpx;
   color: $main-blue;
   background: #eef7ff;
   border-radius: 16rpx;
   padding: 6rpx 14rpx;
+}
+
+.comment-delete-btn {
+  font-size: 22rpx;
+  color: #dd4a4a;
+  background: #fff2f2;
+  border-radius: 16rpx;
+  padding: 6rpx 12rpx;
+}
+
+.reply-list {
+  margin-top: 10rpx;
+  margin-left: 24rpx;
+  border-left: 2rpx solid #eaf1f7;
+  padding-left: 12rpx;
+}
+
+.reply-item {
+  padding: 10rpx 0;
+  border-bottom: 1rpx dashed #edf3f8;
+
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
 .input-row {

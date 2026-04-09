@@ -348,6 +348,29 @@ export async function addFoodToMeal(payload) {
   return pending
 }
 
+export function syncLocalMealCalories(mealType, calories) {
+  const safeMealType = String(mealType || '')
+  const safeCalories = Number(calories || 0)
+  if (!['breakfast', 'lunch', 'dinner', 'other'].includes(safeMealType) || safeCalories <= 0) {
+    return
+  }
+
+  const today = new Date().toLocaleDateString()
+  let caloriesData = {}
+  try {
+    caloriesData = JSON.parse(uni.getStorageSync('calories') || '{}')
+  } catch (e) {
+    caloriesData = {}
+  }
+
+  if (!caloriesData[today]) {
+    caloriesData[today] = { breakfast: 0, lunch: 0, dinner: 0, other: 0 }
+  }
+
+  caloriesData[today][safeMealType] = Number(caloriesData[today][safeMealType] || 0) + safeCalories
+  uni.setStorageSync('calories', JSON.stringify(caloriesData))
+}
+
 export function isCollected(foodId) {
   const numericFoodId = Number(foodId)
   return collectedFoodIds.has(Number.isNaN(numericFoodId) ? foodId : numericFoodId)

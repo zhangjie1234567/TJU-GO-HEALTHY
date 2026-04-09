@@ -28,7 +28,7 @@
 					<view class="card-header">
 						<text class="item-icon">{{ getItemIcon(item) }}</text>
 						<view class="card-info">
-							<text class="item-name">{{ item.name }}</text>
+							<text class="item-name">{{ getDisplayName(item) }}</text>
 							<text class="item-time">{{ formatTime(item.savedAt) }}</text>
 						</view>
 					</view>
@@ -59,15 +59,13 @@ import { ref, computed } from 'vue'
 import { getCollections, removeCollection as removeCollectionApi } from './my-store'
 import { getPosts, savePosts } from '../communication/community-store'
 
-const currentCategory = ref('posts')
+const currentCategory = ref('foods')
 const collections = ref(null)
 
 const categories = [
-	{ key: 'restaurants', label: '🍽 餐厅' },
-	{ key: 'recipes', label: '🍳 食谱' },
-	{ key: 'drinks', label: '🥤 饮品' },
-	{ key: 'courses', label: '📚 课程' },
-	{ key: 'knowledge', label: '🧠 知识' },
+	{ key: 'dishes', label: '🍱 食堂菜品' },
+	{ key: 'recipes', label: '🍳 菜谱' },
+	{ key: 'foods', label: '🥗 食物' },
 	{ key: 'posts', label: '📰 动态' }
 ]
 
@@ -92,7 +90,29 @@ const getCategoryLabel = () => {
 
 const getItemIcon = (item) => {
 	if (item.icon) return item.icon
+	if (item.itemType === 'foods') return '🥗'
+	if (item.itemType === 'dishes') return '🍱'
+	if (item.itemType === 'recipes') return '🍳'
 	return '📰'
+}
+
+const getDisplayName = (item) => {
+	const name = String(item?.name || '').trim()
+	if (name && name !== '未命名收藏') {
+		return name
+	}
+
+	const desc = String(item?.desc || '').trim()
+	if (desc) {
+		const first = desc.split(/[·,，]/)[0]?.trim()
+		if (first) return first
+	}
+
+	if (item?.itemType === 'recipes') return '菜谱收藏'
+	if (item?.itemType === 'dishes') return '食堂菜品收藏'
+	if (item?.itemType === 'foods') return '食物收藏'
+	if (item?.itemType === 'posts') return '动态收藏'
+	return '未命名收藏'
 }
 
 const formatTime = (time) => {
@@ -114,7 +134,7 @@ const formatTime = (time) => {
 
 const viewItem = (item, index) => {
 	uni.showModal({
-		title: item.name,
+		title: getDisplayName(item),
 		content: item.desc || '暂无描述',
 		confirmText: '确定',
 		success() {

@@ -134,6 +134,9 @@
         >
           <view class="recipe-icon">🍽️</view>
           <text class="recipe-name">{{ recipe }}</text>
+          <view class="recipe-collect-btn" @click.stop="toggleRecipeCollect(recipe, index)">
+            <text class="recipe-collect-icon">{{ isRecipeCollected(index) ? '★' : '☆' }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -232,7 +235,8 @@
 <script setup>
   import { ref, computed } from 'vue'
   import { onLoad } from '@dcloudio/uni-app'
-  import { getFoodDetail, toggleCollection, addFoodToMeal } from './foodDataService.js'
+  import { getFoodDetail, toggleCollection, addFoodToMeal, syncLocalMealCalories } from './foodDataService.js'
+  import { getCollections, addCollection, removeCollection, getRecipeNameIdMap } from '../my/my-store'
 
   // ========== 数据状态 ==========
   const foodData = ref({
@@ -266,11 +270,14 @@
 
   const isCollectedState = ref(false)
   const isLoading = ref(true)
+  const recipeCollectedMap = ref({})
+  const recipeNameIdMap = ref({})
 
   // ========== 生命周期 ==========
   onLoad(async (options) => {
     if (!options.foodId) {
       uni.showToast({ title: '参数错误', icon: 'none' })
+      isLoading.value = false
       return
     }
 
@@ -281,6 +288,7 @@
       if (detail) {
         foodData.value = detail
         isCollectedState.value = !!detail.collected
+        await loadRecipeCollectedState()
       } else {
         uni.showToast({ title: '食物不存在', icon: 'none' })
         setTimeout(() => {
@@ -295,29 +303,29 @@
     }
   })
 
-  // ========== 营养成分百分比计算 ==========
-  // 用于可视化展示（基于参考值）
   const getNutrientPercent = (type) => {
-    const nutrition = foodData.value.nutrition
+    const nutrition = foodData.value.nutrition || {}
     let value = 0
-    let referenceValue = 100 // 参考值
-    
-    switch(type) {
+    let referenceValue = 100
+
+    switch (type) {
       case 'protein':
-        value = nutrition.protein
-        referenceValue = 60 // 成人每日推荐蛋白质摄入量约60g
+        value = Number(nutrition.protein || 0)
+        referenceValue = 60
         break
       case 'fat':
-        value = nutrition.fat
-        referenceValue = 60 // 成人每日推荐脂肪摄入量约60g
+        value = Number(nutrition.fat || 0)
+        referenceValue = 60
         break
       case 'cho':
-        value = nutrition.cho
-        referenceValue = 300 // 成人每日推荐碳水摄入量约300g
+        value = Number(nutrition.cho || 0)
+        referenceValue = 300
         break
+      default:
+        value = 0
     }
-    
-    const percent = Math.min((value / referenceValue) * 100 * 100, 100) // 放大显示效果
+
+    const percent = Math.min((value / referenceValue) * 100 * 2, 100)
     return `${percent}%`
   }
 
@@ -335,6 +343,70 @@
       console.error('切换收藏失败', error)
       uni.showToast({ title: error.message || '收藏操作失败', icon: 'none' })
     }
+  }
+
+  const normalizeRecipeName = (name) => String(name || '').trim()
+
+  const getRecipeItemId = (recipeName) => {
+    const normalized = normalizeRecipeName(recipeName)
+    const id = recipeNameIdMap.value[normalized]
+    return Number(id) || 0
+  }
+
+  const isRecipeCollected = (index) => {
+    return !!recipeCollectedMap.value[String(index)]
+  }
+
+  const loadRecipeCollectedState = async () => {
+    try {
+      const relatedNames = (foodData.value.relatedRecipes || [])
+        .map(name => normalizeRecipeName(name))
+        .filter(Boolean)
+
+      recipeNameIdMap.value = await getRecipeNameIdMap(relatedNames)
+
+      const collections = await getCollections()
+      const recipeIds = new Set((collections?.recipes || []).map(item => Number(item.itemId || item.id)))
+      const nextMap = {}
+      ;(foodData.value.relatedRecipes || []).forEach((recipeName, index) => {
+        const recipeId = getRecipeItemId(recipeName)
+        nextMap[String(index)] = recipeId > 0 && recipeIds.has(recipeId)
+      })
+      recipeCollectedMap.value = nextMap
+    } catch (error) {
+      console.error('加载菜谱收藏状态失败', error)
+      recipeCollectedMap.value = {}
+    }
+  }
+
+  const toggleRecipeCollect = async (recipe, index) => {
+    const key = String(index)
+    const nextState = !recipeCollectedMap.value[key]
+    const itemId = getRecipeItemId(recipe)
+    if (!itemId) {
+      uni.showToast({ title: '该菜谱未入库，请先同步菜谱表', icon: 'none' })
+      return
+    }
+
+    if (nextState) {
+      const created = await addCollection({
+        itemType: 'recipes',
+        itemId,
+        itemTitle: recipe,
+        itemDesc: `关联食物：${foodData.value.name || ''}`,
+        itemCover: '🍽️'
+      })
+      if (!created) return
+    } else {
+      const removed = await removeCollection('recipes', itemId)
+      if (!removed) return
+    }
+
+    recipeCollectedMap.value = {
+      ...recipeCollectedMap.value,
+      [key]: nextState
+    }
+    uni.showToast({ title: nextState ? '已收藏' : '已取消收藏', icon: 'none' })
   }
 
   // ========== 餐次设置弹窗 ==========
@@ -426,8 +498,6 @@
     const kcal = calculatedCalories.value
     const grams = getSelectedGrams()
     const mealType = currentMealType.value
-    const today = new Date().toLocaleDateString()
-
     try {
       await addFoodToMeal({
         foodId: Number(foodData.value.id),
@@ -441,16 +511,7 @@
       return
     }
 
-    let caloriesData = {}
-    try {
-      caloriesData = JSON.parse(uni.getStorageSync('calories') || '{}')
-    } catch {}
-
-    if (!caloriesData[today]) {
-      caloriesData[today] = { breakfast: 0, lunch: 0, dinner: 0, other: 0 }
-    }
-    caloriesData[today][mealType] = (caloriesData[today][mealType] || 0) + kcal
-    uni.setStorageSync('calories', JSON.stringify(caloriesData))
+    syncLocalMealCalories(mealType, kcal)
 
     showMealPopup.value = false
     uni.showToast({
@@ -735,6 +796,7 @@
     flex-direction: column;
     align-items: center;
     padding: 16px 12px;
+    position: relative;
     background: linear-gradient(135deg, rgba(255, 107, 107, 0.08), rgba(255, 193, 7, 0.08));
     border: 1px solid rgba(255, 107, 107, 0.15);
     border-radius: 12px;
@@ -757,6 +819,26 @@
     color: #333;
     font-weight: 600;
     text-align: center;
+  }
+
+  .recipe-collect-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+
+  .recipe-collect-icon {
+    font-size: 14px;
+    color: #f5a623;
+    line-height: 1;
   }
 
   /* ========== 添加到餐次区 ========== */

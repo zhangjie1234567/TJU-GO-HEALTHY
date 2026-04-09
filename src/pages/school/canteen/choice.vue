@@ -14,7 +14,7 @@
       <!-- 食堂选择转盘 -->
       <view class="section">
         <text class="section-title">选择食堂</text>
-        <view class="turntable-wrapper">
+        <view class="turntable-wrapper" v-if="canteens.length > 0">
           <view class="turntable-container">
             <view class="turntable" :style="{ transform: `rotate(${canteenRotate}deg)` }">
               <view class="turntable-sector" v-for="(canteen, index) in canteens" :key="index" :style="{ transform: `rotate(${360 / canteens.length * index}deg)` }"></view>
@@ -38,6 +38,9 @@
             {{ isSpinning ? '转盘ing...' : '开始转盘' }}
           </button>
         </view>
+        <view class="result" v-else>
+          <text class="result-text">暂无可用食堂数据</text>
+        </view>
         <view class="result" v-if="selectedCanteen">
           <text class="result-text">选中：{{ selectedCanteen }}</text>
         </view>
@@ -46,7 +49,13 @@
       <!-- 菜品选择转盘 -->
       <view class="section" v-if="selectedCanteen">
         <text class="section-title">{{ selectedCanteen }}菜品</text>
-        <view class="turntable-wrapper">
+        <view class="flavor-row">
+          <text class="flavor-label">口味偏好</text>
+          <picker mode="selector" :range="flavorOptions" :value="flavorOptions.indexOf(selectedFlavor)" @change="onFlavorChange">
+            <view class="flavor-picker">{{ selectedFlavor }}</view>
+          </picker>
+        </view>
+        <view class="turntable-wrapper" v-if="foods.length > 0">
           <view class="turntable-container">
             <view class="turntable" :style="{ transform: `rotate(${foodRotate}deg)` }">
               <view class="turntable-sector" v-for="(food, index) in foods" :key="index" :style="{ transform: `rotate(${360 / foods.length * index}deg)` }"></view>
@@ -70,15 +79,21 @@
             {{ isSpinning ? '转盘ing...' : '开始转盘' }}
           </button>
         </view>
-        <view class="result" v-if="selectedFood">
-          <text class="result-text">选中：{{ selectedFood }}</text>
+        <view class="result" v-else>
+          <text class="result-text">该食堂暂无符合口味的菜品</text>
+        </view>
+        <view class="result" v-if="selectedFoods.length > 0">
+          <text class="result-text">推荐：{{ selectedFoods.join('、') }}</text>
         </view>
       </view>
       
       <!-- 最终结果 -->
-      <view class="final-result" v-if="selectedCanteen && selectedFood">
+      <view class="final-result" v-if="selectedCanteen && selectedFoods.length > 0">
         <text class="final-title">今日推荐</text>
-        <text class="final-content">{{ selectedCanteen }} - {{ selectedFood }}</text>
+        <text class="final-content">{{ selectedCanteen }}</text>
+        <view class="final-food-list">
+          <text class="final-food" v-for="(food, idx) in selectedFoods" :key="idx">{{ idx + 1 }}. {{ food }}</text>
+        </view>
         <button class="reset-btn" @click="reset">重新选择</button>
       </view>
     </view>
@@ -86,69 +101,194 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-// 1. 确保这里的名称和下方对象的键名完全一致，不要有空格
-const canteens = ['留园', '梅园', '竹园', '兰园', '菊园', '桃园']
-
-// 2. 确保这里是你想要显示的真实菜品
-const canteenFoods = {
-  '留园': ['广东肠粉', '印度飞饼', '重庆小面', '麻辣香锅', '脆皮烤鸭', '日式蛋包饭'],
-  '梅园': ['煎饼果子', '安徽牛肉板面', '黄焖鸡米饭', '地三鲜', '扬州炒饭', '手撕包菜'],
-  '竹园': ['石锅拌饭', '飘香木桶饭', '酸辣土豆丝', '宫保鸡丁', '毛氏红烧肉', '清蒸鱼'],
-  '兰园': ['鱼香肉丝', '糖醋排骨', '什锦蛋炒饭', '番茄炒蛋', '川味水煮鱼', '陕西凉皮'],
-  '菊园': ['自助烧烤', '东北锅包肉', '大碗麻辣烫', '奥尔良烤翅', '炸酱面', '杂粮手抓饼'],
-  '桃园': ['咸蛋黄狮子头', '铁板鸡架', '江西瓦罐汤', '砂锅刀削面', '干煸豆角', '回锅肉']
-}
+const apiUrl = 'http://localhost:8080'
+const baseCanteens = ['留园', '梅园', '竹园', '兰园', '菊园', '桃园', '棠园']
+const canteens = ref([])
+const canteenFoods = ref({})
+const canteenMenuItems = ref({})
+const selectedFlavor = ref('不限')
+const selectedFoods = ref([])
+const wheelFoods = ref([])
 
 const canteenRotate = ref(0)
 const foodRotate = ref(0)
 const selectedCanteen = ref('')
-const selectedFood = ref('')
 const isSpinning = ref(false)
 
-// 3. 计算属性：根据选中的食堂，动态切换转盘上的菜品列表
-const foods = computed(() => {
-  console.log('当前选中的食堂:', selectedCanteen.value)
-  return selectedCanteen.value ? (canteenFoods[selectedCanteen.value] || []) : []
+const allFoods = computed(() => {
+  return selectedCanteen.value ? (canteenFoods.value[selectedCanteen.value] || []) : []
 })
 
+const flavorOptions = computed(() => {
+  if (!selectedCanteen.value) return ['不限']
+  const list = canteenMenuItems.value[selectedCanteen.value] || []
+  const set = new Set(['不限'])
+  list.forEach((item) => {
+    const flavor = String(item?.flavor || '').trim()
+    if (flavor) set.add(flavor)
+  })
+  return [...set].slice(0, 10)
+})
+
+const filteredFoods = computed(() => {
+  if (!selectedCanteen.value) return []
+  const all = allFoods.value
+  if (!all.length) return []
+  if (selectedFlavor.value === '不限') return all
+
+  const list = canteenMenuItems.value[selectedCanteen.value] || []
+  const matchedNames = new Set(
+    list
+      .filter(item => String(item?.flavor || '').trim() === selectedFlavor.value)
+      .map(item => String(item?.dishName || '').trim())
+      .filter(Boolean)
+  )
+
+  const matched = all.filter(name => matchedNames.has(name))
+  return matched.length ? matched : all
+})
+
+const foods = computed(() => {
+  return wheelFoods.value
+})
+
+const sampleList = (list, size) => {
+  const arr = [...list]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr.slice(0, Math.max(0, size))
+}
+
+const refreshWheelFoods = () => {
+  const source = filteredFoods.value
+  wheelFoods.value = source.length <= 6 ? [...source] : sampleList(source, 6)
+}
+
+const formatDate = (d) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const requestMenus = () => {
+  const today = formatDate(new Date())
+  const url = `${apiUrl}/canteens/menus?date=${today}`
+
+  return new Promise((resolve) => {
+    try {
+      if (typeof uni !== 'undefined' && uni.request) {
+        uni.request({
+          url,
+          method: 'GET',
+          success: (res) => resolve(res?.data?.data || []),
+          fail: () => resolve([])
+        })
+        return
+      }
+    } catch (e) {}
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => resolve(data?.data || []))
+      .catch(() => resolve([]))
+  })
+}
+
+const loadMenuData = async () => {
+  const list = await requestMenus()
+  const grouped = {}
+  const groupedMenuItems = {}
+  for (const item of list) {
+    const canteenName = String(item?.canteenName || '').trim()
+    const dishName = String(item?.dishName || '').trim()
+    if (!canteenName || !dishName) continue
+    if (!grouped[canteenName]) {
+      grouped[canteenName] = []
+    }
+    if (!groupedMenuItems[canteenName]) {
+      groupedMenuItems[canteenName] = []
+    }
+    if (!grouped[canteenName].includes(dishName)) {
+      grouped[canteenName].push(dishName)
+    }
+    groupedMenuItems[canteenName].push({
+      dishName,
+      flavor: String(item?.flavor || '').trim()
+    })
+  }
+
+  canteenFoods.value = grouped
+  canteenMenuItems.value = groupedMenuItems
+  const extraCanteens = Object.keys(grouped).filter(name => !baseCanteens.includes(name))
+  canteens.value = [...baseCanteens, ...extraCanteens]
+
+  if (selectedCanteen.value && !grouped[selectedCanteen.value]) {
+    selectedCanteen.value = ''
+    selectedFoods.value = []
+    selectedFlavor.value = '不限'
+    foodRotate.value = 0
+    wheelFoods.value = []
+  } else {
+    refreshWheelFoods()
+  }
+}
+
 const spinCanteen = () => {
-  if (isSpinning.value) return
+  if (isSpinning.value || canteens.value.length === 0) return
   isSpinning.value = true
   const currentBase = Math.ceil(canteenRotate.value / 360) * 360
   const randomDeg = currentBase + 360 * 5 + Math.floor(Math.random() * 360)
   canteenRotate.value = randomDeg
   
   setTimeout(() => {
-    const index = Math.floor((360 - (randomDeg % 360)) / (360 / canteens.length)) % canteens.length
-    selectedCanteen.value = canteens[index]
-    selectedFood.value = ''
+    const index = Math.floor((360 - (randomDeg % 360)) / (360 / canteens.value.length)) % canteens.value.length
+    selectedCanteen.value = canteens.value[index]
+    selectedFoods.value = []
+    selectedFlavor.value = '不限'
     foodRotate.value = 0
+    refreshWheelFoods()
     isSpinning.value = false
   }, 2000)
 }
 
 const spinFood = () => {
-  if (isSpinning.value || !selectedCanteen.value) return
+  if (isSpinning.value || !selectedCanteen.value || filteredFoods.value.length === 0) return
   isSpinning.value = true
   const currentBase = Math.ceil(foodRotate.value / 360) * 360
   const randomDeg = currentBase + 360 * 5 + Math.floor(Math.random() * 360)
   foodRotate.value = randomDeg
   
   setTimeout(() => {
-    const index = Math.floor((360 - (randomDeg % 360)) / (360 / foods.value.length)) % foods.value.length
-    selectedFood.value = foods.value[index]
+    const source = filteredFoods.value
+    const picked = sampleList(source, Math.min(3, source.length))
+    selectedFoods.value = picked
+    refreshWheelFoods()
     isSpinning.value = false
   }, 2000)
 }
 
+const onFlavorChange = (e) => {
+  selectedFlavor.value = flavorOptions.value[Number(e?.detail?.value || 0)] || '不限'
+  selectedFoods.value = []
+  foodRotate.value = 0
+  refreshWheelFoods()
+}
+
 const reset = () => {
   selectedCanteen.value = ''
-  selectedFood.value = ''
+  selectedFoods.value = []
+  selectedFlavor.value = '不限'
   canteenRotate.value = 0
   foodRotate.value = 0
+  wheelFoods.value = []
 }
+
+onMounted(loadMenuData)
 </script>
 
 <style lang="scss" scoped>
@@ -211,6 +351,30 @@ const reset = () => {
   color: #555;
 }
 
+.flavor-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+  margin-bottom: 16rpx;
+}
+
+.flavor-label {
+  font-size: 24rpx;
+  color: #637d92;
+}
+
+.flavor-picker {
+  min-width: 180rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #2a4b6b;
+  background: #fff;
+  border: 1rpx solid rgba(79, 161, 242, 0.35);
+  border-radius: 999rpx;
+  padding: 8rpx 18rpx;
+}
+
 .turntable-wrapper {
   display: flex;
   flex-direction: column;
@@ -249,13 +413,13 @@ const reset = () => {
 }
 
 .turntable-text { 
-  font-size: 24rpx; 
+  font-size: 21rpx; 
   font-weight: 600; 
   color: #333; 
   position: absolute;
   text-align: center;
-  width: 100rpx;
-  left: calc(50% - 50rpx);
+  width: 108rpx;
+  left: calc(50% - 54rpx);
   top: 50%;
   /* 为了抵消转盘整体的旋转，文字的 transform 必须实时跟随 template 里的计算 */
 }
@@ -303,7 +467,20 @@ const reset = () => {
 }
 
 .final-title { display: block; font-size: 32rpx; font-weight: 700; margin-bottom: 15rpx; }
-.final-content { display: block; font-size: 36rpx; font-weight: 600; color: #4ecdc4; margin-bottom: 25rpx; }
+.final-content { display: block; font-size: 34rpx; font-weight: 600; color: #4ecdc4; margin-bottom: 18rpx; }
+
+.final-food-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.final-food {
+  font-size: 26rpx;
+  color: #2f3f4a;
+  font-weight: 600;
+}
 
 .reset-btn { 
   width: 220rpx; height: 70rpx; 

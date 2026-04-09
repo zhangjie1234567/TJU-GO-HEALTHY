@@ -62,10 +62,12 @@ function getStoredToken() {
 
 function setStoredToken(token) {
 	if (!token) return
-	uni.setStorageSync('auth_token', token)
+	TOKEN_KEYS.forEach(key => uni.setStorageSync(key, token))
 	if (typeof window !== 'undefined' && window.localStorage) {
-		window.localStorage.setItem('auth_token', token)
-		window.localStorage.setItem('uni_auth_token', token)
+		TOKEN_KEYS.forEach(key => {
+			window.localStorage.setItem(key, token)
+			window.localStorage.setItem(`uni_${key}`, token)
+		})
 	}
 	authWarningShown = false
 }
@@ -173,6 +175,73 @@ function adaptUserFromServer(user) {
 	}
 }
 
+function upsertTodayWeightRecord(weightValue) {
+	const weight = Number(weightValue)
+	if (!Number.isFinite(weight) || weight <= 0) return
+
+	const today = new Date().toISOString().split('T')[0]
+	let list = []
+	try {
+		const raw = uni.getStorageSync('weightList')
+		list = tryParseJSON(raw, []) || []
+		if (!Array.isArray(list)) list = []
+	} catch (e) {
+		list = []
+	}
+
+	const index = list.findIndex(item => item?.date === today)
+	if (index >= 0) {
+		list[index] = { ...list[index], weight }
+	} else {
+		list.unshift({ date: today, weight })
+	}
+
+	uni.setStorageSync('weightList', JSON.stringify(list))
+	uni.setStorageSync('todayWeight', { date: today, weight })
+}
+
+function syncUserRelatedCaches(user) {
+	if (!user) return
+	const normalized = {
+		id: user.id,
+		name: user.name || '',
+		studentId: user.studentId || '',
+		avatar: user.avatar || '😊',
+		height: Number(user.height) || 170,
+		weight: Number(user.weight) || 70,
+		targetWeight: Number(user.targetWeight) || 60,
+		age: Number(user.age) || 20
+	}
+
+	uni.setStorageSync('current_user_profile', JSON.stringify(normalized))
+	uni.setStorageSync('my_user_profile', JSON.stringify(normalized))
+	uni.setStorageSync('userInfo', normalized)
+	uni.setStorageSync('current_user_id', Number(normalized.id || 0))
+	uni.setStorageSync('questionnaireBaseInfo', JSON.stringify({
+		height: normalized.height,
+		weight: normalized.weight
+	}))
+	uni.setStorageSync('targetWeight', String(normalized.targetWeight))
+	upsertTodayWeightRecord(normalized.weight)
+
+	try {
+		const rawQuestionnaire = uni.getStorageSync('questionnaireData')
+		const questionnaire = tryParseJSON(rawQuestionnaire, null)
+		if (questionnaire && typeof questionnaire === 'object') {
+			const updated = {
+				...questionnaire,
+				height: normalized.height,
+				weight: normalized.weight,
+				age: normalized.age,
+				targetWeight: normalized.targetWeight
+			}
+			uni.setStorageSync('questionnaireData', updated)
+		}
+	} catch (e) {
+		// ignore cache sync failure
+	}
+}
+
 function guessPlanIcon(plan) {
 	const text = `${plan?.name || ''}${plan?.type || ''}${plan?.description || ''}`
 	if (text.includes('减脂')) return '⚡'
@@ -227,12 +296,14 @@ function adaptPlanFromServer(plan) {
 }
 
 function adaptCollectionItem(item) {
+	const fallbackName = item.itemTitle || item.name || item.title || item.itemName || item.dishName || item.foodName || item.postTitle || item.recipeName
+	const normalizedType = TYPE_MAP[(item.itemType || '').toLowerCase()] || item.itemType
 	return {
 		id: item.itemId || item.id,
 		collectionId: item.id,
 		itemId: item.itemId || item.id,
-		itemType: item.itemType,
-		name: item.itemTitle || item.name || '未命名收藏',
+		itemType: normalizedType,
+		name: fallbackName || '未命名收藏',
 		desc: item.itemDesc || item.desc || '',
 		icon: item.itemCover || item.icon || '⭐',
 		savedAt: formatDateTime(item.createdAt),
@@ -242,21 +313,19 @@ function adaptCollectionItem(item) {
 
 // itemType 后端可能用大写或不同单词，做归一化映射
 const TYPE_MAP = {
-	restaurant: 'restaurants', restaurants: 'restaurants',
+	food: 'foods', foods: 'foods',
+	restaurant: 'foods', restaurants: 'foods',
+	drink: 'foods', drinks: 'foods',
+	dish: 'dishes', dishes: 'dishes',
 	recipe: 'recipes', recipes: 'recipes',
-	drink: 'drinks', drinks: 'drinks',
-	course: 'courses', courses: 'courses',
-	knowledge: 'knowledge',
 	post: 'posts', posts: 'posts', dynamic: 'posts'
 }
 
 function adaptCollectionsFromServer(collections) {
 	const result = {
-		restaurants: [],
+		foods: [],
 		recipes: [],
-		drinks: [],
-		courses: [],
-		knowledge: [],
+		dishes: [],
 		posts: []
 	}
 
@@ -271,7 +340,7 @@ function adaptCollectionsFromServer(collections) {
 		return result
 	}
 
-	// 后端返回分组对象: {posts: [...], restaurants: [...]}
+	// 后端返回分组对象: {posts: [...], dishes: [...]} 
 	Object.keys(result).forEach(key => {
 		result[key] = (collections[key] || []).map(adaptCollectionItem)
 	})
@@ -449,8 +518,7 @@ export async function login(studentId, name) {
 	}
 	const user = adaptUserFromServer(data?.user)
 	if (user) {
-		uni.setStorageSync('current_user_profile', JSON.stringify(user))
-		uni.setStorageSync('my_user_profile', JSON.stringify(user))
+		syncUserRelatedCaches(user)
 	}
 	return data
 }
@@ -465,8 +533,7 @@ export async function register(payload) {
 export async function getCurrentUser() {
 	try {
 		const user = adaptUserFromServer(await request('/api/user/profile'))
-		uni.setStorageSync('current_user_profile', JSON.stringify(user))
-		uni.setStorageSync('my_user_profile', JSON.stringify(user))
+		syncUserRelatedCaches(user)
 		return user
 	} catch (error) {
 		return readLocalJSON('current_user_profile', readLocalJSON('my_user_profile', null))
@@ -487,8 +554,7 @@ export async function updateUserProfile(profile) {
 			}
 		})
 		const latest = adaptUserFromServer(await request('/api/user/profile'))
-		uni.setStorageSync('current_user_profile', JSON.stringify(latest))
-		uni.setStorageSync('my_user_profile', JSON.stringify(latest))
+		syncUserRelatedCaches(latest)
 		return true
 	} catch (error) {
 		showRequestError(error, '资料更新失败')
@@ -516,7 +582,7 @@ export async function getUserProfile() {
 export async function getUserPlans() {
 	try {
 		const list = await request('/api/plan/list')
-		return (list || []).map(adaptPlanFromServer)
+		return (list || []).map(adaptPlanFromServer).filter(Boolean)
 	} catch (error) {
 		showRequestError(error, '获取方案失败')
 		return []
@@ -528,57 +594,43 @@ export async function saveUserPlans(plans) {
 }
 
 export async function updateUserPlan(planId, plan) {
-    const payload = {
-        name: plan.name,
-        description: plan.desc || plan.description || '',
-        type: plan.type || plan.target || '其他',
-        duration: Number(plan.duration) || 30
-    }
-    try {
-        const updated = await request(`/api/plan/${planId}`, {
-            method: 'PUT',
-            data: payload
-        })
-        return adaptPlanFromServer(updated || { id: planId, ...payload })
-    } catch (error) {
-        showRequestError(error, '更新方案失败')
-        return null
-    }
+	const fallbackText = plan?.details?.overview || plan?.desc || plan?.description || ''
+	const payload = {
+		name: plan.name,
+		description: plan.desc || plan.description || '',
+		type: plan.type || plan.target || '其他',
+		duration: Number(plan.duration) || 30,
+		dietContent: plan?.diet || fallbackText,
+		exerciseContent: plan?.exercise || fallbackText
+	}
+	try {
+		const updated = await request(`/api/plan/${planId}`, {
+			method: 'PUT',
+			data: payload
+		})
+		return adaptPlanFromServer(updated || { id: planId, ...payload })
+	} catch (error) {
+		showRequestError(error, '更新方案失败')
+		return null
+	}
 }
 
 export async function createUserPlan(plan) {
+	const fallbackText = plan?.details?.overview || plan?.desc || plan?.description || ''
     const payload = {
         name: plan.name,
         description: plan.desc || plan.description || '',
         type: plan.type || plan.target || '其他',
-        duration: Number(plan.duration) || 30
+		duration: Number(plan.duration) || 30,
+		dietContent: plan?.diet || fallbackText,
+		exerciseContent: plan?.exercise || fallbackText
     }
 
     try {
-        // 先尝试直接创建
         const created = await request('/api/plan', { method: 'POST', data: payload })
         return adaptPlanFromServer(created)
-    } catch (postError) {
-        // POST 失败（唯一约束冲突等）→ 查询已有方案再更新
-        try {
-            const existingPlans = await request('/api/plan/list')
-            const oldPlan = Array.isArray(existingPlans) ? existingPlans[0] : null
-            if (oldPlan?.id) {
-                const updated = await updateUserPlan(oldPlan.id, plan)
-                if (updated) return updated
-            }
-        } catch (listError) { /* 查询失败，继续尝试主动 upsert */ }
-
-        // 最后兜底：直接 PUT /api/plan/current 更新当前方案（部分后端支持）
-        try {
-            const currentOnServer = await request('/api/plan/current')
-            if (currentOnServer?.id) {
-                const updated = await updateUserPlan(currentOnServer.id, plan)
-                if (updated) return updated
-            }
-        } catch (e) { /* ignore */ }
-
-        showRequestError(postError, '创建方案失败')
+	} catch (error) {
+		showRequestError(error, '创建方案失败')
         return null
     }
 }
@@ -613,12 +665,11 @@ export async function getCurrentPlan() {
 			uni.setStorageSync('current_plan_cache', JSON.stringify(serverPlan))
 			return serverPlan
 		}
-		// 后端返回 null，回退本地缓存
-		return readCache()
 	} catch (error) {
 		// 请求失败时回退缓存
-		return readCache()
 	}
+
+	return readCache()
 }
 
 export async function setCurrentPlan(plan) {
@@ -681,13 +732,27 @@ export async function addCollection(collection) {
 	}
 }
 
+export async function getRecipeNameIdMap(names = []) {
+	try {
+		const normalized = (names || [])
+			.map(name => String(name || '').trim())
+			.filter(Boolean)
+		if (!normalized.length) return {}
+
+		const result = await request('/api/recipe/name-id-map', {
+			method: 'POST',
+			data: normalized
+		})
+		return result || {}
+	} catch (error) {
+		showRequestError(error, '获取菜谱映射失败')
+		return {}
+	}
+}
+
 export async function removeCollection(itemType, itemId, collectionId) {
 	try {
-		// 优先用 collection 表自身主键删除（/api/collection/{id}）
-		// 回退用 itemType+itemId 的旧接口
-		const url = collectionId
-			? `/api/collection/${collectionId}`
-			: `/api/collection/${itemType}/${itemId}`
+		const url = `/api/collection/${itemType}/${itemId}`
 		await request(url, { method: 'DELETE' })
 		return true
 	} catch (error) {
@@ -812,6 +877,14 @@ export async function getAssessmentReport() {
 	try {
 		const report = await request('/api/assessment')
 		return adaptAssessmentFromServer(report)
+	} catch (error) {
+		return null
+	}
+}
+
+export async function getLatestQuestionnaire() {
+	try {
+		return await request('/api/questionnaire/latest')
 	} catch (error) {
 		return null
 	}

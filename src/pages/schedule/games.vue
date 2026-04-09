@@ -48,6 +48,7 @@
       <!-- 提示 -->
       <view class="game-tips">
         <text class="tips-icon">⚡</text>
+        <text class="tips-text">开始挑战前先热身1分钟，结束后记得拉伸和补水～</text>
       </view>
     </view>
   </view>

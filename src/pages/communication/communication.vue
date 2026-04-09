@@ -7,7 +7,7 @@
 					v-model="searchText"
 					type="text"
 					class="search-input"
-					placeholder="搜索知识/动态关键词"
+					placeholder="搜索动态关键词或用户昵称"
 				/>
 				<text v-if="searchText" class="clear-icon" @click="searchText = ''">✕</text>
 			</view>
@@ -16,7 +16,7 @@
 		<view class="entry-row">
 			<view class="entry-card" @click="goTo('/pages/communication/method_rank')">
 				<text class="entry-icon">🏅</text>
-				<text class="entry-title">减重方法评分榜</text>
+				<text class="entry-title">健康方案评分榜</text>
 			</view>
 			<view class="entry-card" @click="goTo('/pages/communication/user_rank')">
 				<text class="entry-icon">📊</text>
@@ -46,7 +46,7 @@
 
 		<view v-if="filteredPosts.length === 0" class="empty-state">
 			<text class="empty-icon">📭</text>
-			<text class="empty-text">没有找到符合条件的动态</text>
+			<text class="empty-text">{{ emptyStateText }}</text>
 		</view>
 
 		<view v-for="item in filteredPosts" :key="item.id" class="post-card" @click="openDetail(item)">
@@ -87,7 +87,7 @@
 				<text class="action-btn" :class="{ liked: item.liked }" @click.stop="toggleLike(item.id)">
 					{{ item.liked ? '已点赞' : '点赞' }}
 				</text>
-				<text class="action-btn" @click.stop="sharePost(item)">分享</text>
+				<button class="action-btn share-btn" open-type="share" @click.stop="prepareShare(item)">分享</button>
 				<text class="action-btn" @click.stop="privateChat(item)">私聊</text>
 				<text class="action-btn" :class="{ collected: item.collected }" @click.stop="toggleCollect(item.id)">
 					{{ item.collected ? '已收藏' : '收藏' }}
@@ -100,19 +100,31 @@
 </template>
 
 <script setup>
-import { onShow } from '@dcloudio/uni-app'
-import { computed, ref } from 'vue'
+import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app'
+import { computed, ref, watch } from 'vue'
 import { apiRequest } from '../../utils/request'
-import { getCollections, saveCollections } from '../my/my-store'
+import { getCollections, addCollection, removeCollection } from '../my/my-store'
+import { getAuthHeaders, getAuthToken, handleAuthError, isAuthError } from './auth-helper'
 
 const searchText = ref('')
 const currentTab = ref('recommend')
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
+const navigatingToChat = ref(false)
+const pendingSharePost = ref(null)
+let searchDebounceTimer = null
 
 const posts = ref([])
 
 const loadCurrentUser = () => {
-	const saved = uni.getStorageSync('current_user_profile')
+	const rawSaved = uni.getStorageSync('current_user_profile')
+	let saved = rawSaved
+	if (typeof rawSaved === 'string') {
+		try {
+			saved = JSON.parse(rawSaved || '{}')
+		} catch (e) {
+			saved = null
+		}
+	}
 	if (saved?.name) {
 		currentUser.value = {
 			name: saved.name,
@@ -134,27 +146,49 @@ const loadCurrentUser = () => {
 
 const loadPosts = async () => {
 	try {
+		const token = getAuthToken()
+		let collectedPostIds = new Set()
+		if (token) {
+			try {
+				const collections = await getCollections()
+				const serverCollected = (collections?.posts || []).map(item => Number(item.itemId || item.id))
+				collectedPostIds = new Set(serverCollected)
+			} catch (e) {
+				collectedPostIds = new Set()
+			}
+		}
+
 		const keyword = searchText.value.trim()
 		const params = { page: 1, size: 50 }
 		if (keyword) params.keyword = keyword
-		const data = await apiRequest({ url: '/api/community/post', method: 'GET', data: params })
+		const data = await apiRequest({
+			url: '/api/community/post',
+			method: 'GET',
+			data: params,
+			header: getAuthHeaders()
+		})
 		posts.value = (data || []).map(item => ({
 			id: item.id,
 			userId: item.userId,
-			user: `用户${item.userId}`,
+			user: item.userName || `用户${item.userId}`,
 			avatar: item.avatar || '🙂',
 			title: item.title,
 			desc: item.content,
 			tag: item.tags || '社区',
-			likes: item.likeCount || 0,
-			comments: item.commentCount || 0,
+			likes: item.likeCount || item.likes || 0,
+			comments: item.commentCount || item.comments || 0,
 			visibility: item.visibility || '所有人可见',
-			following: false,
-			collected: false,
-			liked: false
+			following: Boolean(item.following),
+			collected: collectedPostIds.has(Number(item.id)),
+			liked: Boolean(item.liked)
 		}))
 	} catch (e) {
-		console.error('加载帖子失败', e)
+		if (isAuthError(e)) {
+			posts.value = []
+			uni.showToast({ title: '登录已失效，请重新登录', icon: 'none' })
+			return
+		}
+		console.warn('加载帖子失败', e)
 		posts.value = []
 	}
 }
@@ -162,6 +196,23 @@ const loadPosts = async () => {
 onShow(() => {
 	loadCurrentUser()
 	loadPosts()
+	try {
+		uni.showShareMenu({
+			withShareTicket: true,
+			menus: ['shareAppMessage', 'shareTimeline']
+		})
+	} catch (e) {
+		// ignore platform that does not support explicit share menu
+	}
+})
+
+watch(searchText, () => {
+	if (searchDebounceTimer) {
+		clearTimeout(searchDebounceTimer)
+	}
+	searchDebounceTimer = setTimeout(() => {
+		loadPosts()
+	}, 250)
 })
 
 // 后端已过滤权限，前端直接展示
@@ -197,59 +248,228 @@ const filteredPosts = computed(() => {
 	const keyword = searchText.value.trim()
 	if (!keyword) return result
 	result = result.filter(item =>
-		item.title.includes(keyword) || item.desc.includes(keyword) || item.tag.includes(keyword)
+		item.title.includes(keyword) || item.desc.includes(keyword) || item.tag.includes(keyword) || item.user.includes(keyword)
 	)
 	return result
+})
+
+const emptyStateText = computed(() => {
+	const keyword = searchText.value.trim()
+	if (keyword) return '没有找到符合条件的动态'
+	if (currentTab.value === 'follow') return '你还没有关注任何用户'
+	return '动态广场暂无动态'
 })
 
 const goTo = (url) => {
 	uni.navigateTo({ url })
 }
 
-const toggleFollow = (id) => {
-	const target = posts.value.find(item => item.id === id)
-	if (!target) return
-	target.following = !target.following
-	uni.showToast({ title: target.following ? '已关注' : '已取消关注', icon: 'none' })
-}
+const getCurrentUserId = () => {
+	const direct = Number(uni.getStorageSync('current_user_id') || 0)
+	if (direct > 0) return direct
 
-const toggleCollect = (id) => {
-	const target = posts.value.find(item => item.id === id)
-	if (!target) return
-	target.collected = !target.collected
-	const collections = getCollections()
-	if (target.collected) {
-		const postItem = { id: target.id, name: target.title, desc: target.desc, tag: target.tag, user: target.user, avatar: target.avatar, savedAt: Date.now() }
-		if (!collections.posts) collections.posts = []
-		if (!collections.posts.find(item => item.id === postItem.id)) collections.posts.unshift(postItem)
-	} else {
-		if (collections.posts) collections.posts = collections.posts.filter(item => item.id !== id)
+	const tryGetIdFrom = (raw) => {
+		if (!raw) return 0
+		let obj = raw
+		if (typeof raw === 'string') {
+			try {
+				obj = JSON.parse(raw)
+			} catch (e) {
+				obj = null
+			}
+		}
+		const id = Number(obj?.id || obj?.userId || 0)
+		return id > 0 ? id : 0
 	}
-	saveCollections(collections)
-	uni.showToast({ title: target.collected ? '已收藏' : '已取消收藏', icon: 'none' })
+
+	const fromUserInfo = tryGetIdFrom(uni.getStorageSync('userInfo'))
+	if (fromUserInfo > 0) {
+		uni.setStorageSync('current_user_id', fromUserInfo)
+		return fromUserInfo
+	}
+
+	const fromProfile = tryGetIdFrom(uni.getStorageSync('current_user_profile'))
+	if (fromProfile > 0) {
+		uni.setStorageSync('current_user_id', fromProfile)
+		return fromProfile
+	}
+
+	return 0
 }
 
-const toggleLike = (id) => {
+const toggleFollow = async (id) => {
 	const target = posts.value.find(item => item.id === id)
 	if (!target) return
-	target.liked = !target.liked
-	target.likes = Math.max(0, Number(target.likes || 0) + (target.liked ? 1 : -1))
-	uni.showToast({ title: target.liked ? '已点赞' : '已取消点赞', icon: 'none' })
+	if (!getAuthToken()) {
+		uni.showToast({ title: '请先登录', icon: 'none' })
+		return
+	}
+	const currentUserId = getCurrentUserId()
+	if (currentUserId > 0 && Number(target.userId) === currentUserId) {
+		uni.showToast({ title: '不能关注自己', icon: 'none' })
+		return
+	}
+
+	const followKey = String(target.userId || 0)
+	if (!followKey || followKey === '0') {
+		uni.showToast({ title: '该用户信息不完整', icon: 'none' })
+		return
+	}
+
+	try {
+		const res = await apiRequest({
+			url: `/api/community/follow/${target.userId}`,
+			method: 'POST',
+			header: getAuthHeaders()
+		})
+		const nextState = Boolean(res?.following)
+		posts.value = posts.value.map(item => {
+			if (String(item.userId || 0) !== followKey) return item
+			return {
+				...item,
+				following: nextState
+			}
+		})
+		uni.showToast({ title: nextState ? '已关注' : '已取消关注', icon: 'none' })
+	} catch (error) {
+		if (handleAuthError(error)) return
+		console.error('关注操作失败', error)
+		const msg = String(error?.message || '')
+		if (msg.includes('不能关注自己')) {
+			uni.showToast({ title: '不能关注自己', icon: 'none' })
+		} else {
+			uni.showToast({ title: '操作失败，请重试', icon: 'none' })
+		}
+	}
 }
 
-const sharePost = () => {
-	uni.showToast({ title: '已触发分享', icon: 'none' })
+const toggleCollect = async (id) => {
+	const target = posts.value.find(item => item.id === id)
+	if (!target) return
+
+	const nextState = !target.collected
+	try {
+		if (nextState) {
+			const created = await addCollection({
+				itemType: 'posts',
+				itemId: target.id,
+				itemTitle: target.title,
+				itemDesc: target.desc,
+				itemCover: target.avatar
+			})
+			if (!created) return
+		} else {
+			const removed = await removeCollection('posts', target.id)
+			if (!removed) return
+		}
+
+		target.collected = nextState
+		uni.showToast({ title: nextState ? '已收藏' : '已取消收藏', icon: 'none' })
+	} catch (error) {
+		console.error('切换收藏失败', error)
+	}
 }
 
-const privateChat = (item) => {
-	uni.navigateTo({
-		url: `/pages/communication/chat_detail?name=${encodeURIComponent(item.user)}&avatar=${encodeURIComponent(item.avatar || '🙂')}`
-	})
+const toggleLike = async (id) => {
+	const target = posts.value.find(item => item.id === id)
+	if (!target) return
+	if (!getAuthToken()) {
+		uni.showToast({ title: '请先登录', icon: 'none' })
+		return
+	}
+	try {
+		const res = await apiRequest({
+			url: `/api/community/post/${id}/like`,
+			method: 'POST',
+			header: getAuthHeaders()
+		})
+		target.liked = Boolean(res?.liked)
+		target.likes = Number(res?.likeCount ?? target.likes ?? 0)
+		uni.showToast({ title: target.liked ? '已点赞' : '已取消点赞', icon: 'none' })
+	} catch (error) {
+		if (handleAuthError(error)) return
+		console.error('点赞失败', error)
+		uni.showToast({ title: '点赞失败，请重试', icon: 'none' })
+	}
+}
+
+const buildSharePayload = (item) => {
+	const id = Number(item?.id || 0)
+	const title = String(item?.title || '').trim() || '来健康社区看看这条动态'
+	const path = id > 0
+		? `/pages/communication/post_detail?id=${id}`
+		: '/pages/communication/communication'
+	return { title, path }
+}
+
+const prepareShare = (item) => {
+	pendingSharePost.value = item || null
+}
+
+onShareAppMessage(() => {
+	return buildSharePayload(pendingSharePost.value)
+})
+
+onShareTimeline(() => {
+	const payload = buildSharePayload(pendingSharePost.value)
+	const query = payload.path.includes('?') ? payload.path.split('?')[1] : ''
+	return {
+		title: payload.title,
+		query
+	}
+})
+
+const privateChat = async (item) => {
+	if (navigatingToChat.value) return
+	if (!getAuthToken()) {
+		uni.showToast({ title: '请先登录', icon: 'none' })
+		return
+	}
+	if (!item?.userId) {
+		uni.showToast({ title: '目标用户信息不完整', icon: 'none' })
+		return
+	}
+	const currentUserId = getCurrentUserId()
+	if (currentUserId > 0 && Number(item.userId) === currentUserId) {
+		uni.showToast({ title: '不能私聊自己', icon: 'none' })
+		return
+	}
+	navigatingToChat.value = true
+	try {
+		const thread = await apiRequest({
+			url: '/api/community/chat/thread/open',
+			method: 'POST',
+			header: getAuthHeaders(),
+			data: {
+				targetUserId: Number(item.userId),
+				targetName: item.user || '',
+				targetAvatar: item.avatar || '🙂'
+			}
+		})
+		if (!thread?.id) {
+			uni.showToast({ title: '打开私聊失败', icon: 'none' })
+			return
+		}
+		uni.navigateTo({
+			url: `/pages/communication/chat_detail?threadId=${thread.id}&name=${encodeURIComponent(thread.targetName || item.user || '用户')}&avatar=${encodeURIComponent(thread.targetAvatar || item.avatar || '🙂')}`
+		})
+	} catch (error) {
+		if (handleAuthError(error)) return
+		console.error('打开私聊失败', error)
+		const msg = String(error?.message || '')
+		if (msg.includes('不能和自己私聊') || msg.includes('不能私聊自己')) {
+			uni.showToast({ title: '不能私聊自己', icon: 'none' })
+		} else {
+			uni.showToast({ title: '打开私聊失败，请重试', icon: 'none' })
+		}
+	} finally {
+		navigatingToChat.value = false
+	}
 }
 
 // 检查是否是自己的帖子
 const isOwnPost = (item) => {
-	const currentUserId = uni.getStorageSync('current_user_id') || 1
+	const currentUserId = getCurrentUserId()
 	return item.userId === currentUserId
 }
 
@@ -271,15 +491,15 @@ const showDeleteConfirm = (item) => {
 // 删除列表中的帖子
 const deleteListPost = async (id) => {
 	try {
-		const userId = uni.getStorageSync('current_user_id') || 1
 		await apiRequest({
 			url: `/api/community/post/${id}`,
 			method: 'DELETE',
-			header: { 'X-User-Id': userId }
+			header: getAuthHeaders()
 		})
 		posts.value = posts.value.filter(item => item.id !== id)
 		uni.showToast({ title: '帖子已删除', icon: 'success' })
 	} catch (error) {
+		if (handleAuthError(error)) return
 		console.error('删除失败:', error)
 		uni.showToast({ title: '删除失败，请重试', icon: 'none' })
 	}
@@ -321,7 +541,7 @@ $bg-blue: #E3F2FD;
 
 		.search-input {
 			flex: 1;
-			font-size: 28rpx;
+				font-size: 30rpx;
 		}
 
 		.clear-icon {
@@ -350,7 +570,7 @@ $bg-blue: #E3F2FD;
 		}
 
 		.entry-title {
-			font-size: 26rpx;
+			font-size: 29rpx;
 			color: #333;
 			font-weight: 600;
 		}
@@ -377,7 +597,7 @@ $bg-blue: #E3F2FD;
 		}
 
 		.quick-text {
-			font-size: 22rpx;
+			font-size: 25rpx;
 			color: #2b5f91;
 			font-weight: 500;
 		}
@@ -393,7 +613,7 @@ $bg-blue: #E3F2FD;
 		flex: 1;
 		text-align: center;
 		padding: 14rpx 0;
-		font-size: 26rpx;
+		font-size: 29rpx;
 		color: #5f7f9b;
 		background: #fff;
 		border-radius: 14rpx;
@@ -482,13 +702,13 @@ $bg-blue: #E3F2FD;
 }
 
 .nickname {
-	font-size: 26rpx;
+	font-size: 29rpx;
 	color: #333;
 	font-weight: 600;
 }
 
 .post-tag {
-	font-size: 20rpx;
+	font-size: 23rpx;
 	color: #4f8bc8;
 }
 
@@ -497,7 +717,7 @@ $bg-blue: #E3F2FD;
 	background: #e9f4ff;
 	border-radius: 20rpx;
 	color: #3c7fb8;
-	font-size: 22rpx;
+	font-size: 25rpx;
 
 	&.following {
 		background: #f0f0f0;
@@ -510,7 +730,7 @@ $bg-blue: #E3F2FD;
 	background: #ffe9e9;
 	border-radius: 20rpx;
 	color: #c85252;
-	font-size: 22rpx;
+	font-size: 25rpx;
 	font-weight: 600;
 	transition: all 0.2s;
 
@@ -528,13 +748,13 @@ $bg-blue: #E3F2FD;
 }
 
 .post-title {
-	font-size: 28rpx;
+	font-size: 31rpx;
 	font-weight: 700;
 	color: #2f2f2f;
 }
 
 .post-desc {
-	font-size: 24rpx;
+	font-size: 27rpx;
 	color: #666;
 	line-height: 1.5;
 }
@@ -545,7 +765,7 @@ $bg-blue: #E3F2FD;
 	margin-bottom: 12rpx;
 
 	.stat {
-		font-size: 22rpx;
+		font-size: 24rpx;
 		color: #7b8a98;
 	}
 }
@@ -557,12 +777,15 @@ $bg-blue: #E3F2FD;
 	.action-btn {
 		flex: 1;
 		text-align: center;
-		font-size: 24rpx;
+		font-size: 26rpx;
 		color: #4f8bc8;
 		padding: 10rpx 0;
+		line-height: 1.4;
 		border-radius: 12rpx;
 		background: #f6fbff;
 		margin-right: 10rpx;
+		border: none;
+		outline: none;
 
 		&:last-child {
 			margin-right: 0;
@@ -576,6 +799,17 @@ $bg-blue: #E3F2FD;
 		&.liked {
 			color: #fff;
 			background: #ff6b81;
+		}
+
+		&.share-btn {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 10rpx 0 0;
+
+			&::after {
+				border: none;
+			}
 		}
 	}
 }
@@ -593,7 +827,7 @@ $bg-blue: #E3F2FD;
 	}
 
 	.empty-text {
-		font-size: 24rpx;
+		font-size: 27rpx;
 		color: #8f99a2;
 	}
 }

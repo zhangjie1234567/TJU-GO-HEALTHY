@@ -108,12 +108,15 @@
             nickname: vo.nickname || vo.name,
             avatar: vo.avatar || ''
           }
-          // 存储 token，供后续所有需要鉴权的接口使用
-          uni.setStorageSync('token', vo.token)
+          // 存储 token，兼容不同页面对键名的读取
+          ;['token', 'auth_token', 'access_token', 'my_token'].forEach(key => {
+            uni.setStorageSync(key, vo.token)
+          })
           // 存储用户基本信息（兼容历史键名）
           uni.setStorageSync('userInfo', userProfile)
           uni.setStorageSync('current_user_profile', userProfile)
           uni.setStorageSync('my_user_profile', userProfile)
+          uni.setStorageSync('current_user_id', Number(vo.id || 0))
           // 记住我
           if (form.rememberMe) {
             uni.setStorageSync('login_remember_studentId', studentId)

@@ -184,7 +184,6 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { getDailyData, saveDailyData } from '../my/my-store'
 
 const tasks = ref([])
 const showAddTaskModal = ref(false)
@@ -206,25 +205,10 @@ const paceModes = [
   { label: '节奏跑', value: 'tempo', meterPerSecond: 3.4 }
 ]
 
-const musicPresets = [
-  { label: '轻松跑 150', value: 'easy', bpm: 150 },
-  { label: '正常跑 165', value: 'normal', bpm: 165 },
-  { label: '节奏跑 180', value: 'tempo', bpm: 180 }
-]
-
-const localMusicTracks = {
-  easy: { name: '轻松跑配乐', src: '/static/music/run_calm.mp3' },
-  normal: { name: '正常跑配乐', src: '/static/music/run_steady.mp3' },
-  tempo: { name: '节奏跑配乐', src: '/static/music/run_rush.mp3' }
-}
-
 const runMode = ref('normal')
 const runMetricMode = ref('estimated')
 const cadenceSpm = ref(170)
 const strideLengthM = ref(0.95)
-const musicPreset = ref('normal')
-const musicEnabled = ref(true)
-const musicPlaying = ref(false)
 const voiceBroadcastEnabled = ref(false)
 const realStepCount = ref(0)
 const realTrackingSupported = ref(false)
@@ -239,7 +223,6 @@ const lastAnnouncedKm = ref(0)
 const preferredSpeechVoice = ref(null)
 const voiceResolverBound = ref(false)
 let runTimer = null
-let audioPlayer = null
 let geoWatchId = null
 let motionHandler = null
 let lastGeoPoint = null
@@ -266,17 +249,6 @@ const runModeDescription = computed(() => {
   return '正常跑: 日常训练，速度与耐力平衡'
 })
 
-const selectedBpm = computed(() => {
-  const selected = musicPresets.find(item => item.value === musicPreset.value)
-  return selected ? selected.bpm : 165
-})
-
-const currentTrackLabel = computed(() => {
-  const track = localMusicTracks[musicPreset.value]
-  if (!track) return '未设置'
-  return `${track.name} (${selectedBpm.value} BPM)`
-})
-
 const runTimeText = computed(() => formatDuration(runSeconds.value))
 
 const focusPhaseLabel = computed(() => {
@@ -291,15 +263,10 @@ onMounted(() => {
   loadTasks()
   const savedRunHistory = uni.getStorageSync('run_history')
   runHistory.value = Array.isArray(savedRunHistory) ? savedRunHistory : []
-  musicPreset.value = runMode.value
 })
 
 onUnmounted(() => {
-  syncRunDurationToSummary(false)
-  syncFocusDurationToSummary(false)
   stopRunTimer()
-  stopMusicPlayback()
-  destroyAudioPlayer()
   stopFocusTimer()
 })
 
@@ -403,87 +370,16 @@ const confirmAddTask = () => {
 
 const setRunMode = (mode) => {
   runMode.value = mode
-  musicPreset.value = mode
-  if (isRunning.value && musicEnabled.value) {
-    syncMusicTrack(true)
-  }
-}
-
-const ensureAudioPlayer = () => {
-  if (audioPlayer) return true
-  if (typeof uni.createInnerAudioContext !== 'function') {
-    uni.showToast({ title: '当前环境不支持音频', icon: 'none' })
-    return false
-  }
-
-  audioPlayer = uni.createInnerAudioContext()
-  audioPlayer.loop = true
-  audioPlayer.autoplay = false
-
-  audioPlayer.onPlay(() => {
-    musicPlaying.value = true
-  })
-  audioPlayer.onPause(() => {
-    musicPlaying.value = false
-  })
-  audioPlayer.onStop(() => {
-    musicPlaying.value = false
-  })
-  audioPlayer.onEnded(() => {
-    musicPlaying.value = false
-    // Some runtimes may not honor loop reliably; restart playback as a fallback.
-    if (isRunning.value && musicEnabled.value) {
-      audioPlayer.play()
-    }
-  })
-  audioPlayer.onError(() => {
-    musicPlaying.value = false
-    uni.showToast({ title: '配乐文件不存在', icon: 'none' })
-  })
-
-  return true
-}
-
-const syncMusicTrack = (autoPlay = false) => {
-  if (!musicEnabled.value) return
-  if (!ensureAudioPlayer()) return
-
-  const track = localMusicTracks[musicPreset.value]
-  if (!track) return
-
-  if (audioPlayer.src !== track.src) {
-    audioPlayer.src = track.src
-  }
-
-  if (autoPlay) {
-    audioPlayer.play()
-  }
-}
-
-const stopMusicPlayback = () => {
-  if (!audioPlayer) return
-  audioPlayer.pause()
-  musicPlaying.value = false
-}
-
-const destroyAudioPlayer = () => {
-  if (!audioPlayer) return
-  audioPlayer.destroy()
-  audioPlayer = null
 }
 
 const toggleRunning = () => {
   if (isRunning.value) {
-    syncRunDurationToSummary(false)
     stopRunTimer()
-    stopMusicPlayback()
     isRunning.value = false
     return
   }
 
   isRunning.value = true
-  musicPreset.value = runMode.value
-  syncMusicTrack(true)
   runTimer = setInterval(() => {
     runSeconds.value += 1
   }, 1000)
@@ -495,48 +391,6 @@ const stopRunTimer = () => {
   runTimer = null
 }
 
-const addDailyMetricValue = (metricType, addValue) => {
-  const value = Number(addValue)
-  if (!Number.isFinite(value) || value <= 0) return
-
-  try {
-    const data = getDailyData()
-    const today = new Date().toISOString().split('T')[0]
-    let todayRecord = data.find(d => d.date === today)
-
-    if (!todayRecord) {
-      todayRecord = { date: today, metrics: {} }
-      data.push(todayRecord)
-    }
-
-    const current = Number(todayRecord.metrics?.[metricType]) || 0
-    todayRecord.metrics[metricType] = Number((current + value).toFixed(2))
-    saveDailyData(data)
-  } catch (error) {
-    console.error('写入数据小结失败', error)
-  }
-}
-
-const syncRunDurationToSummary = (force = false) => {
-  const deltaSeconds = runSeconds.value - runSyncedSeconds.value
-  if (deltaSeconds <= 0) return false
-  if (!force && deltaSeconds < 20) return false
-
-  addDailyMetricValue('runMinutes', deltaSeconds / 60)
-  runSyncedSeconds.value = runSeconds.value
-  return true
-}
-
-const syncFocusDurationToSummary = (force = false) => {
-  const deltaSeconds = focusElapsedSeconds.value - focusSyncedSeconds.value
-  if (deltaSeconds <= 0) return false
-  if (!force && deltaSeconds < 60) return false
-
-  addDailyMetricValue('focus', deltaSeconds / 3600)
-  focusSyncedSeconds.value = focusElapsedSeconds.value
-  return true
-}
-
 const saveRunRecord = () => {
   if (runSeconds.value < 20) {
     uni.showToast({ title: '跑步时间太短，先多跑一会儿', icon: 'none' })
@@ -546,19 +400,15 @@ const saveRunRecord = () => {
   const record = {
     time: new Date().toLocaleString(),
     mode: paceModes.find(item => item.value === runMode.value)?.label || '正常跑',
-    duration: runTimeText.value,
-    bpm: selectedBpm.value
+    duration: runTimeText.value
   }
   runHistory.value = [record, ...runHistory.value].slice(0, 5)
   uni.setStorageSync('run_history', runHistory.value)
-  syncRunDurationToSummary(true)
   uni.showToast({ title: '已保存跑步记录', icon: 'success' })
 }
 
 const resetRun = () => {
-  syncRunDurationToSummary(false)
   stopRunTimer()
-  stopMusicPlayback()
   isRunning.value = false
   runSeconds.value = 0
   runSyncedSeconds.value = 0
@@ -608,7 +458,6 @@ const startOrResumeFocus = () => {
       focusPhase.value = 'done'
       focusRunning.value = false
       stopFocusTimer()
-      syncFocusDurationToSummary(true)
       uni.showToast({ title: '专注计划完成', icon: 'success' })
       return
     }
@@ -620,13 +469,11 @@ const startOrResumeFocus = () => {
 }
 
 const pauseFocus = () => {
-  syncFocusDurationToSummary(false)
   focusRunning.value = false
   stopFocusTimer()
 }
 
 const resetFocus = () => {
-  syncFocusDurationToSummary(false)
   focusRunning.value = false
   focusPhase.value = 'focus'
   currentRound.value = 1

@@ -81,12 +81,6 @@
       }
     },
     {
-      "path": "pages/school/canteen/demo",
-      "style": {
-        "navigationBarTitleText": "干饭日记"
-      }
-    },
-    {
       "path": "pages/school/canteen/menu/liu",
       "style": {
         "navigationBarTitleText": "留园菜单"
@@ -120,6 +114,12 @@
       "path": "pages/school/canteen/menu/tao",
       "style": {
         "navigationBarTitleText": "桃园菜单"
+      }
+    },
+    {
+      "path": "pages/school/canteen/menu/tang",
+      "style": {
+        "navigationBarTitleText": "棠园菜单"
       }
     },
     {
@@ -251,7 +251,7 @@
     {
       "path": "pages/communication/method_rank",
       "style": {
-        "navigationBarTitleText": "减重方法评分榜"
+        "navigationBarTitleText": "健康方案评分榜"
       }
     },
     {

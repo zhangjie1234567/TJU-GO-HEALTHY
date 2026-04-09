@@ -1,32 +1,35 @@
 <template>
   <view class="container">
-    <view class="rank-tabs">
-      <view
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="tab-item"
-        :class="{ active: currentTab === tab.value }"
-        @click="currentTab = tab.value"
-      >
-        {{ tab.label }}
-      </view>
-    </view>
-
     <view class="rank-card">
+      <view class="card-header">
+        <text class="title">健康方案排行</text>
+      </view>
+
+      <view class="quick-choose">
+        <text class="quick-title">给我的方案模板评分</text>
+        <view class="quick-list">
+          <view
+            v-for="item in defaultPlans"
+            :key="item"
+            class="quick-item"
+            :class="{ active: form.name === item }"
+            @click="form.name = item"
+          >
+            {{ item }}
+          </view>
+        </view>
+      </view>
+
       <view class="input-area">
-        <input v-model="form.name" class="field" placeholder="新增条目名称" maxlength="20" />
+        <input v-model="form.name" class="field" placeholder="输入条目名称（支持自定义）" maxlength="20" />
         <input v-model="form.score" class="field" placeholder="评分（0-10）" type="digit" />
         <view class="submit-row">
           <text class="submit-btn" @click="addRankItem">提交评分</text>
         </view>
       </view>
 
-      <view class="card-header">
-        <text class="title">{{ currentLabel }} TOP3</text>
-      </view>
-
       <view v-if="currentRanks.length === 0" class="empty-tip">
-        <text>暂无评分数据，先提交第一条吧</text>
+        <text>暂无条目，请先提交第一条评分</text>
       </view>
 
       <view v-for="(item, index) in currentRanks" :key="item.id" class="rank-item">
@@ -34,16 +37,9 @@
           <text class="order">{{ index + 1 }}</text>
           <view class="meta">
             <text class="name">{{ item.name }}</text>
-            <text class="desc">评分 {{ item.score }} · 收藏 {{ item.collect }}</text>
+            <text class="desc">平均分 {{ item.score }} · {{ item.voteCount || 0 }} 人评分</text>
           </view>
         </view>
-        <text
-          class="collect-btn"
-          :class="{ active: item.collected }"
-          @click="toggleCollect(item.id)"
-        >
-          {{ item.collected ? '已收藏' : '收藏' }}
-        </text>
       </view>
     </view>
   </view>
@@ -53,32 +49,31 @@
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 import { apiRequest } from '../../utils/request'
+import { getAuthHeaders, getAuthToken, handleAuthError } from './auth-helper'
 
-const tabs = [
-  { label: '减重方案排行', value: 'plan' },
-  { label: '食谱排行', value: 'recipe' },
-  { label: '运动方式排行', value: 'sport' }
-]
-
-const currentTab = ref('plan')
-
-const rankData = ref({ plan: [], recipe: [], sport: [] })
+const defaultPlans = ['速效减脂方案', '科学慢减方案', '健身增肌方案', '瑜伽冥想方案']
+const rankData = ref([])
 const form = ref({ name: '', score: '' })
 
 const loadRankData = async () => {
   try {
-    const res = await apiRequest({ url: '/api/community/rank/method', method: 'GET' })
-    const grouped = { plan: [], recipe: [], sport: [] }
-    if (Array.isArray(res)) {
-      res.forEach(item => {
-        const type = item.type
-        if (grouped[type]) {
-          grouped[type].push({ id: item.id, name: item.name, score: item.score, collect: item.collectCount || 0, collected: false })
-        }
-      })
-    }
-    rankData.value = grouped
+    const res = await apiRequest({
+      url: '/api/community/rank/method',
+      method: 'GET',
+      data: { type: 'plan' },
+      header: getAuthHeaders()
+    })
+    rankData.value = Array.isArray(res) ? res.map(item => ({
+      id: item.id,
+      name: item.name,
+      score: Number(item.score || 0).toFixed(1),
+      voteCount: Number(item.voteCount || 0)
+    })) : []
   } catch (e) {
+    if (handleAuthError(e)) {
+      rankData.value = []
+      return
+    }
     console.error('加载方法排行失败:', e)
   }
 }
@@ -88,12 +83,14 @@ onShow(() => {
 })
 
 const currentRanks = computed(() => {
-  const list = rankData.value[currentTab.value] || []
-  return [...list].sort((a, b) => Number(b.score) - Number(a.score)).slice(0, 3)
+  return rankData.value.slice(0, 20)
 })
-const currentLabel = computed(() => tabs.find(item => item.value === currentTab.value)?.label || '排行')
 
 const addRankItem = async () => {
+  if (!getAuthToken()) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
   const name = form.value.name.trim()
   const score = Number(form.value.score)
 
@@ -111,25 +108,19 @@ const addRankItem = async () => {
     await apiRequest({
       url: '/api/community/rank/method/add',
       method: 'POST',
-      data: { type: currentTab.value, name, score: Number(score.toFixed(1)) }
+      header: getAuthHeaders(),
+      data: { type: 'plan', name, score: Number(score.toFixed(1)) }
     })
     form.value = { name: '', score: '' }
     await loadRankData()
     uni.showToast({ title: '评分已提交', icon: 'success' })
   } catch (e) {
+    if (handleAuthError(e)) return
     console.error('提交评分失败:', e)
     uni.showToast({ title: '提交失败，请重试', icon: 'none' })
   }
 }
 
-const toggleCollect = (id) => {
-  const list = rankData.value[currentTab.value]
-  const target = list.find(item => item.id === id)
-  if (!target) return
-  target.collected = !target.collected
-  target.collect = Math.max(0, target.collect + (target.collected ? 1 : -1))
-  uni.showToast({ title: target.collected ? '已收藏' : '已取消收藏', icon: 'none' })
-}
 </script>
 
 <style lang="scss" scoped>
@@ -142,33 +133,43 @@ $bg-blue: #E3F2FD;
   padding: 20rpx;
 }
 
-.rank-tabs {
-  display: flex;
-  gap: 10rpx;
-  margin-bottom: 16rpx;
-}
-
-.tab-item {
-  flex: 1;
-  text-align: center;
-  background: #fff;
-  padding: 14rpx 8rpx;
-  border-radius: 14rpx;
-  color: #4a759f;
-  font-size: 22rpx;
-
-  &.active {
-    background: $main-blue;
-    color: #fff;
-    font-weight: 600;
-  }
-}
-
 .rank-card {
   background: #fff;
   border-radius: 20rpx;
   padding: 20rpx;
   box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.08);
+}
+
+.quick-choose {
+  margin-bottom: 14rpx;
+}
+
+.quick-title {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 23rpx;
+  color: #5c7184;
+}
+
+.quick-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8rpx;
+}
+
+.quick-item {
+  background: #f3f9ff;
+  border: 1rpx solid #deebf7;
+  border-radius: 10rpx;
+  padding: 10rpx 12rpx;
+  color: #4a759f;
+  font-size: 22rpx;
+
+  &.active {
+    background: #4FA1F2;
+    border-color: #4FA1F2;
+    color: #fff;
+  }
 }
 
 .input-area {
@@ -258,18 +259,5 @@ $bg-blue: #E3F2FD;
 .desc {
   font-size: 22rpx;
   color: #7d8b99;
-}
-
-.collect-btn {
-  padding: 8rpx 16rpx;
-  border-radius: 20rpx;
-  background: #eaf5ff;
-  color: #3a7fbb;
-  font-size: 22rpx;
-
-  &.active {
-    background: $main-blue;
-    color: #fff;
-  }
 }
 </style>

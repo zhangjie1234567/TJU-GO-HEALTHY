@@ -33,6 +33,40 @@
             <text v-if="selectedVisibility === option" class="option-check">✓</text>
           </view>
         </view>
+
+        <view
+          v-if="selectedVisibility === '部分可见' || selectedVisibility === '部分不可见'"
+          class="related-users"
+        >
+          <view class="related-users-title">
+            {{ selectedVisibility === '部分可见' ? '选择可见用户' : '选择不可见用户' }}
+          </view>
+          <view class="related-users-hint">
+            用户来源：关注你 + 你关注
+          </view>
+          <view v-if="loadingRelatedUsers" class="related-users-empty">正在加载用户...</view>
+          <view v-else-if="relatedUsers.length === 0" class="related-users-empty">
+            暂无可选用户，请先去社区关注同学
+          </view>
+          <view v-else class="user-list">
+            <view
+              v-for="item in relatedUsers"
+              :key="item.userId"
+              class="user-item"
+              :class="{ active: isUserSelected(item.userId) }"
+              @click="toggleUserSelection(item.userId)"
+            >
+              <view class="user-main">
+                <text class="user-name">{{ item.name || `用户${item.userId}` }}</text>
+                <text v-if="getRelationLabel(item)" class="relation-tag">{{ getRelationLabel(item) }}</text>
+              </view>
+              <text class="select-mark">{{ isUserSelected(item.userId) ? '已选择' : '选择' }}</text>
+            </view>
+          </view>
+          <view class="selected-count">
+            已选择 {{ selectedVisibility === '部分可见' ? selectedVisibleUserIds.length : selectedHiddenUserIds.length }} 人
+          </view>
+        </view>
       </view>
 
       <view class="btn-row">
@@ -46,6 +80,7 @@
 import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 import { apiRequest } from '../../utils/request'
+import { getAuthHeaders, getAuthToken, handleAuthError } from './auth-helper'
 
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
 const title = ref('')
@@ -53,6 +88,10 @@ const tag = ref('')
 const content = ref('')
 const visibilityOptions = ['所有人可见', '部分可见', '部分不可见', '私密']
 const selectedVisibility = ref('所有人可见')
+const relatedUsers = ref([])
+const loadingRelatedUsers = ref(false)
+const selectedVisibleUserIds = ref([])
+const selectedHiddenUserIds = ref([])
 
 const getVisibilityEmoji = (option) => {
   const emojis = {
@@ -67,11 +106,64 @@ const getVisibilityEmoji = (option) => {
 const getVisibilityDesc = (option) => {
   const descriptions = {
     '所有人可见': '所有用户都可以看到你的动态',
-    '部分可见': '只有你关注的用户可以看到',
-    '部分不可见': '只有你自己可以看到',
+    '部分可见': '仅你选中的用户可以看到',
+    '部分不可见': '你选中的用户将看不到',
     '私密': '完全私密，只有你能看到'
   }
   return descriptions[option] || ''
+}
+
+const getRelationLabel = (user) => {
+  if (user.isFollowing && user.isFollower) return '互相关注'
+  if (user.isFollowing) return '你关注了TA'
+  if (user.isFollower) return 'TA关注了你'
+  return ''
+}
+
+const loadRelatedUsers = async () => {
+  if (!getAuthToken()) {
+    relatedUsers.value = []
+    return
+  }
+  loadingRelatedUsers.value = true
+  try {
+    const res = await apiRequest({
+      url: '/api/community/follow/related-users',
+      method: 'GET',
+      header: getAuthHeaders()
+    })
+    if (res?.code === 0 && Array.isArray(res.data)) {
+      relatedUsers.value = res.data
+    } else {
+      relatedUsers.value = []
+    }
+  } catch (e) {
+    if (!handleAuthError(e)) {
+      console.error('加载相关用户失败', e)
+    }
+    relatedUsers.value = []
+  } finally {
+    loadingRelatedUsers.value = false
+  }
+}
+
+const isUserSelected = (userId) => {
+  const list = selectedVisibility.value === '部分可见'
+    ? selectedVisibleUserIds.value
+    : selectedHiddenUserIds.value
+  return list.includes(userId)
+}
+
+const toggleUserSelection = (userId) => {
+  const target = selectedVisibility.value === '部分可见'
+    ? selectedVisibleUserIds.value
+    : selectedHiddenUserIds.value
+  const index = target.indexOf(userId)
+  if (index >= 0) {
+    target.splice(index, 1)
+  } else {
+    target.push(userId)
+  }
 }
 
 const loadCurrentUser = () => {
@@ -98,6 +190,7 @@ const loadCurrentUser = () => {
 
 onShow(() => {
   loadCurrentUser()
+  loadRelatedUsers()
 })
 
 const onVisibilityChange = (e) => {
@@ -106,7 +199,7 @@ const onVisibilityChange = (e) => {
 }
 
 const publishPost = async () => {
-  if (!currentUser.value.name || currentUser.value.name === '未登录用户') {
+  if (!getAuthToken()) {
     uni.showToast({ title: '请先去登录页认证账号', icon: 'none' })
     return
   }
@@ -114,9 +207,16 @@ const publishPost = async () => {
     uni.showToast({ title: '请填写标题和内容', icon: 'none' })
     return
   }
+  if (selectedVisibility.value === '部分可见' && selectedVisibleUserIds.value.length === 0) {
+    uni.showToast({ title: '请至少选择1位可见用户', icon: 'none' })
+    return
+  }
+  if (selectedVisibility.value === '部分不可见' && selectedHiddenUserIds.value.length === 0) {
+    uni.showToast({ title: '请至少选择1位不可见用户', icon: 'none' })
+    return
+  }
   uni.showLoading({ title: '发布中...' })
   try {
-    const userId = uni.getStorageSync('current_user_id') || 1
     await apiRequest({
       url: '/api/community/post',
       method: 'POST',
@@ -124,9 +224,11 @@ const publishPost = async () => {
         title: title.value.trim(),
         content: content.value.trim(),
         tag: tag.value.trim() || '日常分享',
-        visibility: selectedVisibility.value
+        visibility: selectedVisibility.value,
+        visibleUserIds: selectedVisibility.value === '部分可见' ? selectedVisibleUserIds.value : [],
+        hiddenUserIds: selectedVisibility.value === '部分不可见' ? selectedHiddenUserIds.value : []
       },
-      header: { 'X-User-Id': userId }
+      header: getAuthHeaders()
     })
     uni.hideLoading()
     uni.showToast({ title: '发布成功', icon: 'success' })
@@ -134,9 +236,12 @@ const publishPost = async () => {
     tag.value = ''
     content.value = ''
     selectedVisibility.value = '所有人可见'
+    selectedVisibleUserIds.value = []
+    selectedHiddenUserIds.value = []
     setTimeout(() => uni.navigateBack(), 350)
   } catch (e) {
     uni.hideLoading()
+    if (handleAuthError(e)) return
     uni.showToast({ title: '发布失败，请重试', icon: 'none' })
     console.error('发布帖子失败', e)
   }
@@ -270,6 +375,85 @@ $bg-blue: #E3F2FD;
 		flex-shrink: 0;
 		font-weight: 700;
   }
+}
+
+.related-users {
+  margin-top: 14rpx;
+  padding: 14rpx;
+  border-radius: 12rpx;
+  background: #f7fbff;
+  border: 1rpx solid #dcecf9;
+}
+
+.related-users-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #2f5f8b;
+}
+
+.related-users-hint {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #7d97ad;
+}
+
+.related-users-empty {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #8ca0b3;
+}
+
+.user-list {
+  margin-top: 10rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx;
+  border-radius: 10rpx;
+  background: #ffffff;
+  border: 1rpx solid #e0ecf6;
+
+  &.active {
+    border-color: #4FA1F2;
+    background: #eaf5ff;
+  }
+}
+
+.user-main {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.user-name {
+  font-size: 23rpx;
+  color: #31485f;
+}
+
+.relation-tag {
+  font-size: 18rpx;
+  color: #4f85b8;
+  background: #e9f4ff;
+  padding: 3rpx 8rpx;
+  border-radius: 999rpx;
+}
+
+.select-mark {
+  font-size: 20rpx;
+  color: #4FA1F2;
+  font-weight: 600;
+}
+
+.selected-count {
+  margin-top: 10rpx;
+  font-size: 21rpx;
+  color: #4f85b8;
 }
 
 .btn-row {

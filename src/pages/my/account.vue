@@ -24,12 +24,6 @@
 					<text class="edit-icon">✏️</text>
 				</view>
 			</view>
-			<view class="divider"></view>
-
-			<view class="info-row">
-				<text class="info-label">密码</text>
-				<text class="edit-link" @click="editPassword">修改密码 →</text>
-			</view>
 		</view>
 
 		<!-- 其他信息 -->
@@ -88,7 +82,7 @@
 		</view>
 
 		<!-- 编辑弹窗 -->
-		<view class="modal-overlay" v-if="showEditModal" @click.self="showEditModal = false">
+		<view class="modal-overlay" v-if="showEditModal">
 			<view class="modal-content">
 				<view class="modal-header">
 					<text class="modal-title">编辑{{ editingField === 'name' ? '昵称' : editingField === 'height' ? '身高' : editingField === 'weight' ? '体重' : editingField === 'targetWeight' ? '目标体重' : '年龄' }}</text>
@@ -121,7 +115,7 @@
 		</view>
 
 		<!-- 头像选择器 -->
-		<view class="modal-overlay" v-if="showAvatarPicker" @click.self="showAvatarPicker = false">
+		<view class="modal-overlay" v-if="showAvatarPicker">
 			<view class="modal-content">
 				<view class="modal-header">
 					<text class="modal-title">选择头像</text>
@@ -134,46 +128,15 @@
 						:key="index"
 						class="avatar-item"
 						:class="{ selected: form.avatar === avatar }"
-						@click="form.avatar = avatar; saveAvatarAndClose()"
+						@click="form.avatar = avatar"
 					>
 						{{ avatar }}
 					</view>
 				</view>
-			</view>
-		</view>
-
-		<!-- 密码修改弹窗 -->
-		<view class="modal-overlay" v-if="showPasswordModal" @click.self="showPasswordModal = false">
-			<view class="modal-content">
-				<view class="modal-header">
-					<text class="modal-title">修改密码</text>
-					<text class="modal-close" @click="showPasswordModal = false">✕</text>
-				</view>
-
-				<view class="modal-body">
-					<input
-						v-model="passwordForm.old"
-						type="password"
-						class="modal-input"
-						placeholder="请输入旧密码"
-					/>
-					<input
-						v-model="passwordForm.new"
-						type="password"
-						class="modal-input"
-						placeholder="请输入新密码"
-					/>
-					<input
-						v-model="passwordForm.confirm"
-						type="password"
-						class="modal-input"
-						placeholder="请确认新密码"
-					/>
-				</view>
 
 				<view class="modal-actions">
-					<view class="modal-btn cancel" @click="showPasswordModal = false">取消</view>
-					<view class="modal-btn confirm" @click="savePassword">保存</view>
+					<view class="modal-btn cancel" @click="showAvatarPicker = false">取消</view>
+					<view class="modal-btn confirm" @click="saveAvatarAndClose">保存</view>
 				</view>
 			</view>
 		</view>
@@ -188,7 +151,6 @@ import { ref } from 'vue'
 import {
 	getCurrentUser,
 	updateUserProfile,
-	changeUserPassword,
 	clearUserSession
 } from './my-store'
 
@@ -208,13 +170,6 @@ const editValue = ref('')
 
 const showAvatarPicker = ref(false)
 const avatarList = ['😊', '😃', '😄', '😁', '🤗', '😍', '🤩', '😎', '🥳', '😇', '🧠', '💪', '🤸', '🏃', '🚴']
-
-const showPasswordModal = ref(false)
-const passwordForm = ref({
-	old: '',
-	new: '',
-	confirm: ''
-})
 
 const loadData = async () => {
 	const user = await getCurrentUser()
@@ -265,46 +220,6 @@ const saveAvatarAndClose = async () => {
 	showAvatarPicker.value = false
 	uni.showToast({
 		title: '头像已更新',
-		icon: 'none'
-	})
-}
-
-const editPassword = () => {
-	passwordForm.value = { old: '', new: '', confirm: '' }
-	showPasswordModal.value = true
-}
-
-const savePassword = async () => {
-	if (!passwordForm.value.old || !passwordForm.value.new || !passwordForm.value.confirm) {
-		uni.showToast({
-			title: '请填写所有字段',
-			icon: 'none'
-		})
-		return
-	}
-
-	if (passwordForm.value.new !== passwordForm.value.confirm) {
-		uni.showToast({
-			title: '两次输入的密码不一致',
-			icon: 'none'
-		})
-		return
-	}
-
-	if (passwordForm.value.new.length < 6) {
-		uni.showToast({
-			title: '密码长度至少6位',
-			icon: 'none'
-		})
-		return
-	}
-
-	const ok = await changeUserPassword(passwordForm.value.old, passwordForm.value.new)
-	if (!ok) return
-
-	showPasswordModal.value = false
-	uni.showToast({
-		title: '密码修改成功',
 		icon: 'none'
 	})
 }

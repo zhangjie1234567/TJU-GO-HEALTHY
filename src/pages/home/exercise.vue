@@ -86,6 +86,7 @@
   } from 'vue'
   import { onShow } from '@dcloudio/uni-app'
   import { BASE_URL } from '@/config.js'
+  import { getDailyData, saveDailyData } from '../my/my-store'
 
   const todayCalorie = ref(0)
   const exerciseGoal = ref(500)
@@ -203,6 +204,36 @@
     uni.setStorageSync('exerciseRecords', JSON.stringify(d))
   }
 
+  async function syncRunMinutesToSummary(name, duration) {
+    if (!String(name || '').includes('跑步')) return
+    const minutes = Number(duration)
+    if (!Number.isFinite(minutes) || minutes <= 0) return
+
+    const token = getToken()
+    if (!token) return
+
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const dailyList = await getDailyData()
+      const todayRecord = (dailyList || []).find(item => item?.date === today)
+      const currentMetrics = todayRecord?.metrics || {}
+      const currentRunMinutes = Number(currentMetrics.runMinutes) || 0
+
+      await saveDailyData(dailyList, {
+        date: today,
+        metrics: {
+          distance: Number(currentMetrics.distance) || 0,
+          runMinutes: Number((currentRunMinutes + minutes).toFixed(2)),
+          focus: Number(currentMetrics.focus) || 0,
+          weight: Number(currentMetrics.weight) || 0,
+          water: Number(currentMetrics.water) || 0
+        }
+      })
+    } catch (error) {
+      console.warn('同步跑步时长到数据小结失败', error)
+    }
+  }
+
   function addExercise() {
     const duration = parseInt(addDuration.value)
     if (!duration || duration < 1 || duration > 300) {
@@ -235,6 +266,7 @@
       })
       todayCalorie.value += calorie
       saveExerciseToLocal()
+      syncRunMinutesToSummary(name, duration)
       showAdd.value = false
       addDuration.value = ''
       customName.value = ''
@@ -259,6 +291,7 @@
       success: (res) => {
         console.log('新增运动响应：', res)
         if (res.statusCode === 200 && res.data.code === 200) {
+          syncRunMinutesToSummary(name, duration)
           // 后端保存成功，重新加载列表
           loadExercise()
           uni.showToast({ title: '运动已记录', icon: 'success' })
@@ -278,6 +311,7 @@
         })
         todayCalorie.value += calorie
         saveExerciseToLocal()
+        syncRunMinutesToSummary(name, duration)
         uni.showToast({ title: '已保存到本地', icon: 'warning' })
       }
     })

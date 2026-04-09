@@ -34,6 +34,7 @@
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 import { apiRequest } from '../../utils/request'
+import { getAuthHeaders, getAuthToken, handleAuthError } from './auth-helper'
 
 const tabs = [
   { label: '通知', value: 'notice' },
@@ -66,9 +67,12 @@ const formatChatTime = (time) => {
 }
 
 const loadChatThreads = async () => {
+  if (!getAuthToken()) {
+    chatThreads.value = []
+    return
+  }
   try {
-    const userId = uni.getStorageSync('current_user_id') || 1
-    const res = await apiRequest({ url: '/api/community/chat/threads', method: 'GET', header: { 'X-User-Id': userId } })
+    const res = await apiRequest({ url: '/api/community/chat/threads', method: 'GET', header: getAuthHeaders() })
     chatThreads.value = (res || []).map(item => ({
       id: item.id,
       name: item.targetName,
@@ -78,6 +82,10 @@ const loadChatThreads = async () => {
       time: formatChatTime(item.updatedAt) || '刚刚'
     }))
   } catch (e) {
+    if (handleAuthError(e)) {
+      chatThreads.value = []
+      return
+    }
     console.error('加载私信列表失败:', e)
     chatThreads.value = []
   }
@@ -88,19 +96,10 @@ onShow(() => {
 })
 
 const data = ref({
-  notice: [
-    { id: 1, name: '系统通知', text: '本周训练挑战已更新，去看看吧。', avatar: '🔔', badge: 'new', time: '09:20' },
-    { id: 2, name: '系统通知', text: '你关注的榜单已刷新。', avatar: '📣', time: '昨天' }
-  ],
+  notice: [],
   chat: [],
-  comment: [
-    { id: 5, name: '慢跑阿青', text: '评论了你的动态：配速太稳了！', avatar: '🏃', time: '10:42' },
-    { id: 6, name: '橙子同学', text: '回复了你：这个食谱我也在做。', avatar: '🍊', time: '昨天' }
-  ],
-  fans: [
-    { id: 7, name: '冰蓝', text: '关注了你', avatar: '🫧', time: '周一' },
-    { id: 8, name: '糖糖', text: '关注了你', avatar: '🍬', time: '周日' }
-  ]
+  comment: [],
+  fans: []
 })
 
 const currentList = computed(() => {

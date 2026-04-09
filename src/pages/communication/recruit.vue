@@ -1,16 +1,16 @@
 <template>
-  <view class="container">
+  <view class="container" @click="dismissKeyboard">
     <view class="tip-card">
       <text class="tip-title">健康搭子招募</text>
       <text class="tip-desc">找一起训练、互相监督的伙伴</text>
 
       <view class="form-area">
-        <input v-model="form.name" class="field" placeholder="队伍名称" maxlength="16" />
-        <input v-model="form.tag" class="field" placeholder="标签（减脂/增肌等）" maxlength="10" />
-        <input v-model="form.goal" class="field" placeholder="目标" maxlength="30" />
-        <input v-model="form.time" class="field" placeholder="时间段" maxlength="20" />
+        <input v-model="form.name" class="field" placeholder="队伍名称" maxlength="16" confirm-type="done" @click.stop />
+        <input v-model="form.tag" class="field" placeholder="标签（减脂/增肌等）" maxlength="10" confirm-type="done" @click.stop />
+        <input v-model="form.goal" class="field" placeholder="目标" maxlength="30" confirm-type="done" @click.stop />
+        <input v-model="form.time" class="field" placeholder="时间段" maxlength="20" confirm-type="done" @click.stop />
         <view class="submit-row">
-          <text class="submit-btn" @click="addRecruit">发布招募</text>
+          <text class="submit-btn" @click.stop="addRecruit">发布招募</text>
         </view>
       </view>
     </view>
@@ -24,7 +24,9 @@
       <text class="time">时间：{{ item.time }}</text>
       <text class="time">成员：{{ item.members }} 人</text>
       <view class="action-row">
-        <text class="btn" @click="join(item)">我要加入</text>
+        <text v-if="item.isCreator" class="btn disabled">创建者</text>
+        <text v-else-if="item.joined" class="btn leave" @click="leave(item)">点击退出</text>
+        <text v-else class="btn" @click="join(item)">我要加入</text>
       </view>
     </view>
   </view>
@@ -34,6 +36,7 @@
 import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 import { apiRequest } from '../../utils/request'
+import { getAuthHeaders, getAuthToken, handleAuthError } from './auth-helper'
 
 const recruits = ref([])
 
@@ -46,28 +49,42 @@ const form = ref({
 
 const loadRecruits = async () => {
   try {
-    const res = await apiRequest({ url: '/api/community/recruit?page=1&size=50', method: 'GET' })
+    const res = await apiRequest({ url: '/api/community/recruit?page=1&size=50', method: 'GET', header: getAuthHeaders() })
     recruits.value = (res || [])
   } catch (e) {
+    if (handleAuthError(e)) {
+      recruits.value = []
+      return
+    }
     console.error('加载招募失败:', e)
   }
 }
 
 onShow(() => {
+  dismissKeyboard()
   loadRecruits()
 })
 
+const dismissKeyboard = () => {
+  if (typeof uni.hideKeyboard === 'function') {
+    uni.hideKeyboard()
+  }
+}
+
 const addRecruit = async () => {
+  if (!getAuthToken()) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
   if (!form.value.name.trim() || !form.value.goal.trim()) {
     uni.showToast({ title: '请至少填写名称和目标', icon: 'none' })
     return
   }
   try {
-    const userId = uni.getStorageSync('current_user_id') || 1
     await apiRequest({
       url: '/api/community/recruit',
       method: 'POST',
-      header: { 'X-User-Id': userId },
+      header: getAuthHeaders(),
       data: {
         name: form.value.name.trim(),
         tag: form.value.tag.trim() || '互助',
@@ -79,19 +96,42 @@ const addRecruit = async () => {
     await loadRecruits()
     uni.showToast({ title: '招募已发布', icon: 'success' })
   } catch (e) {
+    if (handleAuthError(e)) return
     console.error('发布招募失败:', e)
     uni.showToast({ title: '发布失败，请重试', icon: 'none' })
   }
 }
 
 const join = async (item) => {
+  if (!getAuthToken()) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
   try {
-    await apiRequest({ url: `/api/community/recruit/${item.id}/join`, method: 'POST' })
-    uni.showToast({ title: `已申请加入${item.name}`, icon: 'none' })
+    const res = await apiRequest({ url: `/api/community/recruit/${item.id}/join`, method: 'POST', header: getAuthHeaders() })
+    const members = Number(res?.members || 0)
+    uni.showToast({ title: members > 0 ? `已加入${item.name}` : '加入成功', icon: 'none' })
     await loadRecruits()
   } catch (e) {
+    if (handleAuthError(e)) return
     console.error('加入招募失败:', e)
     uni.showToast({ title: '加入失败，请重试', icon: 'none' })
+  }
+}
+
+const leave = async (item) => {
+  if (!getAuthToken()) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  try {
+    await apiRequest({ url: `/api/community/recruit/${item.id}/leave`, method: 'POST', header: getAuthHeaders() })
+    uni.showToast({ title: `已退出${item.name}`, icon: 'none' })
+    await loadRecruits()
+  } catch (e) {
+    if (handleAuthError(e)) return
+    console.error('退出招募失败:', e)
+    uni.showToast({ title: '退出失败，请重试', icon: 'none' })
   }
 }
 </script>
@@ -199,5 +239,14 @@ $bg-blue: #E3F2FD;
   border-radius: 20rpx;
   padding: 8rpx 18rpx;
   font-size: 22rpx;
+}
+
+.btn.leave {
+  background: #ff8c6b;
+}
+
+.btn.disabled {
+  background: #c5d0da;
+  color: #f7fbff;
 }
 </style>

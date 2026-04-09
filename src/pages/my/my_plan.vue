@@ -98,6 +98,46 @@
 		</view>
 	</view>
 
+	<!-- 健康提醒弹窗 -->
+	<view v-if="showRemindPopup" class="popup-mask" @click.self="closeRemindPopup">
+		<view class="popup-content">
+			<view class="popup-title">请选择要设置的提醒</view>
+			<view class="popup-item" v-for="item in remindItems" :key="item.key" @click="selectRemind(item)">
+				<text>{{ item.label }}</text>
+			</view>
+			<view class="popup-link" @click="goToReminderList">查看已设置提醒</view>
+			<view class="popup-cancel" @click="closeRemindPopup">取消</view>
+		</view>
+	</view>
+
+	<!-- 时间选择器弹窗 -->
+	<view v-if="showTimePicker" class="popup-mask" @click.self="closeTimePicker">
+		<view class="popup-content">
+			<view class="popup-title">请选择提醒时间</view>
+			<picker-view :value="pickerValue" @change="onTimeChange" class="picker-view">
+				<picker-view-column>
+					<view v-for="(y, i) in years" :key="`y-${i}`">{{ y }}年</view>
+				</picker-view-column>
+				<picker-view-column>
+					<view v-for="(m, i) in months" :key="`m-${i}`">{{ m }}月</view>
+				</picker-view-column>
+				<picker-view-column>
+					<view v-for="(d, i) in days" :key="`d-${i}`">{{ d }}日</view>
+				</picker-view-column>
+				<picker-view-column>
+					<view v-for="(h, i) in hours" :key="`h-${i}`">{{ h }}时</view>
+				</picker-view-column>
+				<picker-view-column>
+					<view v-for="(min, i) in minutes" :key="`min-${i}`">{{ min }}分</view>
+				</picker-view-column>
+			</picker-view>
+			<view class="popup-btn-row">
+				<view class="popup-btn" @click="closeTimePicker">取消</view>
+				<view class="popup-btn confirm" @click="confirmTime">确定</view>
+			</view>
+		</view>
+	</view>
+
 	<!-- 方案详情弹窗 -->
 	<view class="modal-overlay" v-if="showDetailModal" @click.self="showDetailModal = false">
 		<view class="modal-content detail-modal">
@@ -301,6 +341,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
+import { BASE_URL } from '@/config.js'
 import {
 	getCurrentPlan,
 	setCurrentPlan,
@@ -315,6 +356,9 @@ const showAddModal = ref(false)
 const showDetailModal = ref(false)
 const showProgressModal = ref(false)
 const selectedTemplate = ref(null)
+const showRemindPopup = ref(false)
+const showTimePicker = ref(false)
+const selectedRemind = ref(null)
 
 const newPlan = ref({
 	name: '',
@@ -325,6 +369,21 @@ const newPlan = ref({
 })
 
 const iconList = ['🎯', '💪', '🏃', '🚴', '🤸', '⚽', '🏊', '🧘', '🥗', '📈']
+const remindItems = [
+	{ key: 'weight', label: '设置体重提醒', reminder_title: '我的方案体重提醒' },
+	{ key: 'drink', label: '设置饮水提醒', reminder_title: '我的方案饮水提醒' },
+	{ key: 'exercise', label: '设置运动提醒', reminder_title: '我的方案运动提醒' },
+	{ key: 'fasting', label: '设置断食提醒', reminder_title: '我的方案断食提醒' }
+]
+
+const now = new Date()
+const years = []
+for (let y = now.getFullYear(); y <= now.getFullYear() + 2; y += 1) years.push(y)
+const months = Array.from({ length: 12 }, (_, i) => i + 1)
+const days = Array.from({ length: 31 }, (_, i) => i + 1)
+const hours = Array.from({ length: 24 }, (_, i) => i)
+const minutes = Array.from({ length: 60 }, (_, i) => i)
+const pickerValue = ref([0, now.getMonth(), now.getDate() - 1, now.getHours(), now.getMinutes()])
 
 const planTemplates = [
 	{
@@ -465,7 +524,8 @@ const savePlan = async () => {
 		return
 	}
 
-	if (!uni.getStorageSync('auth_token')) {
+	const token = uni.getStorageSync('auth_token') || uni.getStorageSync('token') || uni.getStorageSync('access_token') || uni.getStorageSync('my_token')
+	if (!token) {
 		uni.showToast({
 			title: '请先登录后再创建方案',
 			icon: 'none'
@@ -684,7 +744,7 @@ const toggleTask = (index) => {
 	// 显示完成提示
 	if (todayTasks.value[index].done) {
 		uni.showToast({
-			title: '太棒了！继续加油！',
+			title: '继续加油',
 			icon: 'success',
 			duration: 1000
 		})
@@ -692,10 +752,127 @@ const toggleTask = (index) => {
 }
 
 const showReminderSetting = () => {
-	uni.showToast({
-		title: '提醒功能开发中',
-		icon: 'none'
+	showRemindPopup.value = true
+}
+
+const goToReminderList = () => {
+	showRemindPopup.value = false
+	uni.navigateTo({ url: '/pages/home/reminder_list?from=my_plan' })
+}
+
+const closeRemindPopup = () => {
+	showRemindPopup.value = false
+}
+
+const selectRemind = (item) => {
+	selectedRemind.value = item
+	showRemindPopup.value = false
+	showTimePicker.value = true
+}
+
+const closeTimePicker = () => {
+	showTimePicker.value = false
+}
+
+const onTimeChange = (e) => {
+	pickerValue.value = e.detail.value
+}
+
+const formatReminderTime = () => {
+	const y = years[pickerValue.value[0]]
+	const m = months[pickerValue.value[1]]
+	const d = days[pickerValue.value[2]]
+	const h = hours[pickerValue.value[3]]
+	const min = minutes[pickerValue.value[4]]
+	return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+const getToken = () => {
+	return uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token') || uni.getStorageSync('my_token') || ''
+}
+
+const addReminderToPhoneCalendar = async (item, reminderTime) => {
+	const startTime = new Date(reminderTime.replace(' ', 'T'))
+	const endTime = new Date(startTime.getTime() + 30 * 60 * 1000)
+
+	return new Promise((resolve) => {
+		// #ifdef MP-WEIXIN
+		if (typeof wx !== 'undefined' && typeof wx.addPhoneCalendar === 'function') {
+			wx.addPhoneCalendar({
+				title: item.reminder_title,
+				startTime,
+				endTime,
+				description: `健康提醒：${item.label}`,
+				success: () => resolve({ calendar_sync_status: 1, message: '手机日历同步成功' }),
+				fail: () => resolve({ calendar_sync_status: 0, message: '手机日历同步失败，提醒已保存' })
+			})
+			return
+		}
+		resolve({ calendar_sync_status: 0, message: '当前微信基础库不支持写入手机日历，提醒已保存' })
+		// #endif
+
+		// #ifndef MP-WEIXIN
+		resolve({ calendar_sync_status: 0, message: '仅微信小程序支持手机日历同步，提醒已保存' })
+		// #endif
 	})
+}
+
+const saveHealthReminder = async (item, reminderTime, calendarSyncStatus) => {
+	const token = getToken()
+	if (!token) {
+		throw new Error('请先登录后再设置提醒')
+	}
+
+	return new Promise((resolve, reject) => {
+		uni.request({
+			url: `${BASE_URL}/api/plan/reminder`,
+			method: 'PUT',
+			header: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			data: {
+				reminder_type: item.key,
+				reminder_title: item.reminder_title,
+				reminder_time: `${reminderTime}:00`,
+				is_enabled: 1,
+				calendar_sync_status: calendarSyncStatus
+			},
+			success(res) {
+				if (res.statusCode === 200 && res.data && res.data.code === 200) {
+					resolve()
+					return
+				}
+				reject(new Error((res.data && res.data.message) || '提醒保存失败'))
+			},
+			fail(err) {
+				reject(new Error((err && err.errMsg) || '提醒保存失败'))
+			}
+		})
+	})
+}
+
+const confirmTime = async () => {
+	if (!selectedRemind.value) {
+		uni.showToast({ title: '请先选择提醒类型', icon: 'none' })
+		return
+	}
+
+	const timeStr = formatReminderTime()
+	showTimePicker.value = false
+
+	try {
+		const calendarResult = await addReminderToPhoneCalendar(selectedRemind.value, timeStr)
+		await saveHealthReminder(selectedRemind.value, timeStr, calendarResult.calendar_sync_status)
+		uni.showToast({ title: '提醒已保存', icon: 'none', duration: 1800 })
+		if (calendarResult.calendar_sync_status !== 1) {
+			setTimeout(() => {
+				uni.showToast({ title: calendarResult.message, icon: 'none', duration: 2000 })
+			}, 260)
+		}
+	} catch (error) {
+		uni.showToast({ title: error.message || '提醒设置失败', icon: 'none', duration: 2200 })
+	}
 }
 
 // 计算计划进度
@@ -805,6 +982,97 @@ $text-light: #888;
 	min-height: 100vh;
 	background: linear-gradient(135deg, $bg-blue 0%, #F0F9FF 100%);
 	padding: 24rpx;
+}
+
+.popup-mask {
+	position: fixed;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.25);
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.popup-content {
+	background: #fff;
+	border-radius: 12px;
+	min-width: 260px;
+	max-width: 90vw;
+	padding: 24px 18px 18px 18px;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.popup-title {
+	font-size: 18px;
+	font-weight: 600;
+	margin-bottom: 14px;
+	text-align: center;
+}
+
+.popup-item {
+	padding: 12px 0;
+	text-align: center;
+	font-size: 16px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.popup-item:last-child {
+	border-bottom: none;
+}
+
+.popup-link {
+	margin-top: 12px;
+	color: #53B1EF;
+	text-align: center;
+	font-size: 15px;
+}
+
+.popup-cancel {
+	margin-top: 10px;
+	color: #888;
+	text-align: center;
+	font-size: 15px;
+}
+
+.picker-view {
+	width: 100%;
+	height: 220px;
+	margin: 12px 0;
+	background: #f7f7fa;
+	border-radius: 8px;
+}
+
+.popup-btn-row {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 12px;
+}
+
+.popup-btn {
+	flex: 1;
+	text-align: center;
+	padding: 10px 0;
+	border-radius: 8px;
+	background: #f2f4f7;
+	color: #666;
+	font-size: 15px;
+	margin-right: 8px;
+}
+
+.popup-btn:last-child {
+	margin-right: 0;
+}
+
+.popup-btn.confirm {
+	background: #4FA1F2;
+	color: #fff;
 }
 
 .current-section {

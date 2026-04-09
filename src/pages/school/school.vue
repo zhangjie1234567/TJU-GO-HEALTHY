@@ -1,232 +1,129 @@
 <template>
-  <view class="page">
-    <image class="bg" src="/static/school/main/background.png" mode="aspectFill" />
-    <!-- http://localhost:5173/#/pages/school/school -->
-    <!-- display: block; font-size:34rpx; font-weight:700; margin-bottom: 20rpx; margin-left: 10rpx; -->
-    <view class="container">
-      <view class="search">
-        <view class="search-box">
-          <input class="search-input" placeholder="搜索" placeholder-style="color: #999" />
-          <image class="search-icon" src="/static/school/main/search_icon.png" mode="aspectFit" />
-        </view>
-      </view>
+  <view class="container">
+    <view class="hero-card">
+      <text class="hero-title">校园服务</text>
+      <text class="hero-subtitle">课表、体测、食堂一站直达</text>
+    </view>
 
-      <view class="grid">
-        <view class="grid-item" v-for="item in items" :key="item.name" @click="onItemClick(item)">
-          <view class="icon-wrap">
-            <image :src="item.img" class="icon" mode="aspectFit" />
+    <view class="module-list">
+      <view class="module-card" v-for="item in items" :key="item.name" @click="onItemClick(item)">
+        <view class="module-left">
+          <text class="module-emoji">{{ item.emoji }}</text>
+          <view class="module-meta">
+            <text class="module-title">{{ item.label }}</text>
+            <text class="module-desc">{{ item.desc }}</text>
           </view>
-          <image :src="item.wordImg" class="label-img" mode="aspectFit" />
         </view>
+        <text class="module-arrow">→</text>
       </view>
     </view>
+
+    <view style="height: 120rpx;"></view>
   </view>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 
-// 保持搜索框不变；项目内已有图标请根据实际素材替换路径
 const items = reactive([
-  { name: 'map', label: '地图', img: '/static/school/main/map.png', wordImg: '/static/school/main/map_word.png' },
-  { name: 'timetable', label: '课表', img: '/static/school/main/timetable.png', wordImg: '/static/school/main/timetable_word.png' },
-  { name: 'fitness', label: '体测', img: '/static/school/main/fitness.png', wordImg: '/static/school/main/fitness_word.png' },
-  { name: 'facilities', label: '校内设施', img: '/static/school/main/facilities.png', wordImg: '/static/school/main/facilities_word.png' },
-  { name: 'canteen', label: '食堂', img: '/static/school/main/canteen.png', wordImg: '/static/school/main/canteen_word.png' },
-  { name: 'others', label: '其他服务', img: '/static/school/main/others.png', wordImg: '/static/school/main/others_word.png' }
+  { name: 'canteen', label: '食堂', emoji: '🍱', desc: '浏览校内食堂菜单' },
+  { name: 'timetable', label: '课表', emoji: '📚', desc: '快速查看课程安排' },
+  { name: 'fitness', label: '体测', emoji: '🏃', desc: '跟踪体测项目与成绩' },
 ])
 
 const routeMap = {
-  map: '/pages/school/map/map',
   timetable: '/pages/school/schedule/schedule',
   fitness: '/pages/school/fitness/fitness',
-  facilities: '/pages/school/facilities/facilities',
-  canteen: '/pages/school/canteen/canteen',
-  others: '/pages/school/others/others'
+  canteen: '/pages/school/canteen/canteen'
 }
 
-const fallbackToHashRoute = (url) => {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.location.hash = `#${url}`
-}
-
-const navigating = ref(false)
-
-// Helper: perform navigation in uni runtime or fallback to H5 hash
-const doNavigate = (url) => {
-  return new Promise((resolve) => {
-    try {
-      if (typeof uni !== 'undefined' && uni.navigateTo) {
-        try {
-          uni.navigateTo({
-            url,
-            success: (res) => resolve({ ok: true, res }),
-            fail: (err) => resolve({ ok: false, err }),
-            complete: () => {}
-          })
-          return
-        } catch (e) {
-          resolve({ ok: false, err: e })
-          return
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    // browser fallback
-    try {
-      const href = '/#' + url.replace('/pages', '/pages')
-      window.location.href = href
-      setTimeout(() => resolve({ ok: true }), 600)
-    } catch (e) {
-      resolve({ ok: false, err: e })
-    }
-  })
-}
-
-const navigateToSafe = async (url) => {
-  try {
-    const result = await doNavigate(url)
-    // ignore known navigation-cancelled errors
-    if (result && result.err && result.err.errMsg && typeof result.err.errMsg === 'string' && result.err.errMsg.includes('Navigation cancelled')) {
-      // ignore
-    }
-  } catch (e) {
-    // ignore
-  } finally {
-    navigating.value = false
-  }
-}
-
-const onItemClick = async (item) => {
-  if (navigating.value) return
-  navigating.value = true
-
-  if (item.name === 'map') { await navigateToSafe('/pages/school/map/map'); return }
-  if (item.name === 'timetable') { await navigateToSafe('/pages/school/schedule/schedule'); return }
-  if (item.name === 'fitness') { await navigateToSafe('/pages/school/fitness/fitness'); return }
-  if (item.name === 'facilities') { await navigateToSafe('/pages/school/facilities/facilities'); return }
-  if (item.name === 'canteen') { await navigateToSafe('/pages/school/canteen/canteen'); return }
-  if (item.name === 'others') { await navigateToSafe('/pages/school/others/others'); return }
+const onItemClick = (item) => {
+  const url = routeMap[item.name]
+  if (!url) return
+  uni.navigateTo({ url })
 }
 </script>
 
 <style lang="scss" scoped>
-.page {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  background: #fff;
-  overflow-y: auto;
-  overflow-x: hidden;
-  font-family: "PingFang SC", "Helvetica Neue", "Microsoft Yahei", Arial, sans-serif;
-}
-
-.bg {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100vw; /* 使背景占满视口宽度 */
-  height: 100vh; /* 使背景占满视口高度 */
-  z-index: 1;
-  opacity: 0.95;
-  object-fit: cover; /* 保持覆盖且居中裁切 */
-  transform: none; /* 取消缩放避免超出 */
-}
-
 .container {
-  position: relative;
-  z-index: 2;
   min-height: 100vh;
-  padding: 40rpx 30rpx calc(180rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
+  padding: 28rpx;
   box-sizing: border-box;
 }
 
-.search {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 10rpx 0 28rpx 0;
+.hero-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 30rpx;
+  box-shadow: 0 8rpx 24rpx rgba(79, 161, 242, 0.12);
+  margin-bottom: 22rpx;
 }
 
-.search-box {
-  display: flex;
-  align-items: center;
-  width: 92%;
-  height: 88rpx;
-  background: rgba(255,255,255,0.98);
-  border-radius: 60rpx;
-  padding: 0 30rpx;
-  box-sizing: border-box;
-}
-
-.search-input {
-  flex: 1;
-  height: 100%;
-  font-size: 32rpx;
-  color: #333;
-  background: transparent;
-  border: none;
-  outline: none;
-}
-
-.search-icon {
-  width: 40rpx;
-  height: 40rpx;
-  margin-left: 20rpx;
-  object-fit: contain;
+.hero-title {
   display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #2a4b6b;
+  margin-bottom: 10rpx;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 34rpx 34rpx;
-  justify-items: center;
+.hero-subtitle {
+  display: block;
+  font-size: 26rpx;
+  color: #6d8eae;
 }
 
-.grid-item {
+.module-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-  justify-content: center;
+  gap: 18rpx;
 }
 
-.icon-wrap {
-  width: 300rpx;
-  height: 300rpx;
-  border-radius: 36rpx;
+.module-card {
+  background: #ffffff;
+  border-radius: 22rpx;
+  padding: 26rpx 24rpx;
   display: flex;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: space-between;
+  box-shadow: 0 6rpx 20rpx rgba(79, 161, 242, 0.1);
 }
 
-.icon {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.module-left {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
 }
 
-.label-img {
-  width: 160rpx;
-  height: 48rpx;
-  margin-top: 14rpx;
-  object-fit: contain;
+.module-emoji {
   display: block;
-  margin-left: auto;
-  margin-right: auto;
+  font-size: 54rpx;
+  line-height: 1;
 }
 
-/* Smaller screens adjustments */
-@media (max-width: 360px) {
-  .icon-wrap { width: 260rpx; height: 260rpx; }
-  .label-img { width: 140rpx; height: 44rpx }
-  .container { padding-bottom: calc(140rpx + env(safe-area-inset-bottom)); }
+.module-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.module-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2a4b6b;
+}
+
+.module-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #7f9cb7;
+}
+
+.module-arrow {
+  font-size: 34rpx;
+  color: #4FA1F2;
+  font-weight: 600;
 }
 </style>

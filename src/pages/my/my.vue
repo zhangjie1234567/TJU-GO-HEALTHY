@@ -37,7 +37,7 @@
 			<view class="section-header">
 				<text class="section-icon">📈</text>
 				<text class="section-title">数据小结</text>
-				<text class="section-desc">{{ totalDataPoints }}条记录</text>
+				<text class="section-desc">{{ totalDataPoints }}天记录</text>
 			</view>
 			<text class="section-arrow">→</text>
 		</view>
@@ -79,12 +79,13 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
+import { BASE_URL } from '@/config.js'
 import {
 	getCurrentUser,
 	getCurrentPlan,
-	getCollections,
-	getDailyData
+	getCollections
 } from './my-store'
+import { getUserProgressData } from '../home/userProgressService'
 
 const currentUser = ref({
 	name: '未登录',
@@ -95,7 +96,7 @@ const currentPlan = ref(null)
 const collections = ref({
 	posts: []
 })
-const dailyData = ref([])
+const progressData = ref({ recordDays: 0 })
 
 const totalCollections = computed(() => {
 	if (!collections.value) return 0
@@ -104,15 +105,53 @@ const totalCollections = computed(() => {
 	}, 0)
 })
 
-const totalDataPoints = computed(() => dailyData.value.length)
+const totalDataPoints = computed(() => Number(progressData.value?.recordDays) || 0)
+
+const loadRecordDaysAligned = async () => {
+	const baseProgress = getUserProgressData()
+	let recordDays = Number(baseProgress?.recordDays) || 0
+	const token = uni.getStorageSync('token') || ''
+
+	if (!token) {
+		progressData.value = { recordDays }
+		return
+	}
+
+	await new Promise((resolve) => {
+		uni.request({
+			url: `${BASE_URL}/api/weight/list`,
+			method: 'GET',
+			header: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			success(res) {
+				if (res.statusCode === 200 && res.data?.code === 200) {
+					const records = Array.isArray(res.data?.data?.records) ? res.data.data.records : []
+					const uniqueWeightDays = new Set(
+						records
+							.map(item => String(item?.date || '').slice(0, 10))
+							.filter(Boolean)
+					).size
+					recordDays = Math.max(recordDays, uniqueWeightDays)
+				}
+				resolve()
+			},
+			fail() {
+				resolve()
+			}
+		})
+	})
+
+	progressData.value = { recordDays }
+}
 
 const loadData = async () => {
 	try {
-		const [user, plan, collectionData, daily] = await Promise.all([
+		const [user, plan, collectionData] = await Promise.all([
 			getCurrentUser(),
 			getCurrentPlan(),
-			getCollections(),
-			getDailyData()
+			getCollections()
 		])
 		currentUser.value = user || {
 			name: '未登录',
@@ -121,7 +160,7 @@ const loadData = async () => {
 		}
 		currentPlan.value = plan || null
 		collections.value = collectionData || { posts: [] }
-		dailyData.value = daily || []
+		await loadRecordDaysAligned()
 	} catch (e) {
 		// Promise.all 意外抛出时不影响页面渲染
 	}
