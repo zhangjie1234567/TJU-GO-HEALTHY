@@ -1,11 +1,5 @@
-const API_BASE_URL = (() => {
-	if (typeof window !== 'undefined' && window.location?.port === '5173') {
-		// H5 开发环境：使用 Vite dev server 内置代理，无需 CORS 处理
-		// vite.config.js 已配置 /api -> http://localhost:8080
-		return ''
-	}
-	return 'http://localhost:8080'
-})()
+import { getApiBaseUrl } from '@/config.js'
+
 const TOKEN_KEYS = ['auth_token', 'token', 'access_token', 'my_token']
 let authWarningShown = false
 let lastToastMessage = ''
@@ -130,7 +124,7 @@ function request(url, options = {}) {
 	const token = getStoredToken()
 	return new Promise((resolve, reject) => {
 		uni.request({
-			url: `${API_BASE_URL}${url}`,
+			url: `${getApiBaseUrl()}${url}`,
 			method: options.method || 'GET',
 			data: options.data,
 			timeout: 5000,

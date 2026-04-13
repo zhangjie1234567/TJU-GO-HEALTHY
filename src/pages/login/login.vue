@@ -15,8 +15,8 @@
             </view>
             <view class="form-group">
               <text class="form-label">学号</text>
-              <input v-model="form.studentId" class="form-input" type="text" placeholder="请输入学号（3-20位字母或数字）"
-                placeholder-class="input-placeholder" maxlength="20" @input="onStudentIdInput" />
+              <input v-model="form.studentId" class="form-input" type="text" placeholder="请输入学号"
+                placeholder-class="input-placeholder" maxlength="10" @input="onStudentIdInput" />
               <text v-if="showStudentIdError" class="form-error">学号格式不正确</text>
             </view>
             <view class="remember-row">
@@ -53,9 +53,9 @@
   const showStudentIdError = ref(false)
   const isSubmitting = ref(false)
 
-  // 学号输入预处理：去掉空白，限制长度
+  // 学号输入预处理：只保留数字并限制为10位
   function onStudentIdInput(e) {
-    const val = String(e.detail?.value ?? '').trim().slice(0, 20)
+    const val = String(e.detail?.value ?? '').replace(/\D/g, '').slice(0, 10)
     form.studentId = val
     showStudentIdError.value = val.length > 0 && !validateStudentId(val)
   }
@@ -65,7 +65,11 @@
   }
 
   function validateStudentId(id) {
-    return /^[A-Za-z0-9]{3,20}$/.test((id || '').trim())
+    return /^\d{10}$/.test((id || '').trim())
+  }
+
+  function validateName(name) {
+    return /^[A-Za-z\u4e00-\u9fa5]{2,20}$/.test((name || '').trim())
   }
 
   function onSubmit() {
@@ -75,6 +79,10 @@
     showStudentIdError.value = false
     if (!name) {
       uni.showToast({ title: '请输入真实姓名', icon: 'none' })
+      return
+    }
+    if (!validateName(name)) {
+      uni.showToast({ title: '姓名格式不正确，请输入2-20位汉字或英文', icon: 'none' })
       return
     }
     if (!studentId) {
@@ -146,7 +154,7 @@
     try {
       const savedId = uni.getStorageSync('login_remember_studentId')
       const savedName = uni.getStorageSync('login_remember_name')
-      if (savedId) form.studentId = String(savedId).slice(0, 20)
+      if (savedId) form.studentId = String(savedId).replace(/\D/g, '').slice(0, 10)
       if (savedName) form.name = savedName
       if (savedId || savedName) form.rememberMe = true
     } catch (e) {}

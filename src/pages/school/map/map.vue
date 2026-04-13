@@ -16,7 +16,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-const apiUrl = ref('http://localhost:8080')
+import { getApiBaseUrl } from '@/config.js'
+
+const apiUrl = ref(getApiBaseUrl())
 const locations = ref([])
 
 const apiGet = async (path) => {

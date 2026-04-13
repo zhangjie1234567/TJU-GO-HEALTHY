@@ -14,7 +14,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-const apiUrl = ref('http://localhost:8080')
+import { getApiBaseUrl } from '@/config.js'
+
+const apiUrl = ref(getApiBaseUrl())
 const status = ref('未连接')
 
 const check = async () => {

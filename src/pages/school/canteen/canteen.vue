@@ -50,6 +50,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { getApiBaseUrl } from '@/config.js'
 
 const canteens = reactive([
   { name: '留园' },
@@ -71,7 +72,7 @@ const reportForm = reactive({
 })
 const flowReports = ref([])
 
-const apiUrl = ref('http://localhost:8080')
+const apiUrl = ref(getApiBaseUrl())
 
 const loadFlowReports = () => {
   try {

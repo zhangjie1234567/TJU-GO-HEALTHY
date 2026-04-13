@@ -72,8 +72,9 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { getApiBaseUrl } from '@/config.js'
 
-const apiBase = 'http://localhost:8080'
+const apiBase = getApiBaseUrl()
 
 // API helper supporting uni.request and fetch
 const apiRequest = (method, path, data = null, params = null) => {

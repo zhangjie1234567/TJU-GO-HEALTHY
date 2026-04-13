@@ -87,7 +87,6 @@
 				<text class="action-btn" :class="{ liked: item.liked }" @click.stop="toggleLike(item.id)">
 					{{ item.liked ? '已点赞' : '点赞' }}
 				</text>
-				<button class="action-btn share-btn" open-type="share" @click.stop="prepareShare(item)">分享</button>
 				<text class="action-btn" @click.stop="privateChat(item)">私聊</text>
 				<text class="action-btn" :class="{ collected: item.collected }" @click.stop="toggleCollect(item.id)">
 					{{ item.collected ? '已收藏' : '收藏' }}
@@ -100,7 +99,7 @@
 </template>
 
 <script setup>
-import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app'
+import { onShow } from '@dcloudio/uni-app'
 import { computed, ref, watch } from 'vue'
 import { apiRequest } from '../../utils/request'
 import { getCollections, addCollection, removeCollection } from '../my/my-store'
@@ -110,7 +109,6 @@ const searchText = ref('')
 const currentTab = ref('recommend')
 const currentUser = ref({ name: '未登录用户', studentId: '', avatar: '' })
 const navigatingToChat = ref(false)
-const pendingSharePost = ref(null)
 let searchDebounceTimer = null
 
 const posts = ref([])
@@ -196,14 +194,6 @@ const loadPosts = async () => {
 onShow(() => {
 	loadCurrentUser()
 	loadPosts()
-	try {
-		uni.showShareMenu({
-			withShareTicket: true,
-			menus: ['shareAppMessage', 'shareTimeline']
-		})
-	} catch (e) {
-		// ignore platform that does not support explicit share menu
-	}
 })
 
 watch(searchText, () => {
@@ -392,32 +382,6 @@ const toggleLike = async (id) => {
 		uni.showToast({ title: '点赞失败，请重试', icon: 'none' })
 	}
 }
-
-const buildSharePayload = (item) => {
-	const id = Number(item?.id || 0)
-	const title = String(item?.title || '').trim() || '来健康社区看看这条动态'
-	const path = id > 0
-		? `/pages/communication/post_detail?id=${id}`
-		: '/pages/communication/communication'
-	return { title, path }
-}
-
-const prepareShare = (item) => {
-	pendingSharePost.value = item || null
-}
-
-onShareAppMessage(() => {
-	return buildSharePayload(pendingSharePost.value)
-})
-
-onShareTimeline(() => {
-	const payload = buildSharePayload(pendingSharePost.value)
-	const query = payload.path.includes('?') ? payload.path.split('?')[1] : ''
-	return {
-		title: payload.title,
-		query
-	}
-})
 
 const privateChat = async (item) => {
 	if (navigatingToChat.value) return
@@ -799,17 +763,6 @@ $bg-blue: #E3F2FD;
 		&.liked {
 			color: #fff;
 			background: #ff6b81;
-		}
-
-		&.share-btn {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			margin: 0 10rpx 0 0;
-
-			&::after {
-				border: none;
-			}
 		}
 	}
 }

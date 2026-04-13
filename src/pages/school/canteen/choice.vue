@@ -102,8 +102,9 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { getApiBaseUrl } from '@/config.js'
 
-const apiUrl = 'http://localhost:8080'
+const apiUrl = getApiBaseUrl()
 const baseCanteens = ['留园', '梅园', '竹园', '兰园', '菊园', '桃园', '棠园']
 const canteens = ref([])
 const canteenFoods = ref({})

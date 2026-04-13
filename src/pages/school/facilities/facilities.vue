@@ -60,7 +60,9 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-const apiUrl = ref('http://localhost:8080')
+import { getApiBaseUrl } from '@/config.js'
+
+const apiUrl = ref(getApiBaseUrl())
 const locations = reactive([])
 const records = ref([])
 const cardVolume = ref('5600')

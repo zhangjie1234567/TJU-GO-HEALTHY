@@ -69,6 +69,7 @@
     onMounted,
     computed
   } from 'vue'
+  import { getApiBaseUrl } from '@/config.js'
 
 
   const weightInput = ref('')
@@ -79,7 +80,7 @@
   const loading = ref(false)
 
   // API基础URL
-  const API_BASE_URL = 'http://localhost:8080'
+  const API_BASE_URL = getApiBaseUrl()
   const API_BASE = API_BASE_URL + '/api/weight'
 
   // 获取token

@@ -132,11 +132,7 @@ const loadRelatedUsers = async () => {
       method: 'GET',
       header: getAuthHeaders()
     })
-    if (res?.code === 0 && Array.isArray(res.data)) {
-      relatedUsers.value = res.data
-    } else {
-      relatedUsers.value = []
-    }
+    relatedUsers.value = Array.isArray(res) ? res : []
   } catch (e) {
     if (!handleAuthError(e)) {
       console.error('加载相关用户失败', e)
