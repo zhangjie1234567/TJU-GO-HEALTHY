@@ -160,8 +160,8 @@
     bmi: 0
   });
 
-  const assetAiCircle = '/static/AI对话小圆圈.png';
-  const assetAiMain = '/static/首页AI对话模块主图.png';
+  const assetAiCircle = '/static/ai-circle.png';
+  const assetAiMain = '/static/ai-main.png';
 
   // 统一路由跳转封装 - 增加异常处理和日志
   function navigateToPage(url) {

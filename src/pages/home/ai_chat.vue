@@ -107,10 +107,7 @@
     <view v-if="messages.length === 0" class="fab-btn fab-top-right" @click="goToHistory">
       <text class="fab-icon">📋</text>
     </view>
-    <!-- 新建对话按钮（左上角，仅在有消息时显示） -->
-    <view v-if="messages.length > 0" class="fab-btn fab-top-left" @click="handleNewChat">
-      <text class="fab-icon">➕</text>
-    </view>
+    <!-- 新建对话按钮已移除 -->
 
   </view>
 </template>
@@ -203,6 +200,12 @@ onLoad((options) => {
   if (options && options.sessionId) {
     isFromHistory.value = true
     loadSession(options.sessionId, decodeURIComponent(options.title || ''))
+  } else {
+    // 没有 sessionId 时，初始化为新会话，防止报错
+    messages.value = []
+    currentSessionId.value = ''
+    currentSessionTitle.value = 'AI对话'
+    uni.setNavigationBarTitle({ title: 'AI对话' })
   }
 })
 
@@ -289,13 +292,7 @@ function goToHistory() {
   uni.navigateTo({ url: '/pages/home/ai_history' })
 }
 
-function handleNewChat() {
-  messages.value = []
-  currentSessionId.value = ''
-  currentSessionTitle.value = ''
-  isFromHistory.value = false
-  uni.setNavigationBarTitle({ title: 'AI对话' })
-}
+// handleNewChat 已移除
 
 // ── 发消息 ──────────────────────────────────────────
 function sendQuickQuestion(q) {

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 
-const devProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080'
+const devProxyTarget = 'http://120.53.88.78:8082'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [

@@ -117,7 +117,8 @@ const getDisplayName = (item) => {
 
 const formatTime = (time) => {
 	if (!time) return '最近'
-	const date = new Date(time)
+	// 兼容 iOS，统一将 "-" 替换为 "/"
+	const date = new Date(typeof time === 'string' ? time.replace(/-/g, '/') : time)
 	const now = new Date()
 	const diff = now - date
 

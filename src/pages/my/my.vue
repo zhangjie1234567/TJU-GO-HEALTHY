@@ -62,12 +62,12 @@
 			<text class="section-arrow">→</text>
 		</view>
 
-		<!-- 帮助与反馈 -->
+		<!-- 反馈 -->
 		<view class="section-card" @click="goToPage('help_feedback')">
 			<view class="section-header">
 				<text class="section-icon">💬</text>
-				<text class="section-title">帮助与反馈</text>
-				<text class="section-desc">获取帮助或提交建议</text>
+				<text class="section-title">反馈</text>
+				<text class="section-desc">提交建议或报告问题</text>
 			</view>
 			<text class="section-arrow">→</text>
 		</view>

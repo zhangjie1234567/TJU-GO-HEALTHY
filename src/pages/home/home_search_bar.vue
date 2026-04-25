@@ -207,7 +207,16 @@
     // 加载热门推荐
     await loadPopularFoods()
   })
-  
+  import { onShow } from '@dcloudio/uni-app'
+
+// 页面返回时自动刷新，保证收藏状态同步
+onShow(async () => {
+  if (hasSearched.value && searchKeyword.value.trim()) {
+    await handleSearch()
+  } else {
+    await loadPopularFoods()
+  }
+})
   // ========== 搜索功能 ==========
   
   // 输入框输入事件（实时搜索建议）

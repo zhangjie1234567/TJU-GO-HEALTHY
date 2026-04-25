@@ -748,26 +748,6 @@ $text-title: #24324a;
   margin-top: 8rpx;
 }
 
-.music-title {
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #445670;
-}
-
-.music-selector {
-  display: flex;
-  gap: 10rpx;
-  margin-top: 10rpx;
-  margin-bottom: 8rpx;
-}
-
-.music-status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6rpx;
-}
-
 .voice-status-row {
   display: flex;
   justify-content: space-between;
@@ -788,45 +768,9 @@ $text-title: #24324a;
   gap: 14rpx;
 }
 
-.music-status {
-  font-size: 22rpx;
-  color: #5f7595;
-}
-
-.music-action {
-  font-size: 22rpx;
-  color: #3f8cff;
-  font-weight: 700;
-}
-
 .mode-active {
   color: #1f5ca8;
   text-decoration: underline;
-}
-
-.music-tip {
-  display: block;
-  margin-top: 4rpx;
-  margin-bottom: 6rpx;
-  font-size: 20rpx;
-  color: #8ca0bd;
-}
-
-.music-chip {
-  flex: 1;
-  text-align: center;
-  font-size: 22rpx;
-  padding: 10rpx;
-  border-radius: 999rpx;
-  background: #f3f7ff;
-  border: 2rpx solid #d9e8ff;
-  color: #667ea0;
-
-  &.active {
-    background: linear-gradient(120deg, #4FA1F2, #80D0FF);
-    color: #fff;
-    border-color: transparent;
-  }
 }
 
 .run-formula {

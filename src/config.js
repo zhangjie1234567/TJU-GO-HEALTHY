@@ -12,9 +12,9 @@ const STORAGE_BASE_URL_KEY = 'api_base_url'
 const LEGACY_API_BASE_URL = 'http://127.0.0.1:3000'
 
 const API_BASE_URL_MAP = {
-	dev: import.meta.env.VITE_API_BASE_URL_DEV || 'http://127.0.0.1:8080',
-	test: import.meta.env.VITE_API_BASE_URL_TEST || 'http://120.53.88.78:8081',
-	prod: import.meta.env.VITE_API_BASE_URL_PROD || 'http://120.53.88.78:8082'
+    dev: '', // 本地开发环境，走 Vite 代理
+    test: 'https://foodarrty.cn',
+    prod: 'https://foodarrty.cn'
 }
 
 const normalizeEnv = (value) => {
@@ -23,9 +23,8 @@ const normalizeEnv = (value) => {
 }
 
 const getModeDefaultEnv = () => {
-	const explicitEnv = normalizeEnv(import.meta.env.VITE_APP_ENV)
-	if (explicitEnv) return explicitEnv
-	return import.meta.env.MODE === 'development' ? 'dev' : 'test'
+	// 默认直接返回 prod，确保现在就是生产环境
+	return 'prod'
 }
 
 export function getApiEnv() {
@@ -60,4 +59,4 @@ export function setApiBaseUrl(baseUrl) {
 	uni.setStorageSync(STORAGE_BASE_URL_KEY, next)
 }
 
-export const BASE_URL = getApiBaseUrl()
+export const BASE_URL = API_BASE_URL_MAP['prod']

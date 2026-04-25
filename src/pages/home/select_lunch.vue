@@ -126,6 +126,7 @@
 
 <script setup>
   import { ref, onMounted } from 'vue'
+  import { onShow } from '@dcloudio/uni-app'
   import { 
     searchFoods, 
     getSearchSuggestions,
@@ -157,7 +158,16 @@
     const allFoods = await getPopularFoods('', 20, 'lunch')
     recommendList.value = allFoods
   })
-
+// 页面返回时自动刷新，保证收藏状态同步
+onShow(async () => {
+  if (hasSearched.value && searchQuery.value.trim()) {
+    await performSearch()
+  } else {
+    // 重新加载推荐午餐
+    const allFoods = await getPopularFoods('', 20, 'lunch')
+    recommendList.value = allFoods
+  }
+})
   // 输入框输入事件（实时搜索建议）
   const handleInput = () => {
     showSearchPanel.value = true

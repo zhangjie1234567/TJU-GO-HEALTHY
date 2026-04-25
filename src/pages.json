@@ -329,7 +329,7 @@
     {
       "path": "pages/my/help_feedback",
       "style": {
-        "navigationBarTitleText": "帮助与反馈"
+        "navigationBarTitleText": "反馈"
       }
     },
     {
