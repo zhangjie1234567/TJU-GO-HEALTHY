@@ -9,7 +9,7 @@
     <view class="rw-input-card rw-target-card">
       <text class="rw-label">目标体重</text>
       <text class="rw-target-value">{{ targetWeightDisplay }} 千克</text>
-      <button class="rw-btn rw-edit-btn" @click="showTargetPopup = true">修改</button>
+      <button class="rw-btn rw-edit-btn" @click="handleEditTarget">修改</button>
     </view>
     <view v-if="showTargetPopup" class="rw-popup-mask">
       <view class="rw-popup-content">
@@ -22,8 +22,7 @@
       </view>
     </view>
     <view class="rw-compare">
-      <text>昨日体重：<text class="rw-compare-num">{{ yesterdayWeightStr }}</text> 千克，今日减重：<text
-          class="rw-compare-num">{{ diffWeightStr }}</text> 千克</text>
+      <text>上次体重：<text class="rw-compare-num">{{ yesterdayWeightStr }}</text></text>
     </view>
     <view class="rw-history">
       <view class="rw-history-header">
@@ -86,6 +85,24 @@
   // 获取token
   function getToken() {
     return uni.getStorageSync('token') || ''
+  }
+
+  function ensureLoginForAction(actionLabel) {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用，你可以先浏览记录页。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
   }
 
   const targetWeightDisplay = computed(() => {
@@ -180,6 +197,7 @@
   onMounted(loadWeight)
 
   function saveWeight() {
+    if (!ensureLoginForAction('保存体重')) return
     const val = parseFloat(weightInput.value)
     if (!val || val < 20 || val > 300) {
       uni.showToast({
@@ -292,6 +310,11 @@
         updateTargetWeightLocal(val)
       }
     })
+  }
+
+  function handleEditTarget() {
+    if (!ensureLoginForAction('修改目标体重')) return
+    showTargetPopup.value = true
   }
 
   // 更新目标体重到本地存储（降级方案）

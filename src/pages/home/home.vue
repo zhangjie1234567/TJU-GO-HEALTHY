@@ -80,7 +80,7 @@
             <text class="tag" @click="goToSelect('dinner')" hover-class="tag-hover">+ 晚餐</text>
           </view>
         </view>
-        <view class="health-link" @click="showRemindPopup = true" hover-class="link-hover">
+        <view class="health-link" @click="onRemindClick" hover-class="link-hover">
           <text class="link-text">— 一键设置健康提醒 —</text>
         </view>
         <!-- 健康提醒弹窗 -->
@@ -133,6 +133,19 @@
       </view>
     </view>
   </view>
+  <!-- 公告弹窗 -->
+  <view v-if="showModal" class="mask" @click="closeModal">
+      <view class="modal" @click.stop>
+        <!-- 关闭按钮 -->
+        <view class="close" @click="closeModal">×</view>
+        <!-- 蓝色标题栏 -->
+        <view class="modal-title">上线公告</view>
+        <!-- 公告文字 -->
+        <view class="modal-text">
+          本小程序将于2026年8月17日重新上线服务，预计可以持续使用至少2年（期间不停运），希望为tju的大家提供便利服务。
+        </view>
+      </view>
+  </view>
 </template>
 
 <script setup>
@@ -152,16 +165,21 @@
     getAvatarEmoji,
     getAvatarDescription
   } from './userProgressService.js';
+  import assetAiCircle from '@/static/ai_circle.png';
+  import assetAiMain from '@/static/ai_main.png';
+  // 页面进入直接展示弹窗
+  const showModal = ref(true)
 
+  // 关闭弹窗
+  const closeModal = () => {
+    showModal.value = false
+  }
   // 用户进度数据
   const userProgress = ref({
     avatarEmoji: '📈',
     avatarDesc: '健康状态良好',
     bmi: 0
   });
-
-  const assetAiCircle = '/static/ai-circle.png';
-  const assetAiMain = '/static/ai-main.png';
 
   // 统一路由跳转封装 - 增加异常处理和日志
   function navigateToPage(url) {
@@ -197,7 +215,7 @@
   }
   // 跳转到AI对话页面
   function goToAIChat() {
-    navigateToPage('/pages/home/ai_chat?from=home');
+    navigateToPage('/pages/home/health_consultation?from=home');
   }
   function goToReminderList() {
     showRemindPopup.value = false;
@@ -236,7 +254,29 @@
     showRemindPopup.value = false;
   }
 
+  function ensureLoginForAction(actionLabel) {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用，你可以先浏览其他功能。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   function selectRemind(item) {
+    if (!ensureLoginForAction('设置健康提醒')) {
+      showRemindPopup.value = false
+      return
+    }
     selectedRemind.value = item;
     showRemindPopup.value = false;
     showTimePicker.value = true;
@@ -457,6 +497,10 @@
       dinner: '/pages/home/select_dinner'
     };
     navigateToPage(map[type] + '?from=home');
+  }
+
+  function onRemindClick() {
+    showRemindPopup.value = true
   }
   // 加载卡路里数据
   function loadCalories() {
@@ -1198,4 +1242,58 @@
   .action-item-hover {
     transform: scale(0.97);
   }
+  /* 全屏遮罩 */
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* 弹窗盒子 */
+.modal {
+  width: 85%;
+  max-width: 520rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 右上角关闭 */
+.close {
+  position: absolute;
+  top: 20rpx;
+  right: 24rpx;
+  font-size: 40rpx;
+  color: #fff;
+  width: 50rpx;
+  height: 50rpx;
+  text-align: center;
+  line-height: 50rpx;
+}
+
+/* 蓝色头部标题 */
+.modal-title {
+  background-color: #007aff;
+  color: #fff;
+  font-size: 32rpx;
+  text-align: center;
+  padding: 30rpx 20rpx;
+}
+
+/* 正文区域 */
+.modal-text {
+  padding: 40rpx 30rpx;
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.7;
+  text-align: justify;
+}
 </style>

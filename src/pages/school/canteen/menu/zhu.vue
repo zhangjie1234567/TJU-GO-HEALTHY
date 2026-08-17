@@ -3,10 +3,16 @@
     <view class="content">
       <text class="page-title">今日菜单 - 竹园</text>
 
-      <view v-if="dishes.length === 0" class="empty">{{ emptyText }}</view>
+      <view class="search-bar">
+        <text class="search-icon">🔍</text>
+        <input class="search-input" v-model="searchKeyword" placeholder="搜索菜品" confirm-type="search" />
+        <text v-if="searchKeyword" class="search-clear" @click="searchKeyword = ''">✕</text>
+      </view>
+
+      <view v-if="displayDishes.length === 0" class="empty">{{ emptyText }}</view>
 
       <view v-else class="dish-list">
-        <view class="dish-card" v-for="dish in dishes" :key="dish.id">
+        <view class="dish-card" v-for="dish in displayDishes" :key="dish.id">
           <view class="dish-head">
             <text class="dish-name">{{ dish.dishName }}</text>
             <text class="dish-price">{{ dish.price.toFixed(2) }}元</text>
@@ -36,7 +42,7 @@
 import { onMounted } from 'vue'
 import { useCanteenMenu } from './baseMenuPage.js'
 
-const { dishes, emptyText, fetchMenu, toggleDishCollection, addDishToMeal } = useCanteenMenu('竹园')
+const { displayDishes, searchKeyword, emptyText, fetchMenu, toggleDishCollection, addDishToMeal } = useCanteenMenu('竹园')
 
 onMounted(fetchMenu)
 </script>

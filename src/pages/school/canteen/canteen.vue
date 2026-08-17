@@ -11,30 +11,6 @@
       </view>
 
       <view class="section-card">
-        <text class="section">食堂实时人流</text>
-        <view class="report-form">
-          <picker mode="selector" :range="canteenNames" :value="reportForm.canteenIndex" @change="onCanteenChange">
-            <view class="form-picker">我在：{{ canteenNames[reportForm.canteenIndex] }}</view>
-          </picker>
-          <picker mode="selector" :range="densityLabels" :value="reportForm.densityIndex" @change="onDensityChange">
-            <view class="form-picker">当前人流：{{ densityLabels[reportForm.densityIndex] }}</view>
-          </picker>
-          <button class="report-btn" @click="submitFlowReport">提交人流上报</button>
-        </view>
-
-        <view class="flow-list" v-if="flowStats.length > 0">
-          <view class="row" v-for="(c, i) in flowStats" :key="i">
-            <text class="cname">{{ c.name }}</text>
-            <view class="bar-track">
-              <view class="bar" :style="{ width: c.width }" />
-            </view>
-            <text class="flow-text">{{ c.label }}</text>
-          </view>
-        </view>
-        <text v-else class="note">暂无上报数据，快来提交你所在食堂的人流情况。</text>
-      </view>
-
-      <view class="section-card">
         <text class="section">今日菜单</text>
         <view class="menu-card canteen-list">
           <view class="canteen-item" v-for="(c, idx) in canteens" :key="idx" @click="goToMenu(c.name)">
@@ -49,7 +25,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { getApiBaseUrl } from '@/config.js'
 
 const canteens = reactive([
@@ -62,88 +38,7 @@ const canteens = reactive([
   { name: '棠园' }
 ])
 
-const FLOW_REPORT_KEY = 'canteen_flow_reports_v1'
-const densityLabels = ['很空', '适中', '拥挤', '爆满']
-const densityValues = [25, 50, 75, 95]
-const canteenNames = canteens.map(c => c.name)
-const reportForm = reactive({
-  canteenIndex: 0,
-  densityIndex: 1
-})
-const flowReports = ref([])
-
 const apiUrl = ref(getApiBaseUrl())
-
-const loadFlowReports = () => {
-  try {
-    const raw = uni.getStorageSync(FLOW_REPORT_KEY)
-    const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw
-    flowReports.value = Array.isArray(parsed) ? parsed : []
-  } catch (e) {
-    flowReports.value = []
-  }
-}
-
-const saveFlowReports = () => {
-  uni.setStorageSync(FLOW_REPORT_KEY, JSON.stringify(flowReports.value))
-}
-
-const flowStats = computed(() => {
-  const now = Date.now()
-  const validWindow = 1000 * 60 * 60 * 6
-
-  return canteenNames.map((name) => {
-    const list = flowReports.value.filter(item => item.canteenName === name && now - Number(item.timestamp || 0) <= validWindow)
-    if (!list.length) {
-      return {
-        name,
-        width: '0%',
-        label: '暂无上报'
-      }
-    }
-
-    const avg = Math.round(list.reduce((sum, item) => sum + Number(item.densityValue || 0), 0) / list.length)
-    const nearestIndex = densityValues.reduce((best, val, idx) => {
-      return Math.abs(val - avg) < Math.abs(densityValues[best] - avg) ? idx : best
-    }, 0)
-
-    return {
-      name,
-      width: `${Math.max(8, avg)}%`,
-      label: `${densityLabels[nearestIndex]} · ${list.length}人上报`
-    }
-  })
-})
-
-const onCanteenChange = (e) => {
-  reportForm.canteenIndex = Number(e?.detail?.value || 0)
-}
-
-const onDensityChange = (e) => {
-  reportForm.densityIndex = Number(e?.detail?.value || 0)
-}
-
-const submitFlowReport = () => {
-  const canteenName = canteenNames[reportForm.canteenIndex]
-  const densityLabel = densityLabels[reportForm.densityIndex]
-  const densityValue = densityValues[reportForm.densityIndex]
-
-  if (!canteenName) {
-    uni.showToast({ title: '请选择食堂', icon: 'none' })
-    return
-  }
-
-  flowReports.value.unshift({
-    canteenName,
-    densityLabel,
-    densityValue,
-    timestamp: Date.now()
-  })
-
-  flowReports.value = flowReports.value.slice(0, 200)
-  saveFlowReports()
-  uni.showToast({ title: '已提交人流上报', icon: 'none' })
-}
 
 const formatDate = (d) => {
   const y = d.getFullYear()
@@ -201,7 +96,6 @@ const goToMenu = async (canteenName) => {
     : `/#/pages/school/canteen/menu/liu?canteenName=${encodeURIComponent(canteenName)}&date=${today}`
 }
 
-loadFlowReports()
 </script>
 
 <style lang="scss" scoped>

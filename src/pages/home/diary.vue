@@ -93,6 +93,24 @@
     return uni.getStorageSync('token') || ''
   }
 
+  function ensureLoginForAction(actionLabel) {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   // 心情选项
   const moodOptions = [
     { value: 1, emoji: '😢', label: '很差' },
@@ -111,11 +129,17 @@
   // 加载日记列表
   function loadDiary() {
     loading.value = true
+    const token = getToken()
+    if (!token) {
+      diaryList.value = []
+      loading.value = false
+      return
+    }
     uni.request({
       url: `${API_BASE}/list`,
       method: 'GET',
       header: {
-        'Authorization': `Bearer ${getToken()}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       success: (res) => {
@@ -166,6 +190,7 @@
 
   // 打开新建弹窗
   function openAddPopup() {
+    if (!ensureLoginForAction('新建日记')) return
     resetForm()
     showAddPopup.value = true
   }
@@ -187,6 +212,7 @@
 
   // 保存日记
   function saveDiary() {
+    if (!ensureLoginForAction('保存日记')) return
     const text = inputText.value.trim()
     if (!text) {
       uni.showToast({
@@ -307,6 +333,7 @@
 
   // 编辑日记
   function editDiary(idx) {
+    if (!ensureLoginForAction('编辑日记')) return
     const diary = diaryList.value[idx]
     inputTitle.value = diary.title || ''
     inputText.value = diary.content || diary.text || ''
@@ -318,6 +345,7 @@
 
   // 删除日记
   function deleteDiary(idx) {
+    if (!ensureLoginForAction('删除日记')) return
     const diaryId = diaryList.value[idx].id
     
     uni.showModal({

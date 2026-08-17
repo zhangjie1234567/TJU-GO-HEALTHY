@@ -145,11 +145,6 @@
         </view>
       </view>
 
-      <view class="ranking-box">
-        <text class="ranking-title">📊 排名信息</text>
-        <text class="ranking-text">超越了 {{ percentile }}% 的用户</text>
-      </view>
-
       <view class="result-actions">
         <view class="action-btn secondary" @click="goBack">← 返回</view>
         <view class="action-btn primary" @click="startGame">再来一次</view>
@@ -892,30 +887,6 @@ $dark-text: #E0E0E0;
           font-weight: 600;
         }
       }
-    }
-  }
-
-  .ranking-box {
-    background: rgba(79, 161, 242, 0.1);
-    border: 2rpx solid rgba(79, 161, 242, 0.2);
-    border-radius: 16rpx;
-    padding: 20rpx;
-    text-align: center;
-    margin-bottom: 30rpx;
-
-    .ranking-title {
-      font-size: 24rpx;
-      font-weight: 700;
-      color: $neon-blue;
-      margin-bottom: 12rpx;
-      display: block;
-    }
-
-    .ranking-text {
-      font-size: 24rpx;
-      color: $vibrant-orange;
-      font-weight: 600;
-      text-shadow: 0 0 10rpx rgba(255, 107, 107, 0.3);
     }
   }
 

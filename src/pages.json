@@ -1,6 +1,12 @@
 {
   "pages": [
     {
+      "path": "pages/home/home",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "登录",
@@ -15,59 +21,12 @@
       }
     },
     {
-      "path": "pages/home/home",
-      "style": {
-        "navigationBarTitleText": "首页"
-      }
-    },
-    {
       "path": "pages/school/school",
       "style": {
         "navigationBarTitleText": "学校"
       }
     },
-    {
-      "path": "pages/school/map/map",
-      "style": {
-        "navigationBarTitleText": "地图"
-      }
-    },
-    {
-      "path": "pages/school/facilities/facilities",
-      "style": {
-        "navigationBarTitleText": "校内设施"
-      }
-    },
-    {
-      "path": "pages/school/facilities/water",
-      "style": {
-        "navigationBarTitleText": "校内饮水机"
-      }
-    },
-    {
-      "path": "pages/school/facilities/printer",
-      "style": {
-        "navigationBarTitleText": "校内打印机"
-      }
-    },
-    {
-      "path": "pages/school/facilities/print_shop",
-      "style": {
-        "navigationBarTitleText": "校内打印店"
-      }
-    },
-    {
-      "path": "pages/school/facilities/shop",
-      "style": {
-        "navigationBarTitleText": "校内超市"
-      }
-    },
-    {
-      "path": "pages/school/facilities/records",
-      "style": {
-        "navigationBarTitleText": "消费记录"
-      }
-    },
+    
     {
       "path": "pages/school/canteen/canteen",
       "style": {
@@ -122,12 +81,7 @@
         "navigationBarTitleText": "棠园菜单"
       }
     },
-    {
-      "path": "pages/school/others/others",
-      "style": {
-        "navigationBarTitleText": "其他服务"
-      }
-    },
+    
     {
       "path": "pages/school/fitness/fitness",
       "style": {
@@ -146,22 +100,11 @@
         "navigationBarTitleText": "锻炼详情"
       }
     },
-    {
-      "path": "pages/school/schedule/schedule",
-      "style": {
-        "navigationBarTitleText": "课表"
-      }
-    },
+    
     {
       "path": "pages/schedule/schedule",
       "style": {
         "navigationBarTitleText": "计划"
-      }
-    },
-    {
-      "path": "pages/communication/communication",
-      "style": {
-        "navigationBarTitleText": "社区"
       }
     },
     {
@@ -183,15 +126,15 @@
       }
     },
     {
-      "path": "pages/home/ai_chat",
+      "path": "pages/home/health_consultation",
       "style": {
-        "navigationBarTitleText": "AI对话"
+        "navigationBarTitleText": "健康咨询"
       }
     },
     {
-      "path": "pages/home/ai_history",
+      "path": "pages/home/health_consultation_history",
       "style": {
-        "navigationBarTitleText": "AI对话历史"
+        "navigationBarTitleText": "健康咨询历史"
       }
     },
     {
@@ -248,48 +191,7 @@
         "navigationBarTitleText": "选择晚餐"
       }
     },
-    {
-      "path": "pages/communication/method_rank",
-      "style": {
-        "navigationBarTitleText": "健康方案评分榜"
-      }
-    },
-    {
-      "path": "pages/communication/user_rank",
-      "style": {
-        "navigationBarTitleText": "用户排行榜"
-      }
-    },
-    {
-      "path": "pages/communication/messages",
-      "style": {
-        "navigationBarTitleText": "消息"
-      }
-    },
-    {
-      "path": "pages/communication/recruit",
-      "style": {
-        "navigationBarTitleText": "健康搭子招募"
-      }
-    },
-    {
-      "path": "pages/communication/publish",
-      "style": {
-        "navigationBarTitleText": "发布动态"
-      }
-    },
-    {
-      "path": "pages/communication/post_detail",
-      "style": {
-        "navigationBarTitleText": "动态详情"
-      }
-    },
-    {
-      "path": "pages/communication/chat_detail",
-      "style": {
-        "navigationBarTitleText": "私聊"
-      }
-    },
+    
     {
       "path": "pages/my/my",
       "style": {
@@ -318,18 +220,6 @@
       "path": "pages/my/data_summary",
       "style": {
         "navigationBarTitleText": "数据小结"
-      }
-    },
-    {
-      "path": "pages/my/yearly_summary",
-      "style": {
-        "navigationBarTitleText": "使用小结"
-      }
-    },
-    {
-      "path": "pages/my/help_feedback",
-      "style": {
-        "navigationBarTitleText": "反馈"
       }
     },
     {
@@ -429,12 +319,7 @@
         "iconPath": "static/tab/schedule-black.png",
         "selectedIconPath": "static/tab/schedule-active.png"
       },
-      {
-        "pagePath": "pages/communication/communication",
-        "text": "社区",
-        "iconPath": "static/tab/communication-black.png",
-        "selectedIconPath": "static/tab/communication-active.png"
-      },
+      
       {
         "pagePath": "pages/my/my",
         "text": "我的",

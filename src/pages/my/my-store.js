@@ -13,12 +13,6 @@ const HELP_CONTENT = [
 		desc: '学习每日打卡、跑步计时和专注计划'
 	},
 	{
-		id: 2,
-		title: '社区功能介绍',
-		icon: '👥',
-		desc: '了解如何发布、评论和互动'
-	},
-	{
 		id: 3,
 		title: '数据记录教程',
 		icon: '📊',
@@ -26,12 +20,6 @@ const HELP_CONTENT = [
 	},
 	{
 		id: 4,
-		title: '排行榜说明',
-		icon: '🏅',
-		desc: '了解社区榜单与互动热度规则'
-	},
-	{
-		id: 5,
 		title: '常见问题',
 		icon: '❓',
 		desc: '查看常见问题的解答'
@@ -159,9 +147,6 @@ function adaptUserFromServer(user) {
 	if (!user) return null
 	return {
 		id: user.id,
-		name: user.name || '',
-		studentId: user.studentId || '',
-		avatar: user.avatar || '😊',
 		height: Number(user.height) || 170,
 		weight: Number(user.weight) || 70,
 		targetWeight: Number(user.targetWeight) || 60,
@@ -198,9 +183,6 @@ function syncUserRelatedCaches(user) {
 	if (!user) return
 	const normalized = {
 		id: user.id,
-		name: user.name || '',
-		studentId: user.studentId || '',
-		avatar: user.avatar || '😊',
 		height: Number(user.height) || 170,
 		weight: Number(user.weight) || 70,
 		targetWeight: Number(user.targetWeight) || 60,
@@ -253,14 +235,27 @@ function buildPlanTarget(plan) {
 }
 
 function buildPlanDetails(plan) {
-    const description = plan?.description || '按照当前方案持续执行，保持稳定节奏。'
+	const dietText = plan?.diet || plan?.dietContent || ''
+	const exerciseText = plan?.exercise || plan?.exerciseContent || ''
+	const description = plan?.description || buildPlanSummary(plan) || '按照当前方案持续执行，保持稳定节奏。'
     // 限制 duration 最大 365 天，防止异常大值导致循环 OOM
     const rawDuration = Number(plan?.duration)
     const duration = (rawDuration > 0 && rawDuration <= 365) ? rawDuration : 30
     const weeks = Math.min(Math.max(1, Math.ceil(duration / 7)), 52)
     const weeklyPlan = []
-    for (let index = 0; index < weeks; index++) {
-        weeklyPlan.push(`第${index + 1}周：${description}`)
+	if (dietText || exerciseText) {
+		for (let index = 0; index < weeks; index++) {
+			weeklyPlan.push(`第${index + 1}周：按 AI 生成的饮食方案与运动计划稳步执行。`)
+		}
+		return {
+			overview: description,
+			features: ['AI个性化饮食', 'AI个性化运动', '持续跟踪'],
+			weeklyPlan,
+			expectedResult: `${duration}天内持续完成 ${plan?.name || '健康计划'}。`
+		}
+	}
+	for (let index = 0; index < weeks; index++) {
+		weeklyPlan.push(`第${index + 1}周：${description}`)
     }
     return {
         overview: description,
@@ -270,10 +265,38 @@ function buildPlanDetails(plan) {
     }
 }
 
+function summarizePlanText(text) {
+	if (!text) return ''
+	const lines = String(text).split(/\r?\n/)
+	for (const line of lines) {
+		const trimmed = line.trim()
+		if (trimmed) {
+			return trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed
+		}
+	}
+	const trimmed = String(text).trim()
+	return trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed
+}
+
+function buildPlanSummary(plan) {
+	const dietText = plan?.diet || plan?.dietContent || ''
+	const exerciseText = plan?.exercise || plan?.exerciseContent || ''
+	const parts = []
+	const dietSummary = summarizePlanText(dietText)
+	const exerciseSummary = summarizePlanText(exerciseText)
+	if (dietSummary) parts.push(`饮食：${dietSummary}`)
+	if (exerciseSummary) parts.push(`运动：${exerciseSummary}`)
+	if (parts.length === 0) return ''
+	const summary = parts.join('；')
+	return summary.length > 120 ? `${summary.slice(0, 120)}…` : summary
+}
+
 
 function adaptPlanFromServer(plan) {
 	if (!plan) return null
-	const desc = plan.description || ''
+	const diet = plan.dietContent || plan.diet || ''
+	const exercise = plan.exerciseContent || plan.exercise || ''
+	const desc = plan.description || buildPlanSummary(plan) || ''
 	return {
 		id: plan.id,
 		name: plan.name,
@@ -284,13 +307,15 @@ function adaptPlanFromServer(plan) {
 		target: buildPlanTarget(plan),
 		duration: Number(plan.duration) || 30,
 		isCurrent: plan.isCurrent,
+		diet,
+		exercise,
 		createdAt: formatDateTime(plan.createdAt),
 		details: buildPlanDetails(plan)
 	}
 }
 
 function adaptCollectionItem(item) {
-	const fallbackName = item.itemTitle || item.name || item.title || item.itemName || item.dishName || item.foodName || item.postTitle || item.recipeName
+	const fallbackName = item.itemTitle || item.name || item.title || item.itemName || item.dishName || item.foodName || item.recipeName
 	const normalizedType = TYPE_MAP[(item.itemType || '').toLowerCase()] || item.itemType
 	return {
 		id: item.itemId || item.id,
@@ -311,16 +336,14 @@ const TYPE_MAP = {
 	restaurant: 'foods', restaurants: 'foods',
 	drink: 'foods', drinks: 'foods',
 	dish: 'dishes', dishes: 'dishes',
-	recipe: 'recipes', recipes: 'recipes',
-	post: 'posts', posts: 'posts', dynamic: 'posts'
+	recipe: 'recipes', recipes: 'recipes'
 }
 
 function adaptCollectionsFromServer(collections) {
 	const result = {
 		foods: [],
 		recipes: [],
-		dishes: [],
-		posts: []
+		dishes: []
 	}
 
 	if (!collections) return result
@@ -334,7 +357,7 @@ function adaptCollectionsFromServer(collections) {
 		return result
 	}
 
-	// 后端返回分组对象: {posts: [...], dishes: [...]} 
+	// 后端返回分组对象: {dishes: [...], foods: [...]} 
 	Object.keys(result).forEach(key => {
 		result[key] = (collections[key] || []).map(adaptCollectionItem)
 	})
@@ -472,27 +495,6 @@ function adaptAssessmentFromServer(report) {
 	}
 }
 
-function adaptFeedbackFromServer(item) {
-	const typeMap = {
-		1: 'feedback',
-		2: 'bug',
-		3: 'report',
-		4: 'suggestion'
-	}
-	const statusMap = {
-		0: 'pending',
-		1: 'reviewing',
-		2: 'done'
-	}
-	return {
-		...item,
-		type: typeMap[item.type] || 'feedback',
-		status: statusMap[item.status] || 'pending',
-		createdAt: formatDateTime(item.createdAt),
-		updatedAt: formatDateTime(item.updatedAt)
-	}
-}
-
 function readLocalJSON(key, fallback) {
 	try {
 		const raw = uni.getStorageSync(key)
@@ -502,15 +504,15 @@ function readLocalJSON(key, fallback) {
 	}
 }
 
-export async function login(studentId, name) {
+export async function login(code) {
 	const data = await request('/api/auth/login', {
 		method: 'POST',
-		data: { studentId, name }
+		data: { code }
 	})
 	if (data?.token) {
 		setStoredToken(data.token)
 	}
-	const user = adaptUserFromServer(data?.user)
+	const user = adaptUserFromServer(data)
 	if (user) {
 		syncUserRelatedCaches(user)
 	}
@@ -539,8 +541,6 @@ export async function updateUserProfile(profile) {
 		await request('/api/user/profile', {
 			method: 'PUT',
 			data: {
-				name: profile.name,
-				avatar: profile.avatar,
 				height: Number(profile.height) || 0,
 				weight: Number(profile.weight) || 0,
 				targetWeight: Number(profile.targetWeight) || 0,
@@ -839,34 +839,6 @@ export async function saveYearlyReport(report) {
 	}
 }
 
-export async function getFeedbackList() {
-	try {
-		const list = await request('/api/feedback')
-		return (list || []).map(adaptFeedbackFromServer)
-	} catch (error) {
-		showRequestError(error, '获取反馈失败')
-		return []
-	}
-}
-
-export async function saveFeedback(feedback) {
-	try {
-		const result = await request('/api/feedback', {
-			method: 'POST',
-			data: {
-				type: feedback.type,
-				content: feedback.content,
-				targetAi: !!feedback.targetAI,
-				email: feedback.email
-			}
-		})
-		return adaptFeedbackFromServer(result)
-	} catch (error) {
-		showRequestError(error, '提交反馈失败')
-		return null
-	}
-}
-
 export async function getAssessmentReport() {
 	try {
 		const report = await request('/api/assessment')
@@ -914,4 +886,6 @@ export function clearUserSession() {
 	clearStoredToken()
 	uni.removeStorageSync('current_user_profile')
 	uni.removeStorageSync('my_user_profile')
+	uni.removeStorageSync('userInfo')
+	uni.removeStorageSync('current_user_id')
 }

@@ -57,7 +57,6 @@
 import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
 import { getCollections, removeCollection as removeCollectionApi } from './my-store'
-import { getPosts, savePosts } from '../communication/community-store'
 
 const currentCategory = ref('foods')
 const collections = ref(null)
@@ -66,7 +65,6 @@ const categories = [
 	{ key: 'dishes', label: '🍱 食堂菜品' },
 	{ key: 'recipes', label: '🍳 菜谱' },
 	{ key: 'foods', label: '🥗 食物' },
-	{ key: 'posts', label: '📰 动态' }
 ]
 
 const currentCollections = computed(() => {
@@ -111,7 +109,6 @@ const getDisplayName = (item) => {
 	if (item?.itemType === 'recipes') return '菜谱收藏'
 	if (item?.itemType === 'dishes') return '食堂菜品收藏'
 	if (item?.itemType === 'foods') return '食物收藏'
-	if (item?.itemType === 'posts') return '动态收藏'
 	return '未命名收藏'
 }
 
@@ -161,16 +158,6 @@ const removeCollection = (index) => {
 					list.splice(index, 1)
 				}
 
-				// 如果是删除的是动态收藏，同时更新社区中该帖子的 collected 状态
-				if (currentCategory.value === 'posts' && item.id) {
-					const posts = getPosts()
-					const targetPost = posts.find(p => p.id === item.id)
-					if (targetPost) {
-						targetPost.collected = false
-						savePosts(posts)
-					}
-				}
-				
 				uni.showToast({
 					title: '已删除',
 					icon: 'none'

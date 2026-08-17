@@ -43,7 +43,7 @@
       </view>
 
       <view class="start-btn" @click="startGame">
-        准备对轰
+        准备拳击
       </view>
 
       <view class="best-record">
@@ -124,7 +124,7 @@
 
       <!-- 结束按钮 -->
       <view class="game-footer">
-        <view class="finish-btn" @click="finishGame">投降</view>
+        <view class="finish-btn" @click="finishGame">结束</view>
       </view>
     </view>
 
@@ -174,12 +174,6 @@
         <text class="rating-emoji">{{ ratingEmoji }}</text>
         <text class="rating-level">{{ ratingLevel }}</text>
         <text class="rating-desc">{{ ratingDesc }}</text>
-      </view>
-
-      <!-- 排名 -->
-      <view class="ranking-info">
-        <text class="ranking-icon">📊</text>
-        <text class="ranking-text">超越了 <text class="ranking-value">{{ percentile }}%</text> 的用户</text>
       </view>
 
       <!-- 新纪录 -->
@@ -1040,34 +1034,6 @@ $text-light: #E0E0E0;
     .rating-desc {
       font-size: 20rpx;
       color: #999;
-    }
-  }
-
-  .ranking-info {
-    background: rgba(188, 19, 254, 0.1);
-    border: 1rpx solid rgba(188, 19, 254, 0.2);
-    border-radius: 16rpx;
-    padding: 20rpx;
-    text-align: center;
-    margin-bottom: 20rpx;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8rpx;
-
-    .ranking-icon {
-      font-size: 40rpx;
-    }
-
-    .ranking-text {
-      font-size: 20rpx;
-      color: $text-light;
-
-      .ranking-value {
-        color: $neon-purple;
-        font-weight: 700;
-        text-shadow: 0 0 8rpx rgba(188, 19, 254, 0.3);
-      }
     }
   }
 

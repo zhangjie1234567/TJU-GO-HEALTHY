@@ -3,6 +3,24 @@ import { BASE_URL } from '@/config.js'
 import { addCollection, getCollections, removeCollection } from '@/pages/my/my-store.js'
 import { addFoodToMeal, syncLocalMealCalories } from '@/pages/home/foodDataService.js'
 
+function ensureLoginForAction(actionLabel) {
+  const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+  if (token) return true
+
+  uni.showModal({
+    title: '需要登录',
+    content: `${actionLabel}需要登录后使用，你可以先浏览食堂菜单。`,
+    confirmText: '去登录',
+    cancelText: '稍后再说',
+    success: (res) => {
+      if (res.confirm) {
+        uni.navigateTo({ url: '/pages/login/login' })
+      }
+    }
+  })
+  return false
+}
+
 function requestWithAuth({ url, method = 'GET', data = null }) {
   const token = uni.getStorageSync('token') || ''
   return new Promise((resolve, reject) => {
@@ -34,7 +52,13 @@ function requestWithAuth({ url, method = 'GET', data = null }) {
 export function useCanteenMenu(canteenName) {
   const dishes = ref([])
   const loading = ref(false)
+  const searchKeyword = ref('')
 
+  const shouldHideDish = (name) => {
+    const text = String(name || '').trimStart()
+    return /^[（(]\s*(单点|加|加料)\s*[)）]/.test(text)
+  }
+  
   const fetchMenu = async () => {
     loading.value = true
     try {
@@ -69,6 +93,7 @@ export function useCanteenMenu(canteenName) {
   }
 
   const toggleDishCollection = async (dish) => {
+    if (!ensureLoginForAction('收藏到菜谱')) return
     const itemId = Number(dish.id)
     if (!itemId) return
 
@@ -98,6 +123,7 @@ export function useCanteenMenu(canteenName) {
   }
 
   const addDishToMeal = async (dish, mealType) => {
+    if (!ensureLoginForAction('加入餐次')) return
     const calorie = Number(dish.calorie || 0)
     if (Number.isNaN(calorie) || calorie <= 0) {
       uni.showToast({ title: '该菜品缺少卡路里', icon: 'none' })
@@ -120,13 +146,25 @@ export function useCanteenMenu(canteenName) {
 
   const emptyText = computed(() => {
     if (loading.value) return '加载中...'
+    if (searchKeyword.value.trim()) return '没有匹配的菜品'
     return '暂无菜单数据'
+  })
+
+  const displayDishes = computed(() => {
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    return dishes.value.filter((dish) => {
+      if (shouldHideDish(dish?.dishName)) return false
+      if (!keyword) return true
+      return String(dish?.dishName || '').toLowerCase().includes(keyword)
+    })
   })
 
   return {
     dishes,
     loading,
     emptyText,
+    searchKeyword,
+    displayDishes,
     fetchMenu,
     toggleDishCollection,
     addDishToMeal

@@ -20,7 +20,7 @@
   ],
   "tags": [
     { "name": "1. 用户认证", "description": "登录、问卷填写等认证相关接口" },
-    { "name": "2. 首页", "description": "食物搜索、健康记录、AI对话、体重/喝水/运动/日记等接口" },
+    { "name": "2. 首页", "description": "食物搜索、健康记录、体重/喝水/运动/日记等接口" },
     { "name": "3. 学校", "description": "地图、课表、食堂、体测、设施、服务等接口" },
     { "name": "4. 计划", "description": "饮食运动计划、运动游戏、全局搜索、饮品、食谱、课程推荐等接口" },
     { "name": "5. 社区", "description": "排行榜、用户排名、发帖、评论等接口" },
@@ -607,7 +607,7 @@
       "get": {
         "tags": ["2. 首页"],
         "summary": "我的饮食/运动方案查询",
-        "description": "获取AI为用户生成的个性化饮食方案和运动方案文本",
+        "description": "获取用户保存的饮食方案和运动方案文本",
         "operationId": "myPlan",
         "security": [{ "BearerAuth": [] }],
         "responses": {
@@ -622,8 +622,8 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "diet": { "type": "string", "description": "AI生成的饮食方案文本" },
-                        "exercise": { "type": "string", "description": "AI生成的运动方案文本" }
+                        "diet": { "type": "string", "description": "饮食方案文本" },
+                        "exercise": { "type": "string", "description": "运动方案文本" }
                       }
                     },
                     "msg": { "type": "string", "example": "success" }
@@ -634,105 +634,6 @@
           },
           "401": { "description": "未登录" },
           "500": { "description": "服务器错误" }
-        }
-      }
-    },
-    "/api/ai/chat": {
-      "post": {
-        "tags": ["2. 首页"],
-        "summary": "AI健康对话",
-        "description": "基于 DeepSeek-R1-Distill-Qwen-32B 模型的AI健康助手对话接口，通过ShowAPI代理调用。支持携带用户健康问卷数据生成个性化建议。",
-        "operationId": "aiChat",
-        "parameters": [
-          {
-            "name": "appKey",
-            "in": "query",
-            "required": true,
-            "description": "ShowAPI appKey",
-            "schema": { "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["model", "messages"],
-                "properties": {
-                  "model": { "type": "string", "description": "模型名称", "example": "deepseek-r1-distill-qwen-32b" },
-                  "stream": { "type": "boolean", "description": "是否流式输出", "default": false },
-                  "messages": {
-                    "type": "array",
-                    "description": "对话消息数组",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "role": { "type": "string", "enum": ["system", "user", "assistant"] },
-                        "content": { "type": "string" }
-                      }
-                    },
-                    "example": [
-                      { "role": "system", "content": "你是一个专业的健康助手" },
-                      { "role": "user", "content": "如何保持健康的饮食习惯？" }
-                    ]
-                  },
-                  "temperature": { "type": "number", "description": "温度参数(0-1)", "default": 0.3 }
-                }
-              }
-            }
-          }
-        },
-        "servers": [
-          { "url": "https://route.showapi.com/3257-1", "description": "ShowAPI代理服务器" }
-        ],
-        "responses": {
-          "200": {
-            "description": "对话成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "showapi_res_code": { "type": "integer", "example": 0 },
-                    "showapi_fee_num": { "type": "integer", "example": 1 },
-                    "showapi_res_id": { "type": "string" },
-                    "showapi_res_error": { "type": "string", "example": "" },
-                    "showapi_res_body": {
-                      "type": "object",
-                      "properties": {
-                        "choices": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "message": {
-                                "type": "object",
-                                "properties": {
-                                  "role": { "type": "string", "example": "assistant" },
-                                  "content": { "type": "string" }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-showapi-error-codes": {
-          "0": "成功",
-          "-1": "系统调用错误",
-          "-2": "可调用次数或金额为0",
-          "-3": "读取超时",
-          "-4": "服务端返回数据解析错误",
-          "-1004": "appKey验证有误",
-          "-1006": "app无权调用接口",
-          "-1007": "没有订购套餐"
         }
       }
     },
@@ -2606,7 +2507,7 @@
       "post": {
         "tags": ["6. 个人中心"],
         "summary": "提交帮助与反馈",
-        "description": "用户提交建议、问题反馈或AI相关反馈，支持邮件联系",
+        "description": "用户提交建议、问题反馈或其他功能反馈，支持邮件联系",
         "operationId": "userFeedback",
         "security": [{ "BearerAuth": [] }],
         "requestBody": {
@@ -2619,12 +2520,12 @@
                 "properties": {
                   "type": {
                     "type": "string",
-                    "description": "反馈类型（suggestion=建议, bug=问题, ai=AI相关）",
-                    "enum": ["suggestion", "bug", "ai"],
+                    "description": "反馈类型（suggestion=建议, bug=问题, other=其他）",
+                    "enum": ["suggestion", "bug", "other"],
                     "example": "suggestion"
                   },
                   "content": { "type": "string", "description": "反馈内容" },
-                  "targetAI": { "type": "boolean", "description": "是否针对AI功能", "default": false },
+                  "targetFeature": { "type": "boolean", "description": "是否针对特定功能", "default": false },
                   "email": { "type": "string", "description": "联系邮箱（可选）" }
                 }
               }

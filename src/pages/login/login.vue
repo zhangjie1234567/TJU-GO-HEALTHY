@@ -1,360 +1,489 @@
 <template>
-  <view class="page">
-    <view class="proto">
-      <view class="card-wrap">
-        <view class="card">
-          <view class="flow-title">
-            <text class="title-text">学生认证</text>
-            <text class="subtitle-text">请登录您的账号</text>
+  <view class="login-page">
+    <view class="bg-blob bg-blob-top"></view>
+    <view class="bg-blob bg-blob-bottom"></view>
+
+    <view class="login-shell">
+      <view class="hero-block">
+        <view class="brand-mark">
+          <text class="brand-mark-text">GO</text>
+        </view>
+        <text class="brand-title">TJU GO HEALTHY</text>
+        <text class="brand-subtitle">校园健康管理，一次登录即可开启</text>
+      </view>
+
+      <view class="login-card">
+        <view class="card-head">
+          <text class="card-head-title">微信授权登录</text>
+          <text class="card-head-desc">登录后可同步问卷、计划、记录与提醒</text>
+        </view>
+
+        <view class="benefit-list">
+          <view class="benefit-item">
+            <text class="benefit-dot"></text>
+            <text class="benefit-text">一键进入首页与个人中心</text>
           </view>
-          <view class="form-wrap">
-            <view class="form-group">
-              <text class="form-label">姓名</text>
-              <input v-model="form.name" class="form-input" type="text" placeholder="请输入真实姓名"
-                placeholder-class="input-placeholder" maxlength="20" />
-            </view>
-            <view class="form-group">
-              <text class="form-label">学号</text>
-              <input v-model="form.studentId" class="form-input" type="text" placeholder="请输入学号"
-                placeholder-class="input-placeholder" maxlength="10" @input="onStudentIdInput" />
-              <text v-if="showStudentIdError" class="form-error">学号格式不正确</text>
-            </view>
-            <view class="remember-row">
-              <checkbox-group @change="onRememberChange">
-                <label class="remember-label">
-                  <checkbox value="remember" :checked="form.rememberMe" color="#4FA1F2" />
-                  <text class="remember-text">记住我</text>
-                </label>
-              </checkbox-group>
-            </view>
-            <button class="auth-btn" hover-class="auth-btn-hover" @tap="onSubmit">
-              认证
-            </button>
+          <view class="benefit-item">
+            <text class="benefit-dot"></text>
+            <text class="benefit-text">同步体重、饮水、运动等数据</text>
+          </view>
+          <view class="benefit-item">
+            <text class="benefit-dot"></text>
+            <text class="benefit-text">仅使用微信 code 登录，不额外收集头像昵称</text>
           </view>
         </view>
+
+        <button
+          class="login-btn"
+          @click="onWechatLogin"
+          :disabled="isSubmitting"
+          :loading="isSubmitting"
+        >
+          {{ isSubmitting ? '登录中...' : '微信授权登录' }}
+        </button>
+
+        <button class="cancel-login-btn" @click="goToHome">取消登录</button>
+
+        <view class="privacy-section">
+          <text class="privacy-title">登录指引与隐私协议</text>
+          <text class="privacy-text">
+            本小程序为校园健康管理工具，仅通过微信授权登录（获取登录凭证 code）用于身份识别。我们会记录身高、体重、运动、饮食、饮水等健康数据，用于个人健康管理与数据统计展示；无支付交易功能，不收集姓名、手机号、学号等敏感个人信息。如您使用AI对话功能，我们会将用户健康相关信息传输至第三方人工智能服务接口，用于生成饮食、运动健康建议，我方严格管控数据安全，不向其他无关第三方泄露、不买卖用户个人信息。
+          </text>
+          <view class="privacy-actions">
+            <text class="privacy-consent">登录即表示你已阅读并同意上述说明。</text>
+            <text class="privacy-link" @click="showPrivacy = true">查看协议</text>
+          </view>
+        </view>
+
+        <view class="login-note">
+          <text>登录即表示你已准备好使用校园健康服务</text>
+        </view>
+      </view>
+    </view>
+
+    <view v-if="showPrivacy" class="privacy-modal" @click="showPrivacy = false">
+      <view class="privacy-dialog" @click.stop>
+        <text class="privacy-dialog-title">登录指引与隐私协议</text>
+        <scroll-view class="privacy-dialog-body" scroll-y="true">
+          <text class="privacy-dialog-text">
+            本协议适用于Pro食养录小程序的登录与使用。请你在登录前仔细阅读并理解本协议内容。
+            
+            1. 功能与范围：本小程序为校园健康管理工具，提供健康记录与数据展示服务。
+            
+            2. 登录方式：仅通过微信授权登录获取登录凭证 code 进行身份识别，不额外获取昵称、头像等信息。
+            
+            3. 收集与使用：记录身高、体重、运动、饮食、饮水等健康数据，用于个人健康管理与数据统计展示。
+            
+            4. 不收集信息：不收集姓名、手机号、学号等敏感个人信息；无支付交易功能。
+
+            5. 如用户使用AI对话功能，用户健康数据会传输至第三方人工智能服务商，用于生成个性化饮食、运动健康建议。
+
+            6. 所有用户私密数据仅账号本人查看，平台不泄露、不共享、不出售任何用户信息。
+
+            7. 开发者严格遵守《个人信息保护法》，妥善存储并保护用户个人隐私数据安全。
+          </text>
+        </scroll-view>
+        <button class="privacy-dialog-btn" @click="showPrivacy = false">我已阅读</button>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-  import {
-    ref,
-    reactive,
-    onMounted
-  } from 'vue'
-  import { BASE_URL } from '@/config.js'
+import { ref } from 'vue'
+import { BASE_URL } from '@/config.js'
 
-  const form = reactive({
-    name: '',
-    studentId: '',
-    rememberMe: false
+// 提交状态控制
+const isSubmitting = ref(false)
+const showPrivacy = ref(false)
+
+function goToHome() {
+  uni.switchTab({ url: '/pages/home/home' })
+}
+
+/**
+ * 【微信小程序过审标准登录】
+ * 仅使用 wx.login 获取 code，不获取昵称/头像，不强制授权
+ * 完全符合微信官方要求，无任何审核风险
+ */
+function onWechatLogin() {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
+  uni.showLoading({
+    title: '登录中...',
+    mask: true
   })
-  const showStudentIdError = ref(false)
-  const isSubmitting = ref(false)
 
-  // 学号输入预处理：只保留数字并限制为10位
-  function onStudentIdInput(e) {
-    const val = String(e.detail?.value ?? '').replace(/\D/g, '').slice(0, 10)
-    form.studentId = val
-    showStudentIdError.value = val.length > 0 && !validateStudentId(val)
-  }
-
-  function onRememberChange(e) {
-    form.rememberMe = (e.detail?.value || []).indexOf('remember') !== -1
-  }
-
-  function validateStudentId(id) {
-    return /^\d{10}$/.test((id || '').trim())
-  }
-
-  function validateName(name) {
-    return /^[A-Za-z\u4e00-\u9fa5]{2,20}$/.test((name || '').trim())
-  }
-
-  function onSubmit() {
-    if (isSubmitting.value) return
-    const name = (form.name || '').trim()
-    const studentId = (form.studentId || '').trim()
-    showStudentIdError.value = false
-    if (!name) {
-      uni.showToast({ title: '请输入真实姓名', icon: 'none' })
-      return
-    }
-    if (!validateName(name)) {
-      uni.showToast({ title: '姓名格式不正确，请输入2-20位汉字或英文', icon: 'none' })
-      return
-    }
-    if (!studentId) {
-      uni.showToast({ title: '请输入学号', icon: 'none' })
-      return
-    }
-    if (!validateStudentId(studentId)) {
-      showStudentIdError.value = true
-      uni.showToast({ title: '学号格式不正确，请输入10位数字', icon: 'none' })
-      return
-    }
-
-    isSubmitting.value = true
-    uni.showLoading({ title: '认证中…' })
-
-    uni.request({
-      url: BASE_URL + '/api/auth/login',
-      method: 'POST',
-      header: { 'Content-Type': 'application/json' },
-      data: { studentId, name, rememberMe: form.rememberMe },
-      success(res) {
+  // 1. 获取微信登录 code（无授权弹窗，无隐私权限）
+  uni.login({
+    provider: 'weixin',
+    success: (res) => {
+      if (!res.code) {
         uni.hideLoading()
         isSubmitting.value = false
-        console.log('登录响应：', res.data)
-        if (res.data && res.data.code === 200 && res.data.data) {
-          const vo = res.data.data
-          const userProfile = {
-            id: vo.id,
-            studentId: vo.studentId,
-            name: vo.name,
-            nickname: vo.nickname || vo.name,
-            avatar: vo.avatar || ''
-          }
-          // 存储 token，兼容不同页面对键名的读取
-          ;['token', 'auth_token', 'access_token', 'my_token'].forEach(key => {
-            uni.setStorageSync(key, vo.token)
-          })
-          // 存储用户基本信息（兼容历史键名）
-          uni.setStorageSync('userInfo', userProfile)
-          uni.setStorageSync('current_user_profile', userProfile)
-          uni.setStorageSync('my_user_profile', userProfile)
-          uni.setStorageSync('current_user_id', Number(vo.id || 0))
-          // 记住我
-          if (form.rememberMe) {
-            uni.setStorageSync('login_remember_studentId', studentId)
-            uni.setStorageSync('login_remember_name', name)
-          } else {
-            uni.removeStorageSync('login_remember_studentId')
-            uni.removeStorageSync('login_remember_name')
-          }
-          uni.showToast({ title: '认证成功', icon: 'success' })
-          setTimeout(() => {
-            uni.navigateTo({ url: '/pages/questionnaire/questionnaire' })
-          }, 1200)
-        } else {
-          const msg = (res.data && res.data.message) || '认证失败，请检查姓名和学号'
-          uni.showToast({ title: msg, icon: 'none' })
-        }
-      },
-      fail() {
-        uni.hideLoading()
-        isSubmitting.value = false
-        uni.showToast({ title: '网络异常，请检查连接后重试', icon: 'none' })
+        uni.showToast({
+          title: '获取登录信息失败',
+          icon: 'none'
+        })
+        return
       }
-    })
-  }
 
-  onMounted(() => {
-    try {
-      const savedId = uni.getStorageSync('login_remember_studentId')
-      const savedName = uni.getStorageSync('login_remember_name')
-      if (savedId) form.studentId = String(savedId).replace(/\D/g, '').slice(0, 10)
-      if (savedName) form.name = savedName
-      if (savedId || savedName) form.rememberMe = true
-    } catch (e) {}
+      // 2. 只把 code 传给后端，后端通过 code2Session 换取 openid
+      uni.request({
+        url: BASE_URL + '/api/auth/login',
+        method: 'POST',
+        header: {
+          'Content-Type': 'application/json'
+        },
+        data: {
+          code: res.code
+        },
+        success: (response) => {
+          const data = response.data || {}
+          if (data.code === 200 && data.data) {
+            const userInfo = data.data
+            // 统一存储 token
+            const token = userInfo.token || userInfo.auth_token || ''
+            if (token) {
+              uni.setStorageSync('token', token)
+              uni.setStorageSync('auth_token', token)
+              uni.setStorageSync('access_token', token)
+            }
+
+            // 只保留匿名标识与 token，不写入姓名、学号、昵称或头像
+            const anonymousUser = {
+              id: userInfo.id || ''
+            }
+            uni.setStorageSync('userInfo', anonymousUser)
+            uni.setStorageSync('current_user_profile', anonymousUser)
+
+            uni.hideLoading()
+            uni.showToast({
+              title: '登录成功',
+              icon: 'success'
+            })
+
+            // 登录成功跳转
+            setTimeout(() => {
+              uni.navigateTo({ url: '/pages/questionnaire/questionnaire' })
+            }, 1000)
+          } else {
+            uni.hideLoading()
+            uni.showToast({
+              title: data.message || '登录失败，请重试',
+              icon: 'none'
+            })
+          }
+        },
+        fail: () => {
+          uni.hideLoading()
+          isSubmitting.value = false
+          uni.showToast({
+            title: '网络异常，请检查后重试',
+            icon: 'none'
+          })
+        },
+        complete: () => {
+          isSubmitting.value = false
+        }
+      })
+    },
+    fail: () => {
+      uni.hideLoading()
+      isSubmitting.value = false
+      uni.showToast({
+        title: '微信登录授权失败',
+        icon: 'none'
+      })
+    }
   })
+}
 </script>
 
-<style lang="scss" scoped>
-  .page {
-    min-height: 100vh;
-    /* 改为你想要的蓝色渐变背景 */
-    background: linear-gradient(165deg, #4FA1F2 0%, #80D0FF 100%);
-    display: flex;
-    align-items: center;
-    /* 垂直居中 */
-    justify-content: center;
-    /* 水平居中 */
-    padding: 40rpx 30rpx;
-    /* 左右留少量内边距，避免内容贴边 */
-    box-sizing: border-box;
-  }
+<style scoped>
+.login-page {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f6fbff 0%, #eef7ff 45%, #ffffff 100%);
+}
 
-  .proto {
-    width: 100%;
-    max-width: 600rpx;
-    /* 限制最大宽度，适配大屏手机 */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(18px);
+  opacity: 0.8;
+}
 
-  .card-wrap {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+.bg-blob-top {
+  width: 260rpx;
+  height: 260rpx;
+  top: -90rpx;
+  left: -100rpx;
+  background: rgba(96, 165, 250, 0.16);
+}
 
-  .card {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20rpx;
-    padding: 40rpx 35rpx;
-    box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(10rpx);
-  }
+.bg-blob-bottom {
+  width: 220rpx;
+  height: 220rpx;
+  right: -90rpx;
+  bottom: 160rpx;
+  background: rgba(96, 165, 250, 0.10);
+}
 
-  .flow-title {
-    text-align: center;
-    margin-bottom: 35rpx;
-  }
+.login-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  padding: 104rpx 48rpx 64rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
-  .title-text {
-    display: block;
-    font-size: 42rpx;
-    font-weight: 700;
-    color: #2C3E50;
-    margin-bottom: 10rpx;
-    letter-spacing: 2rpx;
-  }
+.hero-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
 
-  .subtitle-text {
-    display: block;
-    font-size: 30rpx;
-    color: #666;
-  }
+.brand-mark {
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 34rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 18rpx 42rpx rgba(59, 130, 246, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24rpx;
+}
 
-  .form-wrap {
-    width: 100%;
-  }
+.brand-mark-text {
+  color: #fff;
+  font-size: 36rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
 
-  .form-group {
-    margin-bottom: 28rpx;
-  }
+.brand-title {
+  font-size: 42rpx;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #163024;
+}
 
-  .form-label {
-    display: block;
-    font-size: 32rpx;
-    color: #4A5568;
-    margin-bottom: 12rpx;
-    padding-left: 8rpx;
-  }
+.brand-subtitle {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #5f7669;
+}
 
-  .form-input {
-    width: 100%;
-    height: 73rpx;
-    /* 从48rpx增大到70rpx */
-    border: 2rpx solid #e0e0e0;
-    /* 加粗边框 */
-    border-radius: 35rpx;
-    /* 对应高度调整圆角 */
-    padding: 0 24rpx;
-    /* 增大输入框内边距 */
-    font-size: 28rpx;
-    /* 从16rpx增大到22rpx */
-    color: #333;
-    background: #fff;
-    box-sizing: border-box;
-  }
+.login-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1rpx solid rgba(59, 130, 246, 0.10);
+  border-radius: 36rpx;
+  padding: 34rpx 30rpx 28rpx;
+  box-shadow: 0 18rpx 50rpx rgba(23, 58, 41, 0.08);
+}
 
-  .form-input:focus {
-    border-color: #4FA1F2;
-    box-shadow: 0 0 0 5rpx rgba(79, 161, 242, 0.2);
-    /* 增大聚焦阴影 */
-  }
+.card-head {
+  margin-bottom: 26rpx;
+}
 
-  .input-placeholder {
-    color: #999;
-    font-size: 20rpx;
-    /* 放大占位符字体 */
-  }
+.card-head-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #17382a;
+}
 
-  // 放大错误提示字体
-  .form-error {
-    display: block;
-    font-size: 18rpx;
-    /* 从12rpx增大到18rpx */
-    color: #e74c3c;
-    margin-top: 10rpx;
-    padding-left: 8rpx;
-  }
+.card-head-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #6b8176;
+}
 
-  /* 兼容H5和小程序的输入框聚焦发光蓝色边框 */
-  .form-input:focus {
-    border-color: #4FA1F2 !important;
-    box-shadow: 0 0 0 3px rgba(79, 161, 242, 0.18) !important;
-    outline: none !important;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
+.benefit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 30rpx;
+}
 
-  /* H5下uni-app的input聚焦时也加发光 */
-  input.form-input:focus {
-    border-color: #4FA1F2 !important;
-    box-shadow: 0 0 0 3px rgba(79, 161, 242, 0.18) !important;
-    outline: none !important;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+}
 
-  /* 美化记住我复选框尺寸，兼容H5和小程序 */
-  .remember-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-size: 14rpx;
-    color: #666;
-    margin-bottom: 30rpx;
-    /* 增加复选框与按钮间距 */
-  }
+.benefit-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  margin-top: 10rpx;
+  flex-shrink: 0;
+}
 
-  .remember-label .uni-checkbox-input {
-    width: 14px !important;
-    height: 14px !important;
-    min-width: 14px !important;
-    min-height: 14px !important;
-    border-radius: 3px !important;
-    border: 1px solid #4FA1F2 !important;
-    margin-right: 6px;
-    box-sizing: border-box;
-    vertical-align: middle;
-  }
+.benefit-text {
+  flex: 1;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #395446;
+}
 
-  .remember-label .uni-checkbox-input-checked {
-    background: linear-gradient(90deg, #4FA1F2 0%, #80D0FF 100%) !important;
-    border-color: #4FA1F2 !important;
-  }
+.login-btn {
+  width: 100%;
+  height: 94rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  box-shadow: 0 16rpx 28rpx rgba(59, 130, 246, 0.24);
+}
 
-  .remember-label .uni-checkbox-input:after {
-    border-color: #fff !important;
-  }
+.login-btn::after {
+  border: none;
+}
 
-  .remember-text {
-    font-size: 24rpx;
-    color: #666;
-    margin-left: 10rpx;
-  }
+.cancel-login-btn {
+  margin-top: 16rpx;
+  height: 84rpx;
+  border-radius: 999rpx;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: 2rpx solid rgba(51, 65, 85, 0.12);
+}
 
-  .auth-btn {
-    width: 100%;
-    height: 80rpx;
-    /* 从50rpx增大到80rpx */
-    line-height: 80rpx;
-    /* 对应高度调整行高 */
-    border: none;
-    border-radius: 40rpx;
-    /* 对应高度调整圆角 */
-    background: linear-gradient(90deg, #4FA1F2 0%, #80D0FF 100%);
-    color: #fff;
-    font-size: 30rpx;
-    /* 从18rpx增大到26rpx */
-    font-weight: 600;
-    box-shadow: 0 8rpx 15rpx rgba(79, 161, 242, 0.4);
-    /* 增大按钮阴影 */
-  }
+.cancel-login-btn::after {
+  border: none;
+}
 
-  .auth-btn::after {
-    border: none;
-  }
+.login-note {
+  margin-top: 22rpx;
+  text-align: center;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #8a9c91;
+}
 
-  .auth-btn-hover {
-    opacity: 0.92;
-    transform: scale(0.99);
+.privacy-section {
+  margin-top: 26rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1rpx solid rgba(59, 130, 246, 0.12);
+}
+
+.privacy-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #1f3b2d;
+  margin-bottom: 10rpx;
+}
+
+.privacy-text {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #4b6658;
+}
+
+.privacy-consent {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #3b5a4b;
+}
+
+.privacy-actions {
+  margin-top: 10rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.privacy-link {
+  align-self: flex-start;
+  font-size: 22rpx;
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.privacy-modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  padding: 40rpx;
+}
+
+.privacy-dialog {
+  width: 100%;
+  max-width: 640rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 28rpx 26rpx 24rpx;
+  box-shadow: 0 20rpx 60rpx rgba(15, 23, 42, 0.18);
+}
+
+.privacy-dialog-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #12231a;
+  text-align: center;
+  margin-bottom: 18rpx;
+}
+
+.privacy-dialog-body {
+  max-height: 520rpx;
+}
+
+.privacy-dialog-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #425347;
+  white-space: pre-line;
+}
+
+.privacy-dialog-btn {
+  margin-top: 20rpx;
+  height: 84rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.privacy-dialog-btn::after {
+  border: none;
+}
+
+@media screen and (max-height: 700px) {
+  .login-shell {
+    padding-top: 72rpx;
+    justify-content: flex-start;
   }
+}
 </style>

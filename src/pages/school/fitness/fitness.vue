@@ -15,7 +15,7 @@
           <picker mode="selector" :range="projectOptions" :value="form.projectIndex" @change="onProjectChange">
             <view class="picker">项目名称：{{ projectOptions[form.projectIndex] }}</view>
           </picker>
-          <input class="input" v-model="form.value" placeholder="成绩（如 3分56秒 / 2.56m / 32次）" />
+          <input class="input" v-model="form.value" placeholder="成绩（如 3分56秒 / 2.56m / 32次）" @focus="handleValueFocus" />
           <view class="btn-add" @click="addStat">+ 添加记录</view>
         </view>
       </view>
@@ -68,6 +68,31 @@ const form = reactive({
   value: ''
 })
 
+const ensureLoginForAction = (actionLabel) => {
+  const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+  if (token) return true
+
+  uni.showModal({
+    title: '需要登录',
+    content: `${actionLabel}需要登录后使用，你可以先浏览体测记录。`,
+    confirmText: '去登录',
+    cancelText: '稍后再说',
+    success: (res) => {
+      if (res.confirm) {
+        uni.navigateTo({ url: '/pages/login/login' })
+      }
+    }
+  })
+  return false
+}
+
+const handleValueFocus = () => {
+  if (!ensureLoginForAction('填写体测成绩')) {
+    uni.hideKeyboard()
+    form.value = ''
+  }
+}
+
 const refreshProjectOptions = () => {
   const current = projectOptions.value[form.projectIndex]
   projectOptions.value = genderIndex.value === 0
@@ -94,6 +119,7 @@ const normalizeStatsArray = (list) => {
 }
 
 const addStat = () => {
+  if (!ensureLoginForAction('添加体测记录')) return
   const itemName = projectOptions.value[form.projectIndex]
   const value = String(form.value || '').trim()
   if (!itemName || !value) {

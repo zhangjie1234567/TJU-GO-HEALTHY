@@ -104,20 +104,23 @@ function normalizeFoodDetail(detail) {
   }
 }
 
-function requestApi({ url, method = 'GET', data = undefined }) {
+function requestApi({ url, method = 'GET', data = undefined, allowAnonymous = false }) {
   return new Promise((resolve, reject) => {
     const header = buildAuthHeader()
-    if (!header) {
+    if (!header && !allowAnonymous) {
       console.warn('[FoodAPI] token为空，接口未发出:', method, url)
       reject(new Error('未登录，请先登录'))
       return
     }
+    const requestHeader = allowAnonymous
+      ? { 'Content-Type': 'application/json' }
+      : (header || { 'Content-Type': 'application/json' })
 
     uni.request({
       url,
       method,
       data,
-      header,
+      header: requestHeader,
       success: (res) => {
         const body = res.data || {}
         console.log('[FoodAPI] response:', {
@@ -164,7 +167,8 @@ export async function searchFoods(keyword = '', category = '') {
 
   const data = await requestApi({
     url: `${BASE_URL}/api/search?${params.join('&')}`,
-    method: 'GET'
+    method: 'GET',
+    allowAnonymous: true
   })
 
   const list = normalizeArray(data).map(normalizeFoodItem)
@@ -189,7 +193,8 @@ export async function getSearchSuggestions(keyword) {
 export async function getFoodDetail(foodId) {
   const data = await requestApi({
     url: `${BASE_URL}/api/food/${encodeURIComponent(foodId)}`,
-    method: 'GET'
+    method: 'GET',
+    allowAnonymous: true
   })
 
   if (!data) {

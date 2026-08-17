@@ -9,12 +9,12 @@
 
 const STORAGE_ENV_KEY = 'api_env'
 const STORAGE_BASE_URL_KEY = 'api_base_url'
-const LEGACY_API_BASE_URL = 'http://127.0.0.1:3000'
+const LEGACY_API_BASE_URL = 'https://foodarrty.cn'
 
 const API_BASE_URL_MAP = {
-    dev: '', // 本地开发环境，走 Vite 代理
-    test: 'https://foodarrty.cn',
-    prod: 'https://foodarrty.cn'
+	dev: 'https://foodarrty.cn',
+	test: 'https://foodarrty.cn',
+	prod: 'https://foodarrty.cn'
 }
 
 const normalizeEnv = (value) => {
@@ -23,7 +23,6 @@ const normalizeEnv = (value) => {
 }
 
 const getModeDefaultEnv = () => {
-	// 默认直接返回 prod，确保现在就是生产环境
 	return 'prod'
 }
 
@@ -39,6 +38,7 @@ export function setApiEnv(env) {
 	const normalized = normalizeEnv(env)
 	if (!normalized) return
 	uni.setStorageSync(STORAGE_ENV_KEY, normalized)
+	uni.removeStorageSync(STORAGE_BASE_URL_KEY)
 }
 
 export function getApiBaseUrl() {
@@ -59,4 +59,4 @@ export function setApiBaseUrl(baseUrl) {
 	uni.setStorageSync(STORAGE_BASE_URL_KEY, next)
 }
 
-export const BASE_URL = API_BASE_URL_MAP['prod']
+export const BASE_URL = getApiBaseUrl()

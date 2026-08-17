@@ -33,7 +33,7 @@
           <view class="ex-record-calorie">{{ item.calorie }}大卡</view>
         </view>
       </view>
-      <button class="ex-add-btn" @click="showAdd = true">添加运动</button>
+      <button class="ex-add-btn" @click="openAddPopup">添加运动</button>
     </view>
     <!-- 添加运动弹窗 -->
     <view v-if="showAdd" class="ex-popup-mask">
@@ -105,6 +105,24 @@
   // 获取token
   function getToken() {
     return uni.getStorageSync('token') || ''
+  }
+
+  function ensureLoginForAction(actionLabel) {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
   }
 
   const exerciseTypes = [
@@ -188,8 +206,14 @@
   onShow(loadExercise)
 
   function openGoalEdit() {
+    if (!ensureLoginForAction('修改运动目标')) return
     goalEditValue.value = String(exerciseGoal.value || '')
     showGoalEdit.value = true
+  }
+
+  function openAddPopup() {
+    if (!ensureLoginForAction('添加运动记录')) return
+    showAdd.value = true
   }
 
   // 保存运动记录到本地（仅用于离线缓存）
@@ -235,6 +259,7 @@
   }
 
   function addExercise() {
+    if (!ensureLoginForAction('添加运动记录')) return
     const duration = parseInt(addDuration.value)
     if (!duration || duration < 1 || duration > 300) {
       uni.showToast({ title: '请输入合理时长', icon: 'none' })
@@ -255,24 +280,6 @@
     const calorie = Math.round(caloriePerMin * duration)
 
     const token = getToken()
-    if (!token) {
-      // 未登录时仅保存到本地
-      records.value.push({
-        id: Date.now(),
-        icon: type.icon,
-        name,
-        duration,
-        calorie
-      })
-      todayCalorie.value += calorie
-      saveExerciseToLocal()
-      syncRunMinutesToSummary(name, duration)
-      showAdd.value = false
-      addDuration.value = ''
-      customName.value = ''
-      uni.showToast({ title: '运动已保存到本地', icon: 'success' })
-      return
-    }
 
     // 调用后端API保存运动记录
     uni.request({
@@ -322,6 +329,7 @@
   }
 
   function saveGoal() {
+    if (!ensureLoginForAction('修改运动目标')) return
     const v = parseInt(goalEditValue.value)
     if (!v || v < 1 || v > 10000) {
       uni.showToast({ title: '请输入1~10000之间的目标', icon: 'none' })
@@ -329,14 +337,6 @@
     }
 
     const token = getToken()
-    if (!token) {
-      exerciseGoal.value = v
-      saveExerciseToLocal()
-      showGoalEdit.value = false
-      goalEditValue.value = ''
-      uni.showToast({ title: '已保存到本地', icon: 'success' })
-      return
-    }
 
     uni.request({
       url: `${API_BASE}/goal`,

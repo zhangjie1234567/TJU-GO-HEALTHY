@@ -86,13 +86,13 @@ onShow(() => {
 // ── 操作 ──────────────────────────────────────────
 function openSession(s) {
   uni.navigateTo({
-    url: '/pages/home/ai_chat?sessionId=' + encodeURIComponent(s.sessionId) +
+    url: '/pages/home/health_consultation?sessionId=' + encodeURIComponent(s.sessionId) +
          '&title=' + encodeURIComponent(s.title || '历史对话')
   })
 }
 
 function startNewChat() {
-  uni.navigateTo({ url: '/pages/home/ai_chat' })
+  uni.navigateTo({ url: '/pages/home/health_consultation' })
 }
 
 function confirmDelete(sessionId) {

@@ -1,34 +1,7 @@
 <template>
 	<view class="container">
-		<!-- 账号信息卡片 -->
 		<view class="info-card">
-			<view class="info-row">
-				<text class="info-label">昵称</text>
-				<view class="info-value-edit">
-					<text class="info-value">{{ form.name }}</text>
-					<text class="edit-icon" @click="editField('name')">✏️</text>
-				</view>
-			</view>
-			<view class="divider"></view>
-
-			<view class="info-row">
-				<text class="info-label">学号</text>
-				<text class="info-value">{{ form.studentId }}</text>
-			</view>
-			<view class="divider"></view>
-
-			<view class="info-row">
-				<text class="info-label">头像</text>
-				<view class="avatar-selector" @click="selectAvatar">
-					<view class="avatar-preview">{{ form.avatar }}</view>
-					<text class="edit-icon">✏️</text>
-				</view>
-			</view>
-		</view>
-
-		<!-- 其他信息 -->
-		<view class="info-card">
-			<view class="card-title">个人信息</view>
+			<view class="card-title">健康资料</view>
 
 			<view class="info-row">
 				<text class="info-label">身高</text>
@@ -66,7 +39,6 @@
 			</view>
 		</view>
 
-		<!-- 账号管理 -->
 		<view class="action-section">
 			<text class="section-title">账号管理</text>
 			<view class="action-btn" @click="switchAccount">
@@ -81,25 +53,15 @@
 			</view>
 		</view>
 
-		<!-- 编辑弹窗 -->
 		<view class="modal-overlay" v-if="showEditModal">
 			<view class="modal-content">
 				<view class="modal-header">
-					<text class="modal-title">编辑{{ editingField === 'name' ? '昵称' : editingField === 'height' ? '身高' : editingField === 'weight' ? '体重' : editingField === 'targetWeight' ? '目标体重' : '年龄' }}</text>
+					<text class="modal-title">编辑{{ editingField === 'height' ? '身高' : editingField === 'weight' ? '体重' : editingField === 'targetWeight' ? '目标体重' : '年龄' }}</text>
 					<text class="modal-close" @click="showEditModal = false">✕</text>
 				</view>
 
 				<view class="modal-body">
 					<input
-						v-if="editingField === 'name'"
-						v-model="editValue"
-						type="text"
-						class="modal-input"
-						placeholder="请输入昵称"
-						maxlength="20"
-					/>
-					<input
-						v-else
 						v-model="editValue"
 						type="number"
 						class="modal-input"
@@ -110,33 +72,6 @@
 				<view class="modal-actions">
 					<view class="modal-btn cancel" @click="showEditModal = false">取消</view>
 					<view class="modal-btn confirm" @click="saveEdit">保存</view>
-				</view>
-			</view>
-		</view>
-
-		<!-- 头像选择器 -->
-		<view class="modal-overlay" v-if="showAvatarPicker">
-			<view class="modal-content">
-				<view class="modal-header">
-					<text class="modal-title">选择头像</text>
-					<text class="modal-close" @click="showAvatarPicker = false">✕</text>
-				</view>
-
-				<view class="avatar-grid">
-					<view
-						v-for="(avatar, index) in avatarList"
-						:key="index"
-						class="avatar-item"
-						:class="{ selected: form.avatar === avatar }"
-						@click="form.avatar = avatar"
-					>
-						{{ avatar }}
-					</view>
-				</view>
-
-				<view class="modal-actions">
-					<view class="modal-btn cancel" @click="showAvatarPicker = false">取消</view>
-					<view class="modal-btn confirm" @click="saveAvatarAndClose">保存</view>
 				</view>
 			</view>
 		</view>
@@ -155,9 +90,6 @@ import {
 } from './my-store'
 
 const form = ref({
-	name: '',
-	studentId: '',
-	avatar: '😊',
 	height: 170,
 	weight: 70,
 	targetWeight: 60,
@@ -168,17 +100,11 @@ const showEditModal = ref(false)
 const editingField = ref('')
 const editValue = ref('')
 
-const showAvatarPicker = ref(false)
-const avatarList = ['😊', '😃', '😄', '😁', '🤗', '😍', '🤩', '😎', '🥳', '😇', '🧠', '💪', '🤸', '🏃', '🚴']
-
 const loadData = async () => {
 	const user = await getCurrentUser()
 	if (user) {
 		form.value = {
 			...form.value,
-			name: user.name,
-			studentId: user.studentId,
-			avatar: user.avatar || '😊',
 			height: Number(user.height) || 170,
 			weight: Number(user.weight) || 70,
 			targetWeight: Number(user.targetWeight) || 60,
@@ -194,34 +120,12 @@ const editField = (field) => {
 }
 
 const saveEdit = async () => {
-	if (editValue.value) {
-		if (editingField.value === 'name') {
-			form.value.name = editValue.value
-		} else {
-			form.value[editingField.value] = Number(editValue.value)
-		}
-		const ok = await updateUserProfile(form.value)
-		if (!ok) return
-		showEditModal.value = false
-		uni.showToast({
-			title: '保存成功',
-			icon: 'none'
-		})
-	}
-}
-
-const selectAvatar = () => {
-	showAvatarPicker.value = true
-}
-
-const saveAvatarAndClose = async () => {
+	if (!editValue.value) return
+	form.value[editingField.value] = Number(editValue.value)
 	const ok = await updateUserProfile(form.value)
 	if (!ok) return
-	showAvatarPicker.value = false
-	uni.showToast({
-		title: '头像已更新',
-		icon: 'none'
-	})
+	showEditModal.value = false
+	uni.showToast({ title: '保存成功', icon: 'none' })
 }
 
 const switchAccount = () => {
@@ -231,9 +135,7 @@ const switchAccount = () => {
 		success(res) {
 			if (res.confirm) {
 				clearUserSession()
-				uni.navigateTo({
-					url: '/pages/login/login'
-				})
+				uni.navigateTo({ url: '/pages/login/login' })
 			}
 		}
 	})
@@ -246,14 +148,9 @@ const logout = () => {
 		success(res) {
 			if (res.confirm) {
 				clearUserSession()
-				uni.showToast({
-					title: '已退出登录',
-					icon: 'none'
-				})
+				uni.showToast({ title: '已退出登录', icon: 'none' })
 				setTimeout(() => {
-					uni.navigateTo({
-						url: '/pages/login/login'
-					})
+					uni.navigateTo({ url: '/pages/login/login' })
 				}, 500)
 			}
 		}
@@ -268,7 +165,6 @@ onShow(() => {
 <style scoped lang="scss">
 $main-blue: #4FA1F2;
 $bg-blue: #E3F2FD;
-$light-gray: #f8f8f8;
 $text-dark: #333;
 $text-light: #888;
 $danger-red: #ff6b6b;
@@ -279,21 +175,11 @@ $danger-red: #ff6b6b;
 	padding: 20rpx;
 }
 
-.top-bar {
-	background: white;
-	display: flex;
-	align-items: center;
-	padding: 20rpx;
-	margin-bottom: 20rpx;
-}
-
 .card-title {
 	font-size: 32rpx;
 	font-weight: 700;
 	color: $text-dark;
 	margin-bottom: 20rpx;
-	padding-bottom: 0;
-	border-bottom: none;
 }
 
 .info-row {
@@ -323,36 +209,11 @@ $danger-red: #ff6b6b;
 .edit-icon {
 	font-size: 24rpx;
 	color: $main-blue;
-	cursor: pointer;
-}
-
-.edit-link {
-	font-size: 26rpx;
-	color: $main-blue;
-}
-
-.avatar-selector {
-	display: flex;
-	align-items: center;
-	gap: 8rpx;
-}
-
-.avatar-preview {
-	font-size: 40rpx;
-	width: 50rpx;
-	height: 50rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: $bg-blue;
-	border-radius: 8rpx;
-	cursor: pointer;
 }
 
 .divider {
 	height: 1rpx;
 	background: #eee;
-	margin: 0;
 }
 
 .info-card {
@@ -364,7 +225,6 @@ $danger-red: #ff6b6b;
 }
 
 .action-section {
-	padding: 0;
 	margin-top: 20rpx;
 	margin-bottom: 40rpx;
 }
@@ -373,7 +233,6 @@ $danger-red: #ff6b6b;
 	font-size: 28rpx;
 	font-weight: 600;
 	color: $text-dark;
-	margin-left: 0;
 	margin-bottom: 12rpx;
 	padding-left: 8rpx;
 }
@@ -386,13 +245,7 @@ $danger-red: #ff6b6b;
 	align-items: center;
 	gap: 12rpx;
 	margin-bottom: 16rpx;
-	transition: transform 0.2s, box-shadow 0.2s;
 	box-shadow: 0 4rpx 12rpx rgba(79, 161, 242, 0.08);
-
-	&:active {
-		transform: scale(0.98);
-		box-shadow: 0 2rpx 8rpx rgba(79, 161, 242, 0.12);
-	}
 
 	&.danger {
 		.action-icon,
@@ -418,7 +271,6 @@ $danger-red: #ff6b6b;
 	color: $text-light;
 }
 
-/* 模态框 */
 .modal-overlay {
 	position: fixed;
 	top: 0;
@@ -437,16 +289,6 @@ $danger-red: #ff6b6b;
 	border-radius: 24rpx 24rpx 0 0;
 	padding: 24rpx;
 	max-height: 80vh;
-	animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-	from {
-		transform: translateY(100%);
-	}
-	to {
-		transform: translateY(0);
-	}
 }
 
 .modal-header {
@@ -467,7 +309,6 @@ $danger-red: #ff6b6b;
 .modal-close {
 	font-size: 32rpx;
 	color: $text-light;
-	cursor: pointer;
 }
 
 .modal-body {
@@ -481,87 +322,32 @@ $danger-red: #ff6b6b;
 	padding: 14rpx 18rpx;
 	font-size: 28rpx;
 	height: 64rpx;
-	line-height: 1;
-	margin-bottom: 16rpx;
 	box-sizing: border-box;
 	background: white;
 	color: #333;
-	font-family: inherit;
-	outline: none;
-	-webkit-appearance: none;
-	appearance: none;
-	transition: border-color 0.2s, box-shadow 0.2s;
-	display: flex;
-	align-items: center;
-}
-
-.modal-input::placeholder {
-	color: #ccc;
-	font-size: 28rpx;
-}
-
-.modal-input:focus {
-	border-color: $main-blue;
-	box-shadow: 0 0 0 2rpx rgba(79, 161, 242, 0.1);
-}
-
-.avatar-grid {
-	display: grid;
-	grid-template-columns: repeat(5, 1fr);
-	gap: 16rpx;
-	margin: 20rpx 0;
-}
-
-.avatar-item {
-	font-size: 48rpx;
-	width: 70rpx;
-	height: 70rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: $bg-blue;
-	border-radius: 12rpx;
-	border: 2rpx solid transparent;
-	cursor: pointer;
-	transition: all 0.2s;
-
-	&.selected {
-		border-color: $main-blue;
-		background: rgba(79, 161, 242, 0.2);
-	}
-
-	&:active {
-		transform: scale(0.95);
-	}
 }
 
 .modal-actions {
 	display: flex;
-	gap: 12rpx;
-	margin-top: 24rpx;
+	gap: 16rpx;
+	margin-top: 20rpx;
 }
 
 .modal-btn {
 	flex: 1;
-	padding: 16rpx;
-	border-radius: 8rpx;
-	font-size: 28rpx;
 	text-align: center;
-	font-weight: 600;
-	transition: transform 0.2s;
+	padding: 18rpx 0;
+	border-radius: 12rpx;
+	font-size: 28rpx;
+}
 
-	&:active {
-		transform: scale(0.98);
-	}
+.modal-btn.cancel {
+	background: #f2f4f8;
+	color: $text-dark;
+}
 
-	&.cancel {
-		background: #eee;
-		color: $text-light;
-	}
-
-	&.confirm {
-		background: $main-blue;
-		color: white;
-	}
+.modal-btn.confirm {
+	background: $main-blue;
+	color: white;
 }
 </style>

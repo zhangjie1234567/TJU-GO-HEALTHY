@@ -1,6 +1,13 @@
 <template>
   <view class="questionnaire-container">
     <scroll-view class="questionnaire-scroll" scroll-y="true" :show-scrollbar="false">
+    <view class="skip-bar">
+      <view class="skip-text">
+        <text class="skip-title">问卷可跳过</text>
+        <text class="skip-desc">若不填写问卷AI对话无法使用提示词模板，但可以自定义提示词且其它功能均正常</text>
+      </view>
+      <button class="skip-btn" @click="handleSkipQuestionnaire">跳过</button>
+    </view>
     <!-- 顶部标签栏 -->
     <view class="tab-bar">
       <view class="tab-item" :class="{ active: currentTab === 'base' }" @click="switchTab('base')">基础信息</view>
@@ -380,6 +387,21 @@
     }
   }
 
+  const handleSkipQuestionnaire = () => {
+    uni.showModal({
+      title: '确认跳过问卷',
+      content: '你可以先体验功能，之后随时在“我的-我的测评”中补填问卷。',
+      confirmText: '确认跳过',
+      cancelText: '继续填写',
+      success: (res) => {
+        if (!res.confirm) return
+        uni.setStorageSync('questionnaireSkipped', 'true')
+        uni.setStorageSync('questionnaireCompleted', 'false')
+        uni.switchTab({ url: '/pages/home/home' })
+      }
+    })
+  }
+
   // 表单校验
   const validateBaseForm = () => {
     // 校验性别
@@ -716,6 +738,49 @@
     padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
     padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
+  }
+
+  .skip-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24rpx 26rpx;
+    margin-bottom: 24rpx;
+    border-radius: 24rpx;
+    background: #f4f8ff;
+    border: 1rpx solid #dbeafe;
+    gap: 16rpx;
+  }
+
+  .skip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  .skip-title {
+    font-size: 28rpx;
+    font-weight: 600;
+    color: #1d4ed8;
+  }
+
+  .skip-desc {
+    font-size: 24rpx;
+    color: #475569;
+  }
+
+  .skip-btn {
+    height: 72rpx;
+    padding: 0 28rpx;
+    border-radius: 999rpx;
+    background: #e2e8f0;
+    color: #1f2937;
+    font-size: 24rpx;
+    font-weight: 600;
+  }
+
+  .skip-btn::after {
+    border: none;
   }
 
   /* 顶部标签栏 */

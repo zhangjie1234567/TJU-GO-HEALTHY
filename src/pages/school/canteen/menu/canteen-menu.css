@@ -16,6 +16,34 @@
   margin-bottom: 18rpx;
 }
 
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: #ffffff;
+  border-radius: 999rpx;
+  padding: 12rpx 18rpx;
+  box-shadow: 0 6rpx 16rpx rgba(79, 161, 242, 0.12);
+  margin-bottom: 16rpx;
+}
+
+.search-icon {
+  font-size: 26rpx;
+  color: #4FA1F2;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 24rpx;
+  color: #2a4b6b;
+}
+
+.search-clear {
+  font-size: 22rpx;
+  color: #8aa2b8;
+  padding: 4rpx 8rpx;
+}
+
 .empty {
   background: #fff;
   border-radius: 20rpx;

@@ -252,6 +252,24 @@ onShow(async () => {
     uni.showToast({ title: '已清空历史记录', icon: 'none' })
   }
 
+  const ensureLoginForAction = (actionLabel) => {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用，你可以先浏览食物列表。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   // 跳转到详情页
   const goToDetail = (item) => {
     uni.navigateTo({
@@ -261,6 +279,7 @@ onShow(async () => {
 
   // 切换收藏
   const handleToggleCollect = async (item) => {
+    if (!ensureLoginForAction('收藏食物')) return
     try {
       const newState = await toggleCollection(item.id)
       item.collected = newState

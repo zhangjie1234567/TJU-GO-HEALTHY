@@ -12,13 +12,21 @@
       <!-- 欢迎界面（无消息时） -->
       <view v-if="messages.length === 0" class="welcome-wrap">
         <view class="welcome-bot">🤖</view>
-        <text class="welcome-title">你好，我是AI健康助手</text>
+        <text class="welcome-title">你好，我是健康咨询助手</text>
         <text class="welcome-desc">基于你的健康档案，为你提供个性化饮食与运动建议</text>
+        <view v-if="!hasQuestionnaire" class="questionnaire-notice">
+          <text class="notice-title">你还未填写问卷</text>
+          <text class="notice-desc">未填写问卷时，模板提示词不可用，但仍可自定义提问。</text>
+          <view class="notice-actions">
+            <view class="notice-btn primary" @click="goToQuestionnaire">点击填写问卷</view>
+          </view>
+        </view>
         <view class="quick-list">
           <view
             v-for="(q, qi) in quickQuestions"
             :key="qi"
             class="quick-item"
+            :class="{ 'quick-item-disabled': !hasQuestionnaire }"
             @click="sendQuickQuestion(q)"
           >
             <text class="quick-text">{{ q }}</text>
@@ -114,16 +122,36 @@
 
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
 // ── 常量 ──────────────────────────────────────────
+// 常量
 const quickQuestions = [
-  '根据我的问卷信息帮我生成详细完整的每周饮食方案和运动计划',
+  `请严格根据我的所有问卷信息，为我量身定做一个健康方案，必须严格按以下格式输出：
+【饮食方案开始】
+1. 早餐：时间（例如7:30-8:30）、卡路里上限（例如400kcal）、搭配建议
+2. 午餐：时间（例如12:00-13:00）、卡路里上限（例如600kcal）、搭配建议
+3. 晚餐：时间（例如18:00-19:00）、卡路里上限（例如500kcal）、搭配建议
+每日总卡路里上限：xxx kcal
+营养均衡注意事项：xxx
+每日喝水目标：xxx ml
+
+【饮食方案结束】
+
+【运动计划开始】
+大学生活背景下，每天运动时间：xxx分钟
+推荐运动项目：xxx
+每日运动目标：xxx大卡
+拉伸注意事项：xxx
+轻量运动建议（骑行/步行）：xxx
+是否可替代高强度运动：xxx
+
+【运动计划结束】`,
   '帮我制定一周减脂饮食计划',
   '适合我的有氧运动有哪些？',
   '怎样改善睡眠质量？',
   '如何科学补充蛋白质？'
-]
+];
 
 // ── 后端 API 配置 ──────────────────────────────────────────
   import { BASE_URL } from '@/config.js'
@@ -137,6 +165,7 @@ const messages = ref([])
 const inputText = ref('')
 const isLoading = ref(false)
 const scrollTarget = ref('')
+const hasQuestionnaire = ref(false)
 
 const currentSessionId = ref('')
 const currentSessionTitle = ref('')
@@ -183,6 +212,53 @@ function formatThinkingContent(text) {
   return s.trim()
 }
 
+function extractPlanSection(text, tags) {
+  if (!text) return ''
+  const source = String(text)
+  for (const tag of tags) {
+    if (!tag) continue
+    const pattern = new RegExp(`【${tag}开始】\\s*([\\s\\S]+?)\\s*【${tag}结束】`)
+    const match = source.match(pattern)
+    if (match && match[1]) {
+      return match[1].trim()
+    }
+  }
+  return ''
+}
+
+function resolvePlanPayload(data) {
+  const content = data?.content || ''
+  const diet = data?.diet || extractPlanSection(content, ['饮食方案'])
+  const exercise = data?.exercise || extractPlanSection(content, ['运动计划', '运动方案'])
+  return {
+    diet: diet ? String(diet).trim() : '',
+    exercise: exercise ? String(exercise).trim() : ''
+  }
+}
+
+function syncGeneratedPlanCache(data) {
+  const payload = resolvePlanPayload(data)
+  if (!payload.diet && !payload.exercise) return
+
+  const cached = uni.getStorageSync('myPlan')
+  let current = {}
+  if (cached && typeof cached === 'object') {
+    current = cached
+  } else if (cached) {
+    try {
+      current = JSON.parse(cached)
+    } catch (_) {
+      current = {}
+    }
+  }
+
+  uni.setStorageSync('myPlan', {
+    ...current,
+    diet: payload.diet || current.diet || '',
+    exercise: payload.exercise || current.exercise || ''
+  })
+}
+
 function onUserAvatarError() {
   userAvatar.value = '/static/logo.png'
 }
@@ -197,6 +273,7 @@ onMounted(() => {
 
 // 接收路由参数（从历史页面跳转时携带 sessionId 和 title）
 onLoad((options) => {
+  refreshQuestionnaireStatus()
   if (options && options.sessionId) {
     isFromHistory.value = true
     loadSession(options.sessionId, decodeURIComponent(options.title || ''))
@@ -207,6 +284,10 @@ onLoad((options) => {
     currentSessionTitle.value = 'AI对话'
     uni.setNavigationBarTitle({ title: 'AI对话' })
   }
+})
+
+onShow(() => {
+  refreshQuestionnaireStatus()
 })
 
 // ── 工具函数 ──────────────────────────────────────────
@@ -289,24 +370,99 @@ function loadSession(sessionId, title) {
 }
 
 function goToHistory() {
-  uni.navigateTo({ url: '/pages/home/ai_history' })
+  uni.navigateTo({ url: '/pages/home/health_consultation_history' })
+}
+
+function refreshQuestionnaireStatus() {
+  hasQuestionnaire.value = uni.getStorageSync('questionnaireCompleted') === 'true'
+}
+
+function goToQuestionnaire() {
+  uni.navigateTo({ url: '/pages/questionnaire/questionnaire' })
+}
+
+function acknowledgeNotice() {
+  uni.showToast({ title: '可在“我的-我的测评”中补填问卷', icon: 'none' })
+}
+
+function promptQuestionnaireRequired() {
+  uni.showModal({
+    title: '需要填写问卷',
+    content: '您未填写问卷无法使用模板提示词，请自定义提示词。',
+    confirmText: '点击填写问卷',
+    cancelText: '知道了',
+    success: (res) => {
+      if (res.confirm) {
+        goToQuestionnaire()
+      }
+    }
+  })
 }
 
 // handleNewChat 已移除
 
 // ── 发消息 ──────────────────────────────────────────
 function sendQuickQuestion(q) {
+  if (!hasQuestionnaire.value) {
+    promptQuestionnaireRequired()
+    return
+  }
   inputText.value = q
   sendMessage()
 }
 
-function sendMessage() {
+function requestAiChat(token, payload, timeoutMs = 180000) {
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: BASE_URL + '/api/ai/chat',
+      method: 'POST',
+      header: {
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      data: payload,
+      timeout: timeoutMs,
+      success(res) {
+        if (res && res.statusCode === 504) {
+          const err = new Error('Gateway timeout')
+          err.isGatewayTimeout = true
+          err.response = res
+          reject(err)
+          return
+        }
+        resolve(res)
+      },
+      fail(err) {
+        reject(err)
+      }
+    })
+  })
+}
+
+function shouldRetryRequest(err) {
+  if (!err) return false
+  if (err.isGatewayTimeout) return true
+  const msg = String(err.errMsg || err.message || '')
+  return msg.includes('timeout') || msg.includes('exceed')
+}
+
+async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || isLoading.value) return
 
   const token = getToken()
   if (!token) {
-    uni.showToast({ title: '请先登录', icon: 'none' })
+    uni.showModal({
+      title: '需要登录',
+      content: '登录后可使用 AI 健康咨询功能。',
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
     return
   }
 
@@ -330,71 +486,103 @@ function sendMessage() {
 
   isLoading.value = true
 
-  uni.request({
-    url: BASE_URL + '/api/ai/chat',
-    method: 'POST',
-    header: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    data: {
-      sessionId: currentSessionId.value || '',
-      message: text
-    },
-    timeout: 120000,
-    success(res) {
-      stopThinkingAnimation()
-      isLoading.value = false
-      const body = res.data || {}
-      if (res.data && res.data.code === 200 && res.data.data) {
-        const data = body.data
-        if (!currentSessionId.value) {
-          currentSessionId.value = data.sessionId
-          const title = text.length > 15 ? text.slice(0, 15) + '…' : text
-          currentSessionTitle.value = title
-          uni.setNavigationBarTitle({ title })
-        }
+  const payload = {
+    sessionId: currentSessionId.value || '',
+    message: text
+  }
+
+  let res
+  try {
+    res = await requestAiChat(token, payload)
+  } catch (err) {
+    if (shouldRetryRequest(err)) {
+      try {
+        res = await requestAiChat(token, payload)
+      } catch (retryErr) {
+        stopThinkingAnimation()
+        isLoading.value = false
+        const isTimeout = shouldRetryRequest(retryErr)
         if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
         messages.value[loadingIdx] = {
           _localId: loadingMsg._localId,
           role: 'assistant',
-          content: data.content || '',
-          thinking: formatThinkingContent(data.thinking || ''),
-          _thinkingLoading: false,
-          _showThinking: false,
-          loading: false
-        }
-      } else {
-        if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
-        messages.value[loadingIdx] = {
-          _localId: loadingMsg._localId,
-          role: 'assistant',
-          content: getResponseMessage(body) || '回复失败，请稍后重试',
+          content: isTimeout ? 'AI响应超时，可能已生成，请在历史中查看' : '网络异常，请检查网络后重试',
           thinking: '',
           _thinkingLoading: false,
           _showThinking: false,
           loading: false
         }
+        scrollToBottom()
+        return
       }
-      scrollToBottom()
-    },
-    fail(err) {
+    } else {
       stopThinkingAnimation()
       isLoading.value = false
-      const isTimeout = err && (err.errMsg || '').includes('timeout')
       if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
       messages.value[loadingIdx] = {
         _localId: loadingMsg._localId,
         role: 'assistant',
-        content: isTimeout ? 'AI响应超时，请稍后再试' : '网络异常，请检查网络后重试',
+        content: '网络异常，请检查网络后重试',
         thinking: '',
         _thinkingLoading: false,
         _showThinking: false,
         loading: false
       }
       scrollToBottom()
+      return
     }
-  })
+  }
+
+  stopThinkingAnimation()
+  isLoading.value = false
+  const body = res?.data || {}
+  if (res && res.statusCode && res.statusCode >= 400) {
+    if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
+    messages.value[loadingIdx] = {
+      _localId: loadingMsg._localId,
+      role: 'assistant',
+      content: '服务器繁忙，请稍后再试',
+      thinking: '',
+      _thinkingLoading: false,
+      _showThinking: false,
+      loading: false
+    }
+    scrollToBottom()
+    return
+  }
+
+  if (res && body.code === 200 && body.data) {
+    const data = body.data
+    if (!currentSessionId.value) {
+      currentSessionId.value = data.sessionId
+      const title = text.length > 15 ? text.slice(0, 15) + '…' : text
+      currentSessionTitle.value = title
+      uni.setNavigationBarTitle({ title })
+    }
+    syncGeneratedPlanCache(data)
+    if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
+    messages.value[loadingIdx] = {
+      _localId: loadingMsg._localId,
+      role: 'assistant',
+      content: data.content || '',
+      thinking: formatThinkingContent(data.thinking || ''),
+      _thinkingLoading: false,
+      _showThinking: false,
+      loading: false
+    }
+  } else {
+    if (loadingIdx < 0 || loadingIdx >= messages.value.length) return
+    messages.value[loadingIdx] = {
+      _localId: loadingMsg._localId,
+      role: 'assistant',
+      content: getResponseMessage(body) || '回复失败，请稍后重试',
+      thinking: '',
+      _thinkingLoading: false,
+      _showThinking: false,
+      loading: false
+    }
+  }
+  scrollToBottom()
 }
 </script>
 <style scoped>
@@ -491,6 +679,56 @@ function sendMessage() {
   color: #4e9afe;
 }
 
+
+.quick-item-disabled {
+  opacity: 0.65;
+}
+
+.questionnaire-notice {
+  width: 100%;
+  background: #f8fafc;
+  border: 1rpx solid #e2e8f0;
+  border-radius: 20rpx;
+  padding: 20rpx 22rpx;
+  margin-bottom: 24rpx;
+}
+
+.notice-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8rpx;
+}
+
+.notice-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.notice-btn {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 999rpx;
+  background: #e2e8f0;
+  font-size: 24rpx;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.notice-btn.primary {
+  background: #2563eb;
+  color: #fff;
+}
 /* ── 消息行 ── */
 .msg-row {
   display: flex;

@@ -1,18 +1,16 @@
 <template>
 	<view class="container">
-		<!-- 用户头部信息卡片 -->
 		<view class="user-header" @click="goToPage('account')">
 			<view class="user-card">
-				<view class="user-avatar">{{ currentUser?.avatar || '😊' }}</view>
+				<view class="user-badge">{{ loginBadge }}</view>
 				<view class="user-info">
-					<text class="user-name">{{ currentUser?.name || '未登录' }}</text>
-					<text class="user-id">{{ currentUser?.studentId || '点击登录' }}</text>
+					<text class="user-name">{{ loginLabel }}</text>
+					<text class="user-id">{{ loginHint }}</text>
 				</view>
 				<text class="user-arrow">→</text>
 			</view>
 		</view>
 
-		<!-- 我的方案 -->
 		<view class="section-card" @click="goToPage('my_plan')">
 			<view class="section-header">
 				<text class="section-icon">🎯</text>
@@ -22,7 +20,6 @@
 			<text class="section-arrow">→</text>
 		</view>
 
-		<!-- 我的收藏 -->
 		<view class="section-card" @click="goToPage('my_collection')">
 			<view class="section-header">
 				<text class="section-icon">⭐</text>
@@ -32,7 +29,6 @@
 			<text class="section-arrow">→</text>
 		</view>
 
-		<!-- 数据小结 -->
 		<view class="section-card" @click="goToPage('data_summary')">
 			<view class="section-header">
 				<text class="section-icon">📈</text>
@@ -42,32 +38,11 @@
 			<text class="section-arrow">→</text>
 		</view>
 
-		<!-- 使用小结（年度报告） -->
-		<view class="section-card" @click="goToPage('yearly_summary')">
-			<view class="section-header">
-				<text class="section-icon">🎉</text>
-				<text class="section-title">使用小结</text>
-				<text class="section-desc">查看你的年度成就</text>
-			</view>
-			<text class="section-arrow">→</text>
-		</view>
-
-		<!-- 我的测评 -->
 		<view class="section-card" @click="goToPage('my_assessment')">
 			<view class="section-header">
 				<text class="section-icon">📋</text>
 				<text class="section-title">我的测评</text>
 				<text class="section-desc">查看测评报告</text>
-			</view>
-			<text class="section-arrow">→</text>
-		</view>
-
-		<!-- 反馈 -->
-		<view class="section-card" @click="goToPage('help_feedback')">
-			<view class="section-header">
-				<text class="section-icon">💬</text>
-				<text class="section-title">反馈</text>
-				<text class="section-desc">提交建议或报告问题</text>
 			</view>
 			<text class="section-arrow">→</text>
 		</view>
@@ -81,21 +56,16 @@ import { onShow } from '@dcloudio/uni-app'
 import { ref, computed } from 'vue'
 import { BASE_URL } from '@/config.js'
 import {
-	getCurrentUser,
 	getCurrentPlan,
 	getCollections
 } from './my-store'
 import { getUserProgressData } from '../home/userProgressService'
 
-const currentUser = ref({
-	name: '未登录',
-	studentId: '点击登录',
-	avatar: '😊'
-})
+const loginBadge = ref('未登录')
+const loginLabel = ref('微信授权登录')
+const loginHint = ref('当前不显示姓名、学号、头像或昵称')
 const currentPlan = ref(null)
-const collections = ref({
-	posts: []
-})
+const collections = ref({ foods: [], recipes: [], dishes: [] })
 const progressData = ref({ recordDays: 0 })
 
 const totalCollections = computed(() => {
@@ -148,21 +118,15 @@ const loadRecordDaysAligned = async () => {
 
 const loadData = async () => {
 	try {
-		const [user, plan, collectionData] = await Promise.all([
-			getCurrentUser(),
+		const [plan, collectionData] = await Promise.all([
 			getCurrentPlan(),
 			getCollections()
 		])
-		currentUser.value = user || {
-			name: '未登录',
-			studentId: '点击登录',
-			avatar: '😊'
-		}
 		currentPlan.value = plan || null
-		collections.value = collectionData || { posts: [] }
+		collections.value = collectionData || { foods: [], recipes: [], dishes: [] }
 		await loadRecordDaysAligned()
 	} catch (e) {
-		// Promise.all 意外抛出时不影响页面渲染
+		// 不阻塞页面渲染
 	}
 }
 
@@ -172,28 +136,40 @@ const goToPage = (page) => {
 		my_plan: '/pages/my/my_plan',
 		my_collection: '/pages/my/my_collection',
 		data_summary: '/pages/my/data_summary',
-		yearly_summary: '/pages/my/yearly_summary',
-		my_assessment: '/pages/my/my_assessment',
-		help_feedback: '/pages/my/help_feedback'
+		my_assessment: '/pages/my/my_assessment'
 	}
-	
-	if (routes[page]) {
-		uni.navigateTo({
-			url: routes[page]
-		})
-	}
-}
 
+	if (!routes[page]) return
+
+	const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+	if (!token) {
+		uni.showModal({
+			title: '需要登录',
+			content: '该功能需要登录后使用，请先完成授权登录。',
+			confirmText: '去登录',
+			cancelText: '稍后再说',
+			success: (res) => {
+				if (res.confirm) {
+					uni.navigateTo({ url: '/pages/login/login' })
+				}
+			}
+		})
+		return
+	}
+
+	uni.navigateTo({ url: routes[page] })
+}
 onShow(() => {
-	// 先同步读缓存，立即显示用户名，消除"未登录"闪烁
-	try {
-		const raw = uni.getStorageSync('current_user_profile')
-		if (raw) {
-			const cached = typeof raw === 'string' ? JSON.parse(raw) : raw
-			if (cached?.name) currentUser.value = cached
-		}
-	} catch (e) {}
-	// 后台异步刷新，不阻塞渲染
+	const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+	if (token) {
+			loginBadge.value = '微信已登录'
+		loginLabel.value = '微信已登录'
+		loginHint.value = '仅保留匿名标识与健康数据'
+	} else {
+			loginBadge.value = '未登录'
+		loginLabel.value = '未登录'
+		loginHint.value = '点击进入登录页'
+	}
 	loadData()
 })
 </script>
@@ -211,7 +187,6 @@ $text-light: #888;
 	padding: 20rpx;
 }
 
-/* 用户头部卡片 */
 .user-header {
 	margin-bottom: 24rpx;
 }
@@ -231,15 +206,13 @@ $text-light: #888;
 	}
 }
 
-.user-avatar {
-	font-size: 64rpx;
-	min-width: 64rpx;
-	height: 64rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 12rpx;
-	background: $bg-blue;
+.user-badge {
+	font-size: 24rpx;
+	padding: 10rpx 16rpx;
+	border-radius: 999rpx;
+	background: rgba(79, 161, 242, 0.12);
+	color: $main-blue;
+	white-space: nowrap;
 }
 
 .user-info {
@@ -256,16 +229,14 @@ $text-light: #888;
 }
 
 .user-id {
-	font-size: 26rpx;
+	font-size: 24rpx;
 	color: $text-light;
 }
 
 .user-arrow {
-	font-size: 28rpx;
-	color: $main-blue;
+	font-size: 28rpx;	color: $main-blue;
 }
 
-/* 功能卡片 */
 .section-card {
 	background: white;
 	border-radius: 16rpx;

@@ -20,7 +20,7 @@
         <view class="dw-cup-label">{{ cup.label }}</view>
         <view class="dw-cup-value">{{ cup.value }}ml</view>
       </view>
-      <view class="dw-cup-item" @click="showCustom = true">
+      <view class="dw-cup-item" @click="openCustom">
         <view class="dw-cup-icon">＋</view>
         <view class="dw-cup-label">自定义</view>
       </view>
@@ -124,6 +124,24 @@
     return uni.getStorageSync('token') || ''
   }
 
+  function ensureLoginForAction(actionLabel) {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   function loadDrink() {
     const token = getToken()
     if (!token) {
@@ -173,18 +191,19 @@
   })
 
   function openGoalEdit() {
+    if (!ensureLoginForAction('修改喝水目标')) return
     goalEditValue.value = String(drinkGoal.value || '')
     showGoalEdit.value = true
   }
 
+  function openCustom() {
+    if (!ensureLoginForAction('添加喝水记录')) return
+    showCustom.value = true
+  }
+
   function addWater(val) {
+    if (!ensureLoginForAction('添加喝水记录')) return
     const token = getToken()
-    if (!token) {
-      console.warn('新增喝水未调用后端：token 为空，当前仅本地记录')
-      todayDrank.value += val
-      saveLocal()
-      return
-    }
     uni.request({
       url: BASE_URL + '/api/drink/add',
       method: 'POST',
@@ -208,6 +227,7 @@
   }
 
   function addCustom() {
+    if (!ensureLoginForAction('添加喝水记录')) return
     const v = parseInt(customValue.value)
     if (!v || v < 1 || v > 5000) {
       uni.showToast({
@@ -222,20 +242,13 @@
   }
 
   function saveGoal() {
+    if (!ensureLoginForAction('修改喝水目标')) return
     const v = parseInt(goalEditValue.value)
     if (!v || v < 100 || v > 10000) {
       uni.showToast({ title: '请输入100~10000之间的目标', icon: 'none' })
       return
     }
     const token = getToken()
-    if (!token) {
-      console.warn('修改喝水目标未调用后端：token 为空，当前仅本地记录')
-      drinkGoal.value = v
-      saveLocal()
-      showGoalEdit.value = false
-      goalEditValue.value = ''
-      return
-    }
     uni.request({
       url: BASE_URL + '/api/drink/goal',
       method: 'PUT',

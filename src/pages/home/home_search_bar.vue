@@ -365,7 +365,26 @@ onShow(async () => {
   }
   
   // ========== 收藏功能 ==========
+  const ensureLoginForAction = (actionLabel) => {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用，你可以先浏览与搜索食物。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   const handleToggleCollect = async (item) => {
+    if (!ensureLoginForAction('收藏食物')) return
     try {
       const newState = await toggleCollection(item.id)
       item.collected = newState

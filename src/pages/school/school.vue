@@ -2,7 +2,7 @@
   <view class="container">
     <view class="hero-card">
       <text class="hero-title">校园服务</text>
-      <text class="hero-subtitle">课表、体测、食堂一站直达</text>
+      <text class="hero-subtitle">体测、食堂一站直达</text>
     </view>
 
     <view class="module-list">
@@ -27,12 +27,10 @@ import { reactive } from 'vue'
 
 const items = reactive([
   { name: 'canteen', label: '食堂', emoji: '🍱', desc: '浏览校内食堂菜单' },
-  { name: 'timetable', label: '课表', emoji: '📚', desc: '快速查看课程安排' },
   { name: 'fitness', label: '体测', emoji: '🏃', desc: '跟踪体测项目与成绩' },
 ])
 
 const routeMap = {
-  timetable: '/pages/school/schedule/schedule',
   fitness: '/pages/school/fitness/fitness',
   canteen: '/pages/school/canteen/canteen'
 }

@@ -329,8 +329,27 @@
     return `${percent}%`
   }
 
+  const ensureLoginForAction = (actionLabel) => {
+    const token = uni.getStorageSync('token') || uni.getStorageSync('auth_token') || uni.getStorageSync('access_token')
+    if (token) return true
+
+    uni.showModal({
+      title: '需要登录',
+      content: `${actionLabel}需要登录后使用，你可以先浏览食物详情。`,
+      confirmText: '去登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({ url: '/pages/login/login' })
+        }
+      }
+    })
+    return false
+  }
+
   // ========== 收藏功能 ==========
   const handleToggleCollect = async () => {
+    if (!ensureLoginForAction('收藏食物')) return
     try {
       const newState = await toggleCollection(foodData.value.id)
       isCollectedState.value = newState
@@ -380,6 +399,7 @@
   }
 
   const toggleRecipeCollect = async (recipe, index) => {
+    if (!ensureLoginForAction('收藏菜谱')) return
     const key = String(index)
     const nextState = !recipeCollectedMap.value[key]
     const itemId = getRecipeItemId(recipe)
@@ -473,6 +493,7 @@
   }
 
   function openMealPopup(mealType) {
+    if (!ensureLoginForAction('添加到餐次')) return
     currentMealType.value = mealType
     selectedVesselIdx.value = 0
     selectedPortionIdx.value = 4

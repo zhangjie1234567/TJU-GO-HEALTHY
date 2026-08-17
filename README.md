@@ -94,7 +94,7 @@ npm run build:mp-weixin
 
 - 📘 后端接口说明文档：`api-document.md`
 - 🔁 当前代码中既有本地存储驱动的数据流，也有接口请求：
-  - 🧪 部分页面请求本地接口（如 `http://127.0.0.1:3000/api/search`）
+  - 🧪 部分页面请求生产接口（通过统一 baseURL 访问 `/api/*`）
   - 🤖 `ai_chat.vue` 使用第三方 AI 接口请求
 
 💡 建议联调时统一管理接口 `baseURL` 与鉴权信息，避免在页面内分散配置。

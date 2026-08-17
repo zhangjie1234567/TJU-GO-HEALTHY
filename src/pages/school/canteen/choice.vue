@@ -135,8 +135,10 @@ const flavorOptions = computed(() => {
 
 const filteredFoods = computed(() => {
   if (!selectedCanteen.value) return []
-  const all = allFoods.value
+  let all = allFoods.value
   if (!all.length) return []
+  // 过滤掉以“加”字开头的菜品
+  all = all.filter(name => !(typeof name === 'string' && name.startsWith('加')))
   if (selectedFlavor.value === '不限') return all
 
   const list = canteenMenuItems.value[selectedCanteen.value] || []
