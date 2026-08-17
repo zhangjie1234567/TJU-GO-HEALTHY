@@ -126,18 +126,6 @@
       }
     },
     {
-      "path": "pages/home/health_consultation",
-      "style": {
-        "navigationBarTitleText": "健康咨询"
-      }
-    },
-    {
-      "path": "pages/home/health_consultation_history",
-      "style": {
-        "navigationBarTitleText": "健康咨询历史"
-      }
-    },
-    {
       "path": "pages/home/my_plan",
       "style": {
         "navigationBarTitleText": "我的方案"

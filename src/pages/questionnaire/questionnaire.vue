@@ -4,7 +4,7 @@
     <view class="skip-bar">
       <view class="skip-text">
         <text class="skip-title">问卷可跳过</text>
-        <text class="skip-desc">若不填写问卷AI对话无法使用提示词模板，但可以自定义提示词且其它功能均正常</text>
+        <text class="skip-desc">若不填写问卷，部分个性化健康建议会受影响，但其它功能均正常</text>
       </view>
       <button class="skip-btn" @click="handleSkipQuestionnaire">跳过</button>
     </view>
