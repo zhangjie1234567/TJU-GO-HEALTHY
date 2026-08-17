@@ -8,7 +8,7 @@
         <text class="menu-icon">✕</text>
       </view>
     </view>
-    <!-- 人物形象和AI对话横向排列 - 修复响应式、增加点击反馈 -->
+    <!-- 人物形象区域 -->
     <view class="home-top-row">
       <!-- 人物形象卡片 - 动态显示emoji和状态 -->
       <view class="avatar-card-wrapper">
@@ -18,30 +18,6 @@
           <text class="avatar-hint-home">点击查看计划进度</text>
           <view v-if="userProgress.bmi > 0" class="bmi-badge-home">
             <text class="bmi-value-home">{{ userProgress.bmi }}</text>
-          </view>
-        </view>
-      </view>
-      <!-- AI对话卡片 - 补全点击事件、增加点击反馈、优化布局 -->
-      <view class="ai-card-wrapper">
-        <view class="card-item" @click="goToAIChat" hover-class="card-hover">
-          <!-- 左下：两个圆圈横排 -->
-          <view class="ai-circle-group ai-circle-group-l">
-            <image class="ai-circle" :src="assetAiCircle" lazy-load />
-            <image class="ai-circle" :src="assetAiCircle" lazy-load />
-          </view>
-          <!-- 右上：两个圆圈横排 -->
-          <view class="ai-circle-group ai-circle-group-r">
-            <image class="ai-circle" :src="assetAiCircle" lazy-load />
-            <image class="ai-circle" :src="assetAiCircle" lazy-load />
-          </view>
-
-          <view class="ai-dialog-main">
-            <!-- 蓝色圆角框定位在主图正中间 -->
-            <view class="ai-dialog-main-bg"></view>
-            <image class="ai-dialog-main-img" :src="assetAiMain" mode="aspectFit" lazy-load />
-          </view>
-          <view class="ai-dialog-desc">
-            拍照识别卡路里<br />语音分析情绪<br />定制食谱
           </view>
         </view>
       </view>
@@ -160,9 +136,6 @@
     bmi: 0
   });
 
-  const assetAiCircle = '/static/ai-circle.png';
-  const assetAiMain = '/static/ai-main.png';
-
   // 统一路由跳转封装 - 增加异常处理和日志
   function navigateToPage(url) {
     try {
@@ -194,10 +167,6 @@
   // 跳转到计划进度页面
   function goToPlanProgress() {
     navigateToPage('/pages/home/plan_progress?from=home');
-  }
-  // 跳转到AI对话页面
-  function goToAIChat() {
-    navigateToPage('/pages/home/ai_chat?from=home');
   }
   function goToReminderList() {
     showRemindPopup.value = false;
@@ -635,22 +604,18 @@
     font-weight: 600;
   }
 
-  /* 顶部人物形象和AI对话横向排列 */
+  /* 顶部人物形象区域 */
   .home-top-row {
     width: calc(100vw - 24px);
     max-width: 460px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     margin: 14px auto 0 auto;
     box-sizing: border-box;
   }
 
   .avatar-card-wrapper {
-    width: 100%;
-  }
-
-  .ai-card-wrapper {
     width: 100%;
   }
 
@@ -837,90 +802,6 @@
     box-sizing: border-box;
     overflow-x: hidden !important;
     /* 强制禁止子容器横向溢出 */
-  }
-
-  /* AI对话卡片 */
-  .ai-dialog-card {
-    width: 366px;
-    min-height: 150px;
-    background: #fff;
-    border-radius: 21px;
-    box-shadow: 0 2px 12px rgba(79, 161, 242, 0.12);
-    margin: 24px auto 0 auto;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 24px 16px 20px 16px;
-  }
-
-  /* 小圆圈组容器 */
-  .ai-circle-group {
-    display: flex;
-    gap: 0px;
-    /* 组内两个圆圈的间距 */
-    position: absolute;
-  }
-
-  /* 左下组位置 */
-  .ai-circle-group-l {
-    left: 12px;
-    bottom: 12px;
-  }
-
-  /* 右上组位置 */
-  .ai-circle-group-r {
-    right: 12px;
-    top: 12px;
-  }
-
-  /* 小圆圈基础样式 */
-  .ai-circle {
-    width: 10px;
-    height: 10px;
-  }
-
-  .ai-dialog-main {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    /* 新增：让标题背景绝对定位以主图容器为基准 */
-  }
-
-  .ai-dialog-main-img {
-    width: 130px;
-    height: 130px;
-    margin-bottom: 8px;
-    z-index: 2;
-    /* 图片层级高于背景 */
-    position: relative;
-    /* 开启z-index生效 */
-  }
-
-  /* 背景层样式调整 */
-  .ai-dialog-main-bg {
-    background: linear-gradient(135deg, #4FA1F2 0%, #80D0FF 100%);
-    border-radius: 20px;
-    /* 尺寸为图片的1/3：130px / 3 ≈ 43.3px */
-    width: 90px;
-    height: 50px;
-    /* 绝对定位垂直居中 */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -55%);
-    z-index: 1;
-    /* 背景层级低于图片 */
-  }
-
-  .ai-dialog-desc {
-    margin-top: 12px;
-    color: #333;
-    font-size: 15px;
-    text-align: center;
-    line-height: 1.7;
   }
 
   /* 我的方案卡片区 - 参考schedule设计 */

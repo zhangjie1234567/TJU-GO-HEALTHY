@@ -183,18 +183,6 @@
       }
     },
     {
-      "path": "pages/home/ai_chat",
-      "style": {
-        "navigationBarTitleText": "AI对话"
-      }
-    },
-    {
-      "path": "pages/home/ai_history",
-      "style": {
-        "navigationBarTitleText": "AI对话历史"
-      }
-    },
-    {
       "path": "pages/home/my_plan",
       "style": {
         "navigationBarTitleText": "我的方案"
