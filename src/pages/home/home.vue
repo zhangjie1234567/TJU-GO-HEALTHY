@@ -665,7 +665,7 @@
   }
 
   .card-item {
-    height: 280px;
+    height: 190px;
     background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
     border-radius: 14px;
     box-shadow: 0 4px 14px rgba(79, 161, 242, 0.14);
@@ -699,11 +699,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
+    padding: 10px 10px;
   }
 
   .avatar-emoji-home {
-    font-size: 70px;
+    font-size: 50px;
     line-height: 1;
     animation: avatarFloat 3s ease-in-out infinite;
   }
@@ -718,19 +719,19 @@
   }
 
   .avatar-desc-home {
-    font-size: 13px;
+    font-size: 11px;
     color: #666;
     font-weight: 500;
     text-align: center;
-    margin-top: 4px;
+    margin-top: 0;
   }
 
   .avatar-hint-home {
-    font-size: 18px;
+    font-size: 13px;
     color: #4FA1F2;
     font-weight: 600; 
     text-align: center;
-    margin-top: 6px;
+    margin-top: 2px;
     letter-spacing: 0.5px;
   }
 
